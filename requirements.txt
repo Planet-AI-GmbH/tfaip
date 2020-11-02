@@ -1,0 +1,17 @@
+calamari_ocr
+JPype1
+tensorflow~=2.3.0
+tensorflow_addons
+tensorflow-datasets~=3.0.0
+pandas
+dataclasses-json
+prettytable
+python-Levenshtein
+scikit-image
+tqdm
+pillow
+imageio
+xlrd
+nibabel
+pytest
+PyYAML
