@@ -5,7 +5,7 @@ setup(
     name='tfaip',
     version=__version__,
     packages=find_packages(),
-    license='',
+    license='GPL-v3.0',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     include_package_data=True,
