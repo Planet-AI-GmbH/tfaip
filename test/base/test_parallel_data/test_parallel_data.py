@@ -3,7 +3,7 @@ import unittest
 
 class TestParallelData(unittest.TestCase):
     def test_run(self):
-        from test.trainer.test_parallel_data import Pipeline
+        from test.base.test_parallel_data.pipeline import Pipeline
         from tfaip.base.data.data import DataBase, DataBaseParams
 
         class TestData(DataBase):

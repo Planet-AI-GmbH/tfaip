@@ -33,7 +33,11 @@ class WeightsMovingAverage(addons_optimizer.MovingAverage):
             if not var.trainable:
                 continue
 
-            avg = self.get_slot(var, "average")
+            try:
+                avg = self.get_slot(var, "average")
+            except KeyError:
+                # occurs of var is not trainable...
+                continue
 
             # swap variable but without extra memory
             K.set_value(var, var + avg)

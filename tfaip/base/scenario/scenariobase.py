@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import logging
-from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable
+from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict
 import tensorflow as tf
 import tensorflow.keras as keras
 import re
@@ -16,6 +16,7 @@ import re
 from tensorflow_addons.optimizers import MovingAverage
 
 from tfaip.base.data.data import DataBase
+from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.scenario.scenariobaseparams import ScenarioBaseParams, NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.base.scenario.util.keras_debug_model import KerasDebugModel
 from tfaip.base.scenario.util.print_evaluate_layer import PrintEvaluateLayer
@@ -158,6 +159,7 @@ class ScenarioBase(ABC):
         # Track the global step
         self._keras_model_data = KerasModelData([], [])
         self._keras_train_model: keras.Model = None
+        self._export_graphs: Dict[str, ExportGraph] = {}
         self._keras_predict_model: keras.Model = None
         self.data: DataBase = None
         self.model: ModelBase = None
@@ -197,26 +199,30 @@ class ScenarioBase(ABC):
         trainer_params_dict = trainer_params.to_dict() if trainer_params else None
         scenario_params_dict = trainer_params_dict['scenario_params'] if trainer_params_dict else self._params.to_dict()
         if export_resources:
-            self._export_resources(path, 'resources', scenario_params_dict)
+            self._export_resources(path, scenario_params_dict)
 
         # Export frozen model
         full_model_func = tf.function(lambda x: self._keras_predict_model(x))
         full_model_concrete = full_model_func.get_concrete_function(self._keras_predict_model.input)
-        # lower_control_flow=True enables tf1 compability by disabling tf2 control flow for ops like if/while
+        # lower_control_flow=True enables tf1 compatibility by disabling tf2 control flow for ops like if/while
         frozen_func = convert_variables_to_constants_v2(full_model_concrete, lower_control_flow=True)
         frozen_func.graph.as_graph_def()
         path_frozen = os.path.join(path, 'frozen')
         os.makedirs(path_frozen, exist_ok=True)
-        id_frozen = os.path.join('frozen', 'frozen_model.pb')
-        path_frozen_model = os.path.join(path, id_frozen)
+        id_frozen = 'frozen_model.pb'
         tf.io.write_graph(graph_or_graph_def=frozen_func.graph,
-                          logdir=path,
-                          name=path_frozen_model,
+                          logdir=path_frozen,
+                          name=id_frozen,
                           as_text=False)
-        # Export serve model
-        path_serve = os.path.join(path, 'serve')
-        os.makedirs(path_serve, exist_ok=True)
-        self._keras_predict_model.save(path_serve, include_optimizer=False)
+
+        # Export serve models
+        for label, export_graph in self._export_graphs.items():
+            if label == 'default':
+                path_serve = os.path.join(path, 'serve')  # default model handled separately
+            else:
+                path_serve = os.path.join(path, 'additional', label)
+            os.makedirs(path_serve, exist_ok=True)
+            export_graph.model.save(path_serve, include_optimizer=False)
 
         with open(os.path.join(path, 'net_config.json'), 'w') as f:
             json.dump(self.net_config().to_dict(), f, indent=2)
@@ -231,9 +237,9 @@ class ScenarioBase(ABC):
             with open(params_path, 'w') as f:
                 json.dump(scenario_params_dict, f, indent=2)
 
-    def _export_resources(self, root_path: str, resources_dir: str, scenario_params_dict: dict):
-        os.makedirs(os.path.join(root_path, resources_dir), exist_ok=True)
-        self.data.dump_resources(root_path, resources_dir, scenario_params_dict['data_params'])
+    def _export_resources(self, root_path: str, scenario_params_dict: dict):
+        os.makedirs(os.path.join(root_path), exist_ok=True)
+        self.data.dump_resources(root_path, scenario_params_dict['data_params'])
 
     def _set_no_train_scope(self, regex: Optional[str]):
         if not regex:
@@ -287,8 +293,8 @@ class ScenarioBase(ABC):
 
         # all inputs (step and epoch shall have a dimension of [1])
         inputs_targets = {**real_inputs, **real_targets,
-                          'step': keras.layers.Input([], batch_size=1, name='step', dtype='int32'),
-                          'epoch': keras.layers.Input([], batch_size=1, name='epoch', dtype='int32')}
+                          'step': keras.layers.Input([1], name='step', dtype='int32'),
+                          'epoch': keras.layers.Input([1], name='epoch', dtype='int32')}
 
         # Inputs have already correct names (checked by data) for exporting
         # real_inputs = {k: v if v.op.name == k else keras.layers.Layer(name=k)(v) for k, v in real_inputs.items()}
@@ -315,12 +321,14 @@ class ScenarioBase(ABC):
             real_outputs[pel_key] = tf.identity(pel((real_outputs[pel_key], real_inputs, real_outputs, real_targets)), name=pel_key + '_')
 
         # loss as "output" of the network but called separately for logic
-        _losses = self.model.loss(inputs_targets, real_outputs)
-        _extended_metrics = self.model.extended_metric(inputs_targets, real_outputs)
+        _additional_outputs = self.model.additional_outputs(real_inputs, real_outputs)
+        extended_outputs = {**real_outputs, **self.model.additional_outputs(real_inputs, real_outputs)}
+        _losses = self.model.loss(inputs_targets, extended_outputs)
+        _extended_metrics = self.model.extended_metric(inputs_targets, extended_outputs)
         _simple_metrics = self.model.metric()
         outputs = {
-            **real_outputs, **_losses, **_extended_metrics,
-            **{k: real_outputs[v.output] for k, v in _simple_metrics.items()}
+            **real_outputs, **_losses, **_extended_metrics, **_additional_outputs,
+            **{k: extended_outputs[v.output] for k, v in _simple_metrics.items()}
         }
 
         self._keras_model_data = KerasModelData(
@@ -334,8 +342,9 @@ class ScenarioBase(ABC):
         logger.info("Attempting to set no train scope")
         self._set_no_train_scope(no_train_scope)  # exclude layers from training
         # self._keras_export_model = keras.Model(inputs=real_inputs, outputs=real_outputs)
-        logger.info("Building prediction keras model (for export and decoding)")
-        self._keras_predict_model = keras.Model(inputs=real_inputs, outputs=pred_outputs)
+        logger.info("Building prediction/export keras model (for export and decoding)")
+        self._export_graphs = self.model.export_graphs(real_inputs, pred_outputs, real_targets)
+        self._keras_predict_model = self._export_graphs['default'].model
 
         # self._keras_export_model = self._create_export_model()
 
@@ -365,22 +374,24 @@ class ScenarioBase(ABC):
                 keras.models.load_model(tmp)
             logger.info("Model can be successfully loaded")
 
-    def _wrap_data(self, dataset, steps_per_epoch):
+    def _wrap_data(self, dataset, steps_per_epoch, batch_size):
         # wrapper for model fit (allows for other arguments)
         def regroup(inputs, targets):
             # see setup_training
             # regroup data for training into all as input, and only loss and metrics as output
             # this is required to allow for custom losses with multiple inputs
+            ones_batched = [1] * batch_size
             if self._keras_train_model:
-                step_epoch = {'step': self._keras_train_model.optimizer.iterations,
-                              'epoch': self._keras_train_model.optimizer.iterations // steps_per_epoch}
+                step_epoch = {'step': ones_batched * self._keras_train_model.optimizer.iterations,
+                              'epoch': ones_batched * self._keras_train_model.optimizer.iterations // steps_per_epoch}
             else:
                 # No train model exists, this happens on model debug
-                step_epoch = {'step': 0, 'epoch': 0}
+                step_epoch = {'step': ones_batched * 0,
+                              'epoch': ones_batched * 0}
             wrapped_inputs = {**inputs, **targets, **step_epoch}
-            wrapped_targets = {**{l: [0] * self.data.params().train_batch_size for l in
+            wrapped_targets = {**{l: [0] * batch_size for l in
                                   self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names},
-                               **{k: targets[v.target] for k, v in self.model.metric().items()}
+                               **{k: targets[v.target] for k, v in self.model.metric().items() if v.target in targets}
                                }
             wrapped_weights = self.model.sample_weights(inputs, targets)
             return wrapped_inputs, wrapped_targets, wrapped_weights
@@ -388,10 +399,10 @@ class ScenarioBase(ABC):
         return dataset.map(regroup)
 
     def _wrapped_train_data(self, steps_per_epoch):
-        return self._wrap_data(self.data.get_train_data(), steps_per_epoch)
+        return self._wrap_data(self.data.get_train_data(), steps_per_epoch, self._params.data_params.train_batch_size)
 
     def _wrapped_val_data(self, steps_per_epoch):
-        return self._wrap_data(self.data.get_val_data(), steps_per_epoch)
+        return self._wrap_data(self.data.get_val_data(), steps_per_epoch, self._params.data_params.val_batch_size)
 
     def fit(self,
             epochs,

@@ -13,6 +13,7 @@ class KerasDebugModel(keras.Model):
 
     def call(self, inputs, training=None, mask=None):
         outputs = self.model.build(inputs)
-        losses = self.model.loss(inputs, outputs)
-        metrics = self.model.extended_metric(inputs, outputs)
+        extended_outputs = {**outputs, **self.model.additional_outputs(inputs, outputs)}
+        losses = self.model.loss(inputs, extended_outputs)
+        metrics = self.model.extended_metric(inputs, extended_outputs)
         return {**outputs, **losses, **metrics}

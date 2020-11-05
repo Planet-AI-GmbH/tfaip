@@ -8,6 +8,8 @@ import os
 from typeguard import typechecked
 
 from tfaip.base.data.data_base_params import DataBaseParams
+from tfaip.base.resource.manager import ResourceManager
+from tfaip.base.resource.resource import Resource
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +40,13 @@ class DataBase(ABC):
         return DataBaseParams
 
     def __init__(self, params: DataBaseParams):
+        # Flags to change from sub-class
+        self._auto_batch = True
+
         params.validate()
         self._params = params
         self._current_val_list = 0
-        self.resources_dir = os.getcwd()
+        self.resources = ResourceManager()
 
         self._is_entered = False
         self._pipelines = []
@@ -68,10 +73,34 @@ class DataBase(ABC):
     def params(self) -> DataBaseParams:
         return self._params
 
-    @staticmethod
-    def _wrap_prefetch(dataset, size):
-        if size > 0:
-            return dataset.prefetch(size)
+    def _padding_values(self) -> Dict[str, float]:
+        return {}
+
+    def _wrap_padded_batch(self, dataset: tf.data.Dataset, batch_size: int, drop_remainder: bool):
+        pad_values = self._padding_values()
+
+        def default(dtype):
+            return '' if dtype == tf.string else 0
+
+        return dataset.padded_batch(
+            batch_size,
+            (
+                {k: v.shape for k, v in self.input_layer_specs().items()},
+                {k: v.shape for k, v in self.target_layer_specs().items()},
+            ),
+            (
+                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()},
+                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.target_layer_specs().items()},
+            ),
+            drop_remainder=drop_remainder
+        )
+
+    def _wrap_dataset(self, dataset, batch_size, prefetch, limit, drop_remainder):
+        if self._auto_batch:
+            dataset = self._wrap_padded_batch(dataset, batch_size, drop_remainder)
+        if prefetch > 0:
+            dataset = dataset.prefetch(prefetch)
+        dataset = dataset.take(compute_limit(limit, batch_size))
         return dataset
 
     @typechecked
@@ -80,9 +109,12 @@ class DataBase(ABC):
             raise ValueError("get_train_data must be called within a 'with data:' statement")
         if not self._params.train_lists:
             raise ValueError("Empty train list in data.")
-
-        return DataBase._wrap_prefetch(self._get_train_data(), self._params.train_prefetch).\
-            take(compute_limit(self._params.train_limit, self._params.train_batch_size))
+        return self._wrap_dataset(self._get_train_data(),
+                                  batch_size=self._params.train_batch_size,
+                                  prefetch=self._params.train_prefetch,
+                                  limit=self._params.train_limit,
+                                  drop_remainder=self._params.train_batch_drop_remainder,
+                                  )
 
     @typechecked
     def get_val_data(self, val_list: Optional[str] = None) -> tf.data.Dataset:
@@ -94,8 +126,12 @@ class DataBase(ABC):
         if not self._params.val_list:
             raise ValueError("Empty validation list in data.")
 
-        return DataBase._wrap_prefetch(self._get_val_data(val_list), self._params.val_prefetch).\
-            take(compute_limit(self._params.val_limit, self._params.val_batch_size))
+        return self._wrap_dataset(self._get_val_data(val_list),
+                                  batch_size=self._params.val_batch_size,
+                                  prefetch=self._params.val_prefetch,
+                                  limit=self._params.val_limit,
+                                  drop_remainder=self._params.val_batch_drop_remainder,
+                                  )
 
     @typechecked
     def get_lav_datasets(self) -> Generator[tf.data.Dataset, None, None]:
@@ -127,10 +163,6 @@ class DataBase(ABC):
         """
         return self._target_layer_specs()
 
-    @typechecked
-    def resource(self, path: str) -> str:
-        return os.path.join(self.resources_dir, path)
-
     @abstractmethod
     def _get_train_data(self):
         raise NotImplemented
@@ -147,18 +179,15 @@ class DataBase(ABC):
     def _target_layer_specs(self):
         raise NotImplemented
 
-    def dump_resources(self, root_path: str, resources_dir: str, data_params_dict: dict):
-        """
-        Override this method if your data requres resources for exporting the model (e.g. preproc in ATR)
+    def register_resource_from_parameter(self, param_name: str) -> Resource:
+        return self.resources.register(Resource(param_name, getattr(self._params, param_name)))
 
-        Override any path in data_params dict to be relative to root_path (e.g. resources_dir/resource).
-        Then copy the resource into the root path.
-
-        :param root_path: the root path (all paths should be stored relative to this dir)
-        :param resources_dir: the subdir there to store the resource
-        :param data_params_dict: serialized params to export (change all absolute paths of exported resources relative to root_path)
-        """
-        pass
+    def dump_resources(self, root_path: str, data_params_dict: dict):
+        # dump resources and adjust the paths in the dumped dict
+        self.resources.dump(root_path)
+        for r_id, resource in self.resources.items():
+            if r_id in data_params_dict:
+                data_params_dict[r_id] = resource.dump_path
 
     def set_val_list(self, idx: int):
         self._params.val_list = self._params.lav_lists[idx]

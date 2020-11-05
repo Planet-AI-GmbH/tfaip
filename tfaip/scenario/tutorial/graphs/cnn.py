@@ -2,21 +2,16 @@ from typing import TYPE_CHECKING
 
 from tensorflow import keras
 
-from tfaip.base.model import GraphBase
 from tfaip.base.model.components.conv import Conv2D
 from tfaip.base.model.components.ff_layer import FF
 from tfaip.base.model.components.pool import MaxPool2D
+from tfaip.scenario.tutorial.graphs.tutorialgraph import TutorialGraph
 
 if TYPE_CHECKING:
     from tfaip.scenario.tutorial.model import ModelParams
 
 
-class ConvLayers(GraphBase):
-    @classmethod
-    def params_cls(cls):
-        from tfaip.scenario.tutorial.model import ModelParams
-        return ModelParams
-
+class ConvLayers(TutorialGraph):
     def __init__(self, params: 'ModelParams'):
         super(ConvLayers, self).__init__(params, name='conv')
         self._params = params
@@ -29,6 +24,6 @@ class ConvLayers(GraphBase):
         self.ff = FF(out_dimension=128, name='f_ff', activation='relu')
         self.logits = FF(out_dimension=self._params.n_classes, activation=None, name='classify')
 
-    def call(self, images, **kwargs):
+    def _call(self, images, **kwargs):
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(images, **kwargs), **kwargs), **kwargs), **kwargs)
         return self.logits(self.ff(self.flatten(conv_out), **kwargs), **kwargs)

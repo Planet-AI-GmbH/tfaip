@@ -1,6 +1,6 @@
 from typing import Callable
 
-from test.trainer.test_parallel_data.worker import Worker
+from test.base.test_parallel_data.worker import Worker
 from tfaip.util.multiprocessing.data.pipeline import DataPipeline
 from tfaip.util.multiprocessing.data.worker import DataWorker
 

@@ -2,7 +2,7 @@ import unittest
 
 from tensorflow.python.keras.backend import clear_session
 
-from test.scenario.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
+from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
 from tfaip.scenario.tutorial.data import DataParams, Data
 from tfaip.scenario.tutorial.scenario import TutorialScenario
 

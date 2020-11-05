@@ -21,7 +21,7 @@ class LAVCallback(Callback):
         self.trainer_params = trainer_params
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.device_params = trainer_params.device_params
-        lav_params.model_path_ = trainer_params.checkpoint_dir or os.getcwd()  # possible since paths are absolute anyway
+        lav_params.model_path_ = os.getcwd()  # Here resources are still relative to current working dir
         self.lav = scenario.create_lav(lav_params=lav_params, scenario_params=scenario.params)
         self.lav_this_epoch = False
 

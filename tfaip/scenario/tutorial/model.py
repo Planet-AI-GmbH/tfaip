@@ -31,12 +31,8 @@ class TutorialModel(ModelBase):
     def get_params_cls():
         return ModelParams
 
-    def __init__(self, params: ModelParams, *args, **kwargs):
-        super(TutorialModel, self).__init__(params, *args, **kwargs)
-        self._params: ModelParams = self._params  # For IntelliSense
-        self.graph = self._params.graph.cls(self._params)
-        self.predict_layer = keras.layers.Lambda(lambda x: K.softmax(x), name='pred')
-        self.class_layer = keras.layers.Lambda(lambda x: K.argmax(x), name='class')
+    def create_graph(self, params) -> 'GraphBase':
+        return params.graph.cls(params)
 
     def _best_logging_settings(self):
         return "max", "acc"
@@ -52,12 +48,6 @@ class TutorialModel(ModelBase):
 
     def _metric(self):
         return {'simple_acc': SimpleMetric("gt", "class", keras.metrics.Accuracy())}
-
-    def _build(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        logits = self.graph(K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1))
-        pred = self.predict_layer(logits)
-        cls = self.class_layer(pred)
-        return {'pred': pred, 'logits': logits, 'class': cls}
 
     def _print_evaluate(self, inputs, outputs: Dict[str, AnyNumpy], targets: Dict[str, AnyNumpy], data, print_fn=print):
         correct = outputs['class'] == targets['gt']

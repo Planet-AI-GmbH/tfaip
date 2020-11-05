@@ -2,7 +2,7 @@ import unittest
 
 from tensorflow.python.keras.backend import clear_session
 
-from test.scenario.util.store_logs_callback import StoreLogsCallback
+from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.base.trainer import TrainerParams
 from tfaip.scenario.tutorial.data import DataParams
 from tfaip.scenario.tutorial.scenario import TutorialScenario

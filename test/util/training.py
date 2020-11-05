@@ -7,7 +7,7 @@ from typing import Type
 
 from tensorflow.python.keras.backend import clear_session
 
-from test.scenario.util.store_logs_callback import StoreLogsCallback
+from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.base.scenario import ScenarioBaseParams, ScenarioBase
 from tfaip.base.trainer import TrainerParams, Trainer
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
@@ -100,21 +100,35 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.max_iter = 1
 
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export', 'serve')
+        def load_scenario_params(lav_p):
+            path = os.path.abspath(os.path.join(lav_p.model_path_, 'trainer_params.json'))
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    d = json.load(f)['scenario_params']
+            else:
+                path = os.path.abspath(os.path.join(lav_p.model_path_, 'scenario_params.json'))
+                with open(path, 'r') as f:
+                    d = json.load(f)
+            return scenario.params_from_dict(d)
+
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
+        scenario_params = load_scenario_params(lav_params)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 5
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best', 'serve')
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
+        scenario_params = load_scenario_params(lav_params)
         scenario_params.data_params.val_batch_size = 1
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 1
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best', 'serve')
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
+        scenario_params = load_scenario_params(lav_params)
         scenario_params.data_params.val_batch_size = 5
         lav = scenario.create_lav(lav_params, scenario_params)
         bs5_results = next(lav.run())

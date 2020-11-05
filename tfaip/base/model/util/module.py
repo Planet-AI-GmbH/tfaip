@@ -9,6 +9,11 @@ def import_submodules(package, recursive=True):
     if isinstance(package, str):
         package = importlib.import_module(package)
     results = {}
+    if not hasattr(package, '__path__'):
+        # is already a module
+        results[package.__name__] = package
+        return results
+
     for loader, name, is_pkg in pkgutil.walk_packages(package.__path__):
         full_name = package.__name__ + '.' + name
         results[full_name] = importlib.import_module(full_name)
@@ -17,7 +22,7 @@ def import_submodules(package, recursive=True):
     return results
 
 
-def import_graphs(module_name, sub_module_name = 'graphs') -> List[Type[GraphBase]]:
+def import_graphs(module_name, sub_module_name='graphs') -> List[Type[GraphBase]]:
     modules = import_submodules(module_name[:module_name.rfind('.')] + '.' + sub_module_name)
     return [c for n, c in sum([inspect.getmembers(module, lambda member: inspect.isclass(
         member) and member.__module__ == module.__name__ and issubclass(member, GraphBase)) for _, module in

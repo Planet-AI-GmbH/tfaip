@@ -28,6 +28,9 @@ class DataBaseParams:
         help="Number of processes for validation data loading. Is train_num_processes by default."
              "Must be supported by the scenario."
     ))
+    val_batch_drop_remainder: bool = field(default=False, metadata=dc_meta(
+        help="Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size."
+    ))
 
     train_lists: List[str] = field(default=None, metadata=dc_meta(
         help="Training list files."
@@ -47,6 +50,9 @@ class DataBaseParams:
     ))
     train_num_processes: int = field(default=4, metadata=dc_meta(
         help="Number of processes in the training dataset (must be supported by the scenario)"
+    ))
+    train_batch_drop_remainder: bool = field(default=False, metadata=dc_meta(
+        help="Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size."
     ))
 
     lav_lists: Optional[List[str]] = field(default=None, metadata=dc_meta(

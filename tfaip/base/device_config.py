@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class DistributionStrategy(StrEnum):
     Default = 'default'
     CentralStorage = 'central_storage'
-    Mirror = 'Mirror'
+    Mirror = 'mirror'
 
 
 @dataclass_json
@@ -32,8 +32,8 @@ class DeviceConfigParams:
     soft_device_placement: bool = field(default=True, metadata=dc_meta(
         help="Set up soft device placement is enabled"
     ))
-    dist_strategy: Optional[DistributionStrategy] = field(default=None, metadata=dc_meta(
-        help="Distribution strategy for multi GPU."
+    dist_strategy: DistributionStrategy = field(default=DistributionStrategy.Default,  metadata=dc_meta(
+        help="Distribution strategy for multi GPU, select 'mirror' or 'central_storage'"
     ))
 
 
@@ -62,7 +62,8 @@ class DeviceConfig:
                     tf.config.LogicalDeviceConfiguration(memory_limit=self._params.gpu_memory)])
 
         physical_gpu_device_names = ['/gpu:' + d.name.split(':')[-1] for d in physical_gpu_devices]
-        if not self._params.dist_strategy or self._params.dist_strategy == DistributionStrategy.Default:
+        logger.debug(f"Selecting strategy {self._params.dist_strategy.value}")
+        if self._params.dist_strategy == DistributionStrategy.Default:
             self.strategy = None
         elif self._params.dist_strategy == DistributionStrategy.CentralStorage:
             self.strategy = tf.distribute.experimental.CentralStorageStrategy(compute_devices=physical_gpu_device_names)
@@ -74,7 +75,7 @@ class DeviceConfig:
 
 def distribute_strategy(train):
     def wrapper(*args, **kwargs):
-        trainer_or_lav  = args[0]
+        trainer_or_lav = args[0]
         if trainer_or_lav.device_config.strategy:
             with trainer_or_lav.device_config.strategy.scope():
                 return train(*args, **kwargs)

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator
@@ -10,6 +11,7 @@ from dataclasses_json import dataclass_json
 
 from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
 from tfaip.base.lav.callbacks.lav_callback import LAVCallback
+from tfaip.util.file.oshelper import ChDir
 from tfaip.util.time import MeasureTime
 
 if TYPE_CHECKING:
@@ -109,8 +111,9 @@ class LAV(ABC):
     @distribute_strategy
     def run(self, model: keras.Model = None, silent=False, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
         callbacks = callbacks if callbacks else []
-        self._data = self._data_fn()
-        self._data.resources_dir = self._params.model_path_
+        with ChDir(os.path.join(self._params.model_path_)):
+            # resources are located in parent dir
+            self._data = self._data_fn()
         self._model = self._model_fn()
         for cb in callbacks:
             cb.lav, cb.data, cb.model = self, self._data, self._model
@@ -122,7 +125,7 @@ class LAV(ABC):
         else:
             custom_objects = None
 
-        _keras_model: keras.Model = model if model else keras.models.load_model(self._params.model_path_, compile=False, custom_objects=custom_objects)
+        _keras_model: keras.Model = model if model else keras.models.load_model(os.path.join(self._params.model_path_, 'serve'), compile=False, custom_objects=custom_objects)
         _keras_model.run_eagerly = run_eagerly
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model

@@ -24,6 +24,6 @@ setup(
     python_requires='>=3.7',
     install_requires=open("requirements.txt").read().split('\n'),
     tests_requires=[],
-    keywords=['machine learning', 'tensorflow'],
+    keywords=['machine learning', 'tensorflow', 'framework'],
     data_files=[('', ["requirements.txt"])],
 )

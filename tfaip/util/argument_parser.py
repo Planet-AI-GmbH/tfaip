@@ -1,6 +1,7 @@
 import enum
 from argparse import ArgumentParser, Action
 from typing import Optional, List, Union, Any, Type
+import Levenshtein
 
 
 def dc_meta(*, help: str = None):
@@ -106,13 +107,24 @@ def make_store_dataclass_action(data_cls: Any):
                 if len(kv.split('=')) == 2:
                     key, val = kv.split("=")
                 else:
-                    raise ValueError("Could not parse '{}' must by KEY=VALUE".format(kv))
+                    raise ValueError(f"Could not parse '{kv}' must by KEY=VALUE")
 
                 # get parameter of data_cls
                 try:
                     field = next(f for name, f in data_cls.__dataclass_fields__.items() if f.name == key)
                 except StopIteration:
-                    raise AttributeError('Invalid argument {}. Available arguments {}'.format(key, generate_argument_list(data_cls)))
+                    arguments = generate_argument_list(data_cls)
+                    closest = None
+                    for arg in arguments:
+                        if key in arg:
+                            closest = key
+
+                    if not closest and len(arguments) > 0:
+                        distances = {a: Levenshtein.distance(a, key) for a in arguments}
+                        closest = sorted(arguments, key=lambda a: distances[a])[0]
+
+                    str_args = argument_list_to_str(arguments)
+                    raise AttributeError(f'Invalid argument {key}. Did you mean "{closest}={val}"? Available arguments {str_args}')
 
                 # Single
                 if field.type == Optional[str] or field.type == str:
@@ -187,7 +199,11 @@ def generate_help(data_cls: Any):
 
 
 def generate_argument_list(data_cls: Any):
-    return "[" + ", ".join(["{}".format(name) for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')]) + "]"
+    return [name for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')]
+
+
+def argument_list_to_str(arguments):
+    return "[" + ', '.join(f"{name}" for name in arguments) + "]"
 
 
 def add_args_group(parser: ArgumentParser, group: str, params_cls: Any, default=None):

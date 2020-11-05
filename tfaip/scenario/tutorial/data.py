@@ -37,15 +37,15 @@ class Data(DataBase):
     def _get_train_data(self):
         def group(img, gt):
             return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._train).batch(self._params.train_batch_size).repeat().map(group)
+        return tf.data.Dataset.from_tensor_slices(self._train).repeat().map(group)
 
     def _get_val_data(self, val_list):
         def group(img, gt):
             return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._test).batch(self._params.val_batch_size).map(group)
+        return tf.data.Dataset.from_tensor_slices(self._test).map(group)
 
     def _input_layer_specs(self):
-        return {'img': tf.TensorSpec(shape=(28, 28), dtype='int32')}
+        return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
 
     def _target_layer_specs(self):
-        return {'gt': tf.TensorSpec(shape=[], dtype='int32')}
+        return {'gt': tf.TensorSpec(shape=[], dtype='uint8')}
