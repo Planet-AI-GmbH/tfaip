@@ -21,7 +21,7 @@ from tfaip import __version__
 setup(
     name='tfaip',
     version=__version__,
-    packages=find_packages(include=['tfaip']),
+    packages=find_packages(exclude=['test/*']),
     license='GPL-v3.0',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
