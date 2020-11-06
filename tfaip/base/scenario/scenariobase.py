@@ -41,8 +41,10 @@ from tfaip.base.scenario.util.print_evaluate_layer import PrintEvaluateLayer
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 if TYPE_CHECKING:
-    from tfaip.base import TrainerParams
+    from tfaip.base.trainer import TrainerParams
     from tfaip.base.model import ModelBase
+    from tfaip.base.lav import LAVParams, LAV
+    from tfaip.base.predict import Predictor, PredictorParams
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,22 @@ class ScenarioBase(ABC):
         return params
 
     @classmethod
+    def from_path(cls, path: str) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
+        trainer_params_json_path = os.path.join(path, 'trainer_params.json')
+        scenario_params_json_path = os.path.join(path, 'scenario_params.json')
+        if os.path.exists(trainer_params_json_path):
+            with open(trainer_params_json_path) as f:
+                scenario_params_dict = json.load(f)['scenario_params']
+        elif os.path.exists(scenario_params_json_path):
+            with open(scenario_params_json_path) as f:
+                scenario_params_dict = json.load(f)
+        else:
+            raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
+
+        scenario_params_dict['data_params']['resource_base_path'] = path
+        return cls.from_dict(scenario_params_dict)
+
+    @classmethod
     def from_dict(cls, d: dict) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
         scenario_params = ScenarioBaseParams.from_dict(d)
         spec = importlib.util.spec_from_file_location(scenario_params.scenario_module_,
@@ -150,6 +168,11 @@ class ScenarioBase(ABC):
         return LAV
 
     @classmethod
+    def predictor_cls(cls) -> Type['Predictor']:
+        from tfaip.base.predict import Predictor
+        return Predictor
+
+    @classmethod
     def create_trainer(cls, trainer_params: 'TrainerParams', restore=False) -> 'Trainer':
         return cls.trainer_cls()(trainer_params, cls(trainer_params.scenario_params), restore)
 
@@ -157,6 +180,10 @@ class ScenarioBase(ABC):
     def create_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams') -> 'LAV':
         return cls.lav_cls()(lav_params, lambda: cls.data_cls()(scenario_params.data_params),
                              lambda: cls.model_cls()(scenario_params.model_params))
+
+    @classmethod
+    def create_predictor(cls, params: 'PredictorParams', scenario_params: 'ScenarioBaseParams') -> 'Predictor':
+        return cls.predictor_cls()(params, cls.model_cls()(scenario_params.model_params), cls.data_cls()(scenario_params.data_params))
 
     @staticmethod
     def get_params_cls() -> Type[ScenarioBaseParams]:

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class ResourceManager:
-    def __init__(self, working_dir: str = None, dump_prefix_dir: str = 'resources'):
+    def __init__(self, working_dir: str, dump_prefix_dir: str = 'resources'):
         self.working_dir = working_dir if working_dir is not None else os.getcwd()
         self.dump_prefix_dir = dump_prefix_dir
         self._resources: Dict[str, Resource] = {}

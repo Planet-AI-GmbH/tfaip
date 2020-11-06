@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
 
 class MLPLayers(TutorialGraph):
-    def __init__(self, params: 'ModelParams'):
-        super(MLPLayers, self).__init__(params, name="MLP")
+    def __init__(self, params: 'ModelParams', name='MLP', **kwargs):
+        super(MLPLayers, self).__init__(params, name=name, **kwargs)
         self.n_classes = params.n_classes
         self.flatten = keras.layers.Flatten()
         self.ff = FF(out_dimension=128, name='f_ff', activation='relu')

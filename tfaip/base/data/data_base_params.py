@@ -18,6 +18,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 import logging
+import os
 
 from dataclasses_json import dataclass_json
 
@@ -82,6 +83,8 @@ class DataBaseParams:
              "Higher numbers for better performance but on the drawback if higher memory consumption. "
              "Only used if the scenario uses a DataPipeline."
     ))
+
+    resource_base_path_: str = os.getcwd()
 
     def validate(self):
         if self.train_num_processes <= 0:

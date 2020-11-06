@@ -117,27 +117,16 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.max_iter = 1
 
-        def load_scenario_params(lav_p):
-            path = os.path.abspath(os.path.join(lav_p.model_path_, 'trainer_params.json'))
-            if os.path.exists(path):
-                with open(path, 'r') as f:
-                    d = json.load(f)['scenario_params']
-            else:
-                path = os.path.abspath(os.path.join(lav_p.model_path_, 'scenario_params.json'))
-                with open(path, 'r') as f:
-                    d = json.load(f)
-            return scenario.params_from_dict(d)
-
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
-        scenario_params = load_scenario_params(lav_params)
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 5
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        scenario_params = load_scenario_params(lav_params)
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         scenario_params.data_params.val_batch_size = 1
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
@@ -145,7 +134,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         lav_params.max_iter = 1
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        scenario_params = load_scenario_params(lav_params)
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         scenario_params.data_params.val_batch_size = 5
         lav = scenario.create_lav(lav_params, scenario_params)
         bs5_results = next(lav.run())

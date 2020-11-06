@@ -29,8 +29,8 @@ if TYPE_CHECKING:
 
 
 class ConvLayers(TutorialGraph):
-    def __init__(self, params: 'ModelParams'):
-        super(ConvLayers, self).__init__(params, name='conv')
+    def __init__(self, params: 'ModelParams', name='conv', **kwargs):
+        super(ConvLayers, self).__init__(params, name=name, **kwargs)
         self._params = params
 
         self.conv1 = Conv2D(kernel_size=(2, 2), filters=16, strides=(1, 1), padding='same', name='conv1')

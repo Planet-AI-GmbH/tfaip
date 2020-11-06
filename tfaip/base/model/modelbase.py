@@ -228,6 +228,13 @@ class ModelBase(ABC):
         print_fn(f"\n    TARGET: {target}\nPREDICTION: {prediction}")
 
     @typechecked
+    def print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
+        self._print_prediction(outputs, data, print_fn)
+
+    def _print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
+        print_fn(f"\n     PREDICTION:\n" + "\n".join([f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in outputs.items()]))
+
+    @typechecked
     def target_prediction(self,
                           targets: Dict[str, AnyNumpy],
                           outputs: Dict[str, AnyNumpy],

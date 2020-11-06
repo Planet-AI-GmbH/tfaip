@@ -63,7 +63,7 @@ class DataBase(ABC):
         params.validate()
         self._params = params
         self._current_val_list = 0
-        self.resources = ResourceManager()
+        self.resources = ResourceManager(params.resource_base_path_)
 
         self._is_entered = False
         self._pipelines = []
@@ -93,28 +93,30 @@ class DataBase(ABC):
     def _padding_values(self) -> Dict[str, float]:
         return {}
 
-    def _wrap_padded_batch(self, dataset: tf.data.Dataset, batch_size: int, drop_remainder: bool):
+    def _wrap_padded_batch(self, dataset: tf.data.Dataset, batch_size: int, drop_remainder: bool, predict: bool):
         pad_values = self._padding_values()
 
         def default(dtype):
             return '' if dtype == tf.string else 0
 
-        return dataset.padded_batch(
-            batch_size,
-            (
+        if predict:
+            shapes = {k: v.shape for k, v in self.input_layer_specs().items()}
+            values = {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()}
+        else:
+            shapes = (
                 {k: v.shape for k, v in self.input_layer_specs().items()},
                 {k: v.shape for k, v in self.target_layer_specs().items()},
-            ),
-            (
-                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()},
-                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.target_layer_specs().items()},
-            ),
-            drop_remainder=drop_remainder
-        )
+            )
+            values = (
+                         {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()},
+                         {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.target_layer_specs().items()},
+                     )
 
-    def _wrap_dataset(self, dataset, batch_size, prefetch, limit, drop_remainder):
+        return dataset.padded_batch(batch_size, shapes, values, drop_remainder=drop_remainder)
+
+    def _wrap_dataset(self, dataset, batch_size, prefetch, limit, drop_remainder, predict=False):
         if self._auto_batch:
-            dataset = self._wrap_padded_batch(dataset, batch_size, drop_remainder)
+            dataset = self._wrap_padded_batch(dataset, batch_size, drop_remainder, predict=predict)
         if prefetch > 0:
             dataset = dataset.prefetch(prefetch)
         dataset = dataset.take(compute_limit(limit, batch_size))
@@ -157,6 +159,24 @@ class DataBase(ABC):
             yield self.get_val_data(lav_list)
 
     @typechecked
+    def get_predict_data(self, predict_list: Optional[str] = None) -> tf.data.Dataset:
+        if predict_list is None:
+            predict_list = self._params.lav_lists[0] if self._params.lav_lists else self._params.val_list
+
+        if not self._is_entered:
+            raise ValueError("get_val_data must be called withing a 'with data:' statement")
+        if not predict_list:
+            raise ValueError("Empty prediction list in")
+
+        return self._wrap_dataset(self._get_predict_data(predict_list),
+                                  batch_size=self._params.val_batch_size,
+                                  prefetch=self._params.val_prefetch,
+                                  limit=self._params.val_limit,
+                                  drop_remainder=False,
+                                  predict=True,
+                                  )
+
+    @typechecked
     def create_input_layers(self) -> Dict[str, keras.layers.Input]:
         return dict_to_input_layers(self.input_layer_specs())
 
@@ -188,6 +208,9 @@ class DataBase(ABC):
     def _get_val_data(self, val_list: str):
         raise NotImplemented
 
+    def _get_predict_data(self, predict_list: str):
+        return self._get_val_data(predict_list).map(lambda inputs, targets: inputs)
+
     @abstractmethod
     def _input_layer_specs(self):
         raise NotImplemented
@@ -201,6 +224,7 @@ class DataBase(ABC):
 
     def dump_resources(self, root_path: str, data_params_dict: dict):
         # dump resources and adjust the paths in the dumped dict
+        data_params_dict['resource_base_path_'] = '.'
         self.resources.dump(root_path)
         for r_id, resource in self.resources.items():
             if r_id in data_params_dict:
