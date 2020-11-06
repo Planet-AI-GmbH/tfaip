@@ -23,6 +23,8 @@ from dataclasses_json import dataclass_json, config, LetterCase
 from tfaip.base.data.data_base_params import DataBaseParams
 from tfaip.base.model import ModelBaseParams
 from tfaip.util.argument_parser import dc_meta
+from tfaip.util.versioning import get_commit_hash
+from tfaip import __version__
 
 
 @dataclass_json
@@ -52,6 +54,9 @@ class ScenarioBaseParams:
     scenario_module_: str = None
     id_: str = None
 
+    tfaip_commit_hash_: str = field(default_factory=get_commit_hash)
+    tfaip_version_: str = __version__
+
 
 @dataclass
 class NetConfigNodeSpec:
@@ -69,4 +74,7 @@ class NetConfigParamsBase:
     id_serve: str = field(metadata=config(letter_case=LetterCase.CAMEL))
     in_nodes: Dict[str, NetConfigNodeSpec] = field(metadata=config(letter_case=LetterCase.CAMEL))
     out_nodes: Dict[str, NetConfigNodeSpec] = field(metadata=config(letter_case=LetterCase.CAMEL))
+
     tf_version: str = field(metadata=config(letter_case=LetterCase.CAMEL))
+    tfaip_commit_hash: str = field(default_factory=get_commit_hash, metadata=config(letter_case=LetterCase.CAMEL))
+    tfaip_version: str = field(default=__version__, metadata=config(letter_case=LetterCase.CAMEL))

@@ -26,7 +26,6 @@ from tfaip.base.trainer.callbacks.export_best import ExportBestState
 from tfaip.base.trainer.scheduler.learningrate_params import LearningRateParams
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.argument_parser import dc_meta
-from tfaip.util.versioning import get_commit_hash
 
 
 @dataclass_json
@@ -121,7 +120,5 @@ class TrainerParams:
         help="Parameters to specify parameters to load before training (e.g. warmstart or finetuning)"
     ))
 
-
     # Logging of the best state during training, required for resume training
     export_best_state_: ExportBestState = field(default_factory=lambda: ExportBestState())
-    commit_id_: str = field(default_factory=get_commit_hash)
