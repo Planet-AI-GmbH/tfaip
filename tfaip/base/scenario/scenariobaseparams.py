@@ -47,6 +47,13 @@ class ScenarioBaseParams:
         help="Number of evaluation examples to print per evaluation, use -1 to print all"
     ))
 
+    export_frozen: bool = field(default=True, metadata=dc_meta(
+        help="Export the frozen graph alongside the saved model"
+    ))
+    export_serve: bool = field(default=True, metadata=dc_meta(
+        help="Export the serving model (saved model format)"
+    ))
+
     model_params: ModelBaseParams = field(default_factory=lambda: ModelBaseParams())
     data_params: DataBaseParams = field(default_factory=lambda: DataBaseParams())
 
