@@ -4,9 +4,9 @@ It aims to reduce your work on the train-loop, validation, saving, optimizer, mu
 provides lot more features, which can be configured via command line.
 
 # Setup
-see: https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki/Install
+see: [Setup](https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki/Install)
 # Usage
-To setup your own scenario see: https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki/Scenario-setup.md
+To setup your own scenario see: [Scenario setup](https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki/Scenario-setup.md)
 
 ## Running the tutorial scenario:
 The default tutorial scenario is 'fashion-mnist'. Run your first training with:
