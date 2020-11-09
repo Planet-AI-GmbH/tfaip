@@ -19,7 +19,7 @@ You can evaluate the model on the validation dataset with:
 `tfaip-lav --export_dir models/fashion_default/export`
 
 Most hyper parameter can be configured via command line see `tfaip-train -h` and `tfaip-train tutorial -h`.
-
+You can find detailed description in the [wiki](https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki)
 
 _Contributions are welcome, and they are greatly appreciated!_
 
