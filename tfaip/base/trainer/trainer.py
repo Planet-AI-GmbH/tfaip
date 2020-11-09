@@ -29,7 +29,7 @@ from tfaip.base.device_config import DeviceConfig, distribute_strategy
 from tfaip.base.scenario import ScenarioBase
 from tfaip.base.trainer.callbacks.benchmark_callback import BenchmarkCallback
 from tfaip.base.trainer.callbacks.ema_callback import EMACallback
-from tfaip.base.trainer.callbacks.export_best import ExportBestCallback
+from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingCallback
 from tfaip.base.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.base.trainer.callbacks.logger_callback import LoggerCallback
 from tfaip.base.trainer.callbacks.tensor_board_callback import TensorBoardCallback
@@ -158,16 +158,15 @@ class Trainer(ABC):
                 # we need only weights to restore the training, the graph will be reconstructed
                 variables_path = os.path.join(self._params.checkpoint_dir, 'variables', 'variables')
                 callbacks.append(tf.keras.callbacks.ModelCheckpoint(variables_path, save_weights_only=True))
-            callbacks.append(TrainParamsLoggerCallback(self._params, self._params.checkpoint_dir))
+
+        callbacks.append(TrainParamsLoggerCallback(self._params, self._params.checkpoint_dir))
 
         if self._params.calc_ema:
             # EMA must be before export best to export ema
             # noinspection PyTypeChecker
             callbacks.append(EMACallback(optimizer))
 
-        if self._params.export_best and self._params.checkpoint_dir:
-            callbacks.append(
-                ExportBestCallback(os.path.join(self._params.checkpoint_dir, 'best'), self._scenario, self._params))
+        callbacks.append(EarlyStoppingCallback(self._scenario, self._params))
 
         if self._params.checkpoint_dir:
             # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
@@ -218,6 +217,18 @@ class Trainer(ABC):
                 "clipnorm": clip_grad if clip_grad > 0 else None,
                 "clipvalue": -clip_grad if clip_grad < 0 else None,
             }
+            if self._params.optimizer_params.optimizer == 'SGD':
+                args['momentum'] = self._params.optimizer_params.momentum
+            elif self._params.optimizer_params.optimizer in ['Adam', 'Adamax']:
+                args['beta_1'] = self._params.optimizer_params.beta_1
+                args['beta_2'] = self._params.optimizer_params.beta_2
+                args['epsilon'] = self._params.optimizer_params.epsilon
+            elif self._params.optimizer_params.optimizer in ['RMSprop']:
+                args['momentum'] = self._params.optimizer_params.momentum
+                args['rho'] = self._params.optimizer_params.rho
+                args['centered'] = self._params.optimizer_params.centered
+                args['epsilon'] = self._params.optimizer_params.epsilon
+
             if self._params.calc_ema:
                 return WeightsMovingAverage, {'optimizer': real_optimizer(**args)}
             else:

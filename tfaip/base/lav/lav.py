@@ -20,7 +20,7 @@ import logging
 import os
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator
+from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator, Optional
 
 import prettytable
 import tensorflow.keras as keras
@@ -32,7 +32,8 @@ from tfaip.util.file.oshelper import ChDir
 from tfaip.util.time import MeasureTime
 
 if TYPE_CHECKING:
-    from tfaip.base import DataBase, ModelBase
+    from tfaip.base.data.data import DataBase
+    from tfaip.base.model import ModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -121,12 +122,12 @@ class LAV(ABC):
         self._data_fn = data_fn
         self._model_fn = model_fn
         self.device_config = DeviceConfig(self._params.device_params)
-        self._data: 'DataBase' = None
-        self._model: 'ModelBase' = None
+        self._data: Optional['DataBase'] = None
+        self._model: Optional['ModelBase'] = None
         self.benchmark_results = LAVBenchmarkResults()
 
     @distribute_strategy
-    def run(self, model: keras.Model = None, silent=False, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
+    def run(self, model: keras.Model = None, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
         callbacks = callbacks if callbacks else []
         with ChDir(os.path.join(self._params.model_path_)):
             # resources are located in parent dir

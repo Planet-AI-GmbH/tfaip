@@ -22,7 +22,7 @@ import logging
 FORMAT = '{levelname:<8s} {asctime} {name:>30.30s}: {message}'
 formatter = logging.Formatter(FORMAT, style='{')
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=getattr(logging, os.environ.get('TFAIP_LOG_LEVEL', 'INFO').upper()))
 logging.getLogger().handlers[0].setFormatter(formatter)
 
 for handler in logging.getLogger("tensorflow").handlers:

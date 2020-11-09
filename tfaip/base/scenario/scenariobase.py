@@ -41,8 +41,10 @@ from tfaip.base.scenario.util.print_evaluate_layer import PrintEvaluateLayer
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 if TYPE_CHECKING:
-    from tfaip.base import TrainerParams
+    from tfaip.base.trainer import TrainerParams
     from tfaip.base.model import ModelBase
+    from tfaip.base.lav import LAVParams, LAV
+    from tfaip.base.predict import Predictor, PredictorParams
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,22 @@ class ScenarioBase(ABC):
         return params
 
     @classmethod
+    def from_path(cls, path: str) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
+        trainer_params_json_path = os.path.join(path, 'trainer_params.json')
+        scenario_params_json_path = os.path.join(path, 'scenario_params.json')
+        if os.path.exists(trainer_params_json_path):
+            with open(trainer_params_json_path) as f:
+                scenario_params_dict = json.load(f)['scenario_params']
+        elif os.path.exists(scenario_params_json_path):
+            with open(scenario_params_json_path) as f:
+                scenario_params_dict = json.load(f)
+        else:
+            raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
+
+        scenario_params_dict['data_params']['resource_base_path'] = path
+        return cls.from_dict(scenario_params_dict)
+
+    @classmethod
     def from_dict(cls, d: dict) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
         scenario_params = ScenarioBaseParams.from_dict(d)
         spec = importlib.util.spec_from_file_location(scenario_params.scenario_module_,
@@ -150,6 +168,11 @@ class ScenarioBase(ABC):
         return LAV
 
     @classmethod
+    def predictor_cls(cls) -> Type['Predictor']:
+        from tfaip.base.predict import Predictor
+        return Predictor
+
+    @classmethod
     def create_trainer(cls, trainer_params: 'TrainerParams', restore=False) -> 'Trainer':
         return cls.trainer_cls()(trainer_params, cls(trainer_params.scenario_params), restore)
 
@@ -157,6 +180,10 @@ class ScenarioBase(ABC):
     def create_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams') -> 'LAV':
         return cls.lav_cls()(lav_params, lambda: cls.data_cls()(scenario_params.data_params),
                              lambda: cls.model_cls()(scenario_params.model_params))
+
+    @classmethod
+    def create_predictor(cls, params: 'PredictorParams', scenario_params: 'ScenarioBaseParams') -> 'Predictor':
+        return cls.predictor_cls()(params, cls.model_cls()(scenario_params.model_params), cls.data_cls()(scenario_params.data_params))
 
     @staticmethod
     def get_params_cls() -> Type[ScenarioBaseParams]:
@@ -219,27 +246,29 @@ class ScenarioBase(ABC):
             self._export_resources(path, scenario_params_dict)
 
         # Export frozen model
-        full_model_func = tf.function(lambda x: self._keras_predict_model(x))
-        full_model_concrete = full_model_func.get_concrete_function(self._keras_predict_model.input)
-        # lower_control_flow=True enables tf1 compatibility by disabling tf2 control flow for ops like if/while
-        frozen_func = convert_variables_to_constants_v2(full_model_concrete, lower_control_flow=True)
-        frozen_func.graph.as_graph_def()
-        path_frozen = os.path.join(path, 'frozen')
-        os.makedirs(path_frozen, exist_ok=True)
-        id_frozen = 'frozen_model.pb'
-        tf.io.write_graph(graph_or_graph_def=frozen_func.graph,
-                          logdir=path_frozen,
-                          name=id_frozen,
-                          as_text=False)
+        if self._params.export_frozen:
+            full_model_func = tf.function(lambda x: self._keras_predict_model(x))
+            full_model_concrete = full_model_func.get_concrete_function(self._keras_predict_model.input)
+            # lower_control_flow=True enables tf1 compatibility by disabling tf2 control flow for ops like if/while
+            frozen_func = convert_variables_to_constants_v2(full_model_concrete, lower_control_flow=True)
+            frozen_func.graph.as_graph_def()
+            path_frozen = os.path.join(path, 'frozen')
+            os.makedirs(path_frozen, exist_ok=True)
+            id_frozen = 'frozen_model.pb'
+            tf.io.write_graph(graph_or_graph_def=frozen_func.graph,
+                              logdir=path_frozen,
+                              name=id_frozen,
+                              as_text=False)
 
         # Export serve models
-        for label, export_graph in self._export_graphs.items():
-            if label == 'default':
-                path_serve = os.path.join(path, 'serve')  # default model handled separately
-            else:
-                path_serve = os.path.join(path, 'additional', label)
-            os.makedirs(path_serve, exist_ok=True)
-            export_graph.model.save(path_serve, include_optimizer=False)
+        if self._params.export_serve:
+            for label, export_graph in self._export_graphs.items():
+                if label == 'default':
+                    path_serve = os.path.join(path, 'serve')  # default model handled separately
+                else:
+                    path_serve = os.path.join(path, 'additional', label)
+                os.makedirs(path_serve, exist_ok=True)
+                export_graph.model.save(path_serve, include_optimizer=False)
 
         with open(os.path.join(path, 'net_config.json'), 'w') as f:
             json.dump(self.net_config().to_dict(), f, indent=2)
@@ -397,14 +426,13 @@ class ScenarioBase(ABC):
             # see setup_training
             # regroup data for training into all as input, and only loss and metrics as output
             # this is required to allow for custom losses with multiple inputs
-            ones_batched = [1] * batch_size
             if self._keras_train_model:
-                step_epoch = {'step': ones_batched * self._keras_train_model.optimizer.iterations,
-                              'epoch': ones_batched * self._keras_train_model.optimizer.iterations // steps_per_epoch}
+                step_epoch = {'step': [self._keras_train_model.optimizer.iterations] * batch_size,
+                              'epoch': [self._keras_train_model.optimizer.iterations // steps_per_epoch] * batch_size}
             else:
                 # No train model exists, this happens on model debug
-                step_epoch = {'step': ones_batched * 0,
-                              'epoch': ones_batched * 0}
+                step_epoch = {'step': [0] * batch_size,
+                              'epoch': [0] * batch_size}
             wrapped_inputs = {**inputs, **targets, **step_epoch}
             wrapped_targets = {**{l: [0] * batch_size for l in
                                   self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names},

@@ -22,11 +22,10 @@ from dataclasses_json import dataclass_json
 
 from tfaip.base.scenario import ScenarioBaseParams
 from tfaip.base.device_config import DeviceConfigParams
-from tfaip.base.trainer.callbacks.export_best import ExportBestState
+from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingParams
 from tfaip.base.trainer.scheduler.learningrate_params import LearningRateParams
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.argument_parser import dc_meta
-from tfaip.util.versioning import get_commit_hash
 
 
 @dataclass_json
@@ -37,6 +36,25 @@ class OptimizerParams:
     ))
     clip_grad: float = field(default=0, metadata=dc_meta(
         help="Gradient clipping. If == 0 -> disabled, > 0: global norm, < 0: local norm"
+    ))
+
+    momentum: float = field(default=0.0, metadata=dc_meta(
+        help="(optimizer=SGD,RMSprop) Momentum"
+    ))
+    rho: float = field(default=0.0, metadata=dc_meta(
+        help="(optimizer=RMSprop) rho"
+    ))
+    centered: bool = field(default=False, metadata=dc_meta(
+        help="(optimizer=RMSprop) centered"
+    ))
+    beta_1: float = field(default=0.9, metadata=dc_meta(
+        help="(optimizer=Adam) beta_1"
+    ))
+    beta_2: float = field(default=0.999, metadata=dc_meta(
+        help="(optimizer=Adam) beta_2"
+    ))
+    epsilon: float = field(default=1e-7, metadata=dc_meta(
+        help="(optimizer=Adam,RMSprop) epsilon"
     ))
 
 
@@ -120,8 +138,4 @@ class TrainerParams:
     warmstart_params: WarmstartParams = field(default_factory=lambda: WarmstartParams(), metadata=dc_meta(
         help="Parameters to specify parameters to load before training (e.g. warmstart or finetuning)"
     ))
-
-
-    # Logging of the best state during training, required for resume training
-    export_best_state_: ExportBestState = field(default_factory=lambda: ExportBestState())
-    commit_id_: str = field(default_factory=get_commit_hash)
+    early_stopping_params: EarlyStoppingParams = field(default_factory=lambda: EarlyStoppingParams())
