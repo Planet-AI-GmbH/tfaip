@@ -11,7 +11,7 @@ To setup your own scenario see: [Scenario setup](https://github.com/Planet-AI-Gm
 ## Running the tutorial scenario:
 The default tutorial scenario is 'fashion-mnist'. Run your first training with:
 
-`tfaip-train tutorial --trainer_params checkpoint_dir=models/fashion_A`
+`tfaip-train tutorial --trainer_params checkpoint_dir=models/fashion_default`
 
 tfaip-train refers to `tfaip/scripts/train.py`. You can switch to mnist data with `--data_params dataset=mnist`.
 
@@ -19,7 +19,7 @@ You can evaluate the model on the validation dataset with:
 `tfaip-lav --export_dir models/fashion_default/export`
 
 Most hyper parameter can be configured via command line see `tfaip-train -h` and `tfaip-train tutorial -h`.
-You can find detailed description in the [wiki](https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki)
+Checkout the [Wiki](https://github.com/Planet-AI-GmbH/tf2_aip_base/wiki) for further explanations.
 
 _Contributions are welcome, and they are greatly appreciated!_
 

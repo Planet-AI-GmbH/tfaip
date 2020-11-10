@@ -74,11 +74,11 @@ def scenarios():
         load_all_scenarios(this_dir, 'tfaip.scenario')
 
         # load external scenarios
-        external_dirs = os.environ.get('TFAIP_SCENARIOS', '').split(';')
+        external_dirs = os.environ.get('TFAIP_SCENARIOS', '').split(':')
         for external_dir in external_dirs:
             if len(external_dir) == 0:
                 continue
             logger.info(f"Loading external scenarios from {external_dir}")
-            load_all_scenarios(external_dir, '', root_dir=external_dir)
+            load_all_scenarios(external_dir, os.path.split(external_dir)[-1], root_dir=external_dir)
 
     return _scenarios
