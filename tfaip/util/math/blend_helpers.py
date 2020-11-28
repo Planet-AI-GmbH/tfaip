@@ -39,6 +39,7 @@ class BlendIterablor(Iterator, Iterable):
         """
         assert isinstance(random, Random)
         self._random = random
+        self.ingredients = ingredients
         assert isinstance(ingredients, list)
         assert isinstance(mixing_ratios, list)
         assert len(ingredients) == len(mixing_ratios)
@@ -66,6 +67,9 @@ class BlendIterablor(Iterator, Iterable):
                     logger.warning('ingredient {}: missing method "shuffle(random)" - skipping'.format(type(ingredient)))
                 self._cumulative_mri_dict[key] = ingredient
         self._key_helper = KeyHelper(self._cumulative_mri_dict)
+
+    def __len__(self):
+        return sum(map(len, self.ingredients))
 
     def __iter__(self):
         return self

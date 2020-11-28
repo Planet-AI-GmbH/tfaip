@@ -16,7 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 from dataclasses_json import dataclass_json
 
@@ -85,7 +85,7 @@ class TrainerParams:
         help="By default, the trainer checks initially whether the prediction model can be saved and loaded. This may "
              "take some time. Thus for debugging you should skip this by setting it to True"
     ))
-    test_every_n: int = field(default=1, metadata=dc_meta(
+    val_every_n: int = field(default=1, metadata=dc_meta(
         help="Rate at which to test the model on the validation data (--data_params validation_list)"
     ))
     lav_every_n: int = field(default=0, metadata=dc_meta(
@@ -139,3 +139,8 @@ class TrainerParams:
         help="Parameters to specify parameters to load before training (e.g. warmstart or finetuning)"
     ))
     early_stopping_params: EarlyStoppingParams = field(default_factory=lambda: EarlyStoppingParams())
+
+    # Additional params
+    saved_checkpoint_sub_dir_: str = ''  # formatted checkpoint_sub_dir of the actual epoch (no formatters)
+    checkpoint_sub_dir_: str = ''  # `filepath` may contain placeholders such as `{epoch:02d}`
+    checkpoint_save_freq_: Union[str, int] = 'epoch'  # or after this many epochs

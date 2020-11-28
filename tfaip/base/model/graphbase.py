@@ -30,7 +30,7 @@ class GraphBase(keras.layers.Layer):
     @classmethod
     @abstractmethod
     def params_cls(cls):
-        raise NotImplemented
+        raise NotImplementedError
 
     def __init__(self, params: 'ModelBaseParams', **kwargs):
         super(GraphBase, self).__init__(**kwargs)

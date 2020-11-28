@@ -18,11 +18,33 @@
 from dataclasses import dataclass
 
 
-@dataclass
 class Resource:
-    id: str
-    rel_path: str
-    basename: str = None
-    dump_dir: str = ''
-    dump_path: str = None
-    abs_path: str = None
+    @staticmethod
+    def encode(r: 'Resource'):
+        if r is None:
+            return None
+        return r.initial_path
+
+    @staticmethod
+    def decode(r: str):
+        if r is None:
+            return None
+        return Resource(r)
+
+    def __init__(self, initial_path: str):
+        self.initial_path = initial_path
+
+        self.rel_path: str = initial_path
+
+        self.initialized: bool = False
+        self.dump_dir: str = ''
+
+        # These values will be specified from the resource manager
+        self.basename: str = None
+        self.dump_path: str = None
+        self.abs_path: str = None
+
+    def __str__(self):
+        assert self.initialized
+        return self.abs_path
+

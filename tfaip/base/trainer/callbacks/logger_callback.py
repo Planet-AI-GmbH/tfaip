@@ -23,8 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class LoggerCallback(Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        logger.info(f"Start of epoch {epoch + 1:4d}")
+
     def on_epoch_end(self, epoch, logs=None):
         if logs is None:
             return
         logs_str = ' - '.join(f"{k}: {logs[k]:.4f}" for k in sorted(logs.keys()))
-        logger.info(f"Results of epoch {epoch:4d}: {logs_str}")
+        logger.info(f"Results of epoch {epoch + 1:4d}: {logs_str}")

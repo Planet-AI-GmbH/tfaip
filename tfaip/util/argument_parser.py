@@ -17,11 +17,35 @@
 # ==============================================================================
 import enum
 from argparse import ArgumentParser, Action
-from typing import Optional, List, Union, Any, Type
+from typing import Optional, List, Union, Any, Type, Dict
 import Levenshtein
 
+from tfaip.base.resource.resource import Resource
 
-def dc_meta(*, help: str = None):
+
+class TFAIPArgumentParser(ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        super(TFAIPArgumentParser, self).__init__(*args, **kwargs)
+        self._required_fields = {}
+
+    def get_required_fields(self, group):
+        if group not in self._required_fields:
+            self._required_fields[group] = []
+        return self._required_fields[group]
+
+    def parse_known_args(self, *args, **kwargs):
+        r = super(TFAIPArgumentParser, self).parse_known_args(*args, **kwargs)
+
+        not_set_fields = {k: v for k, v in self._required_fields.items() if len(v) > 0}
+        if len(not_set_fields) > 0:
+            s = [f"{group} {' '.join([f.name for f in fields])}" for group, fields in not_set_fields.items()]
+            raise ValueError(f"Required arguments '{' '.join(s)}' were not set.")
+        return r
+
+
+def dc_meta(*, help: str = None, arg_mode: str = 'flat', arg_mode_separator='.',
+            required=False):
+    assert arg_mode in ['flat', 'snake', 'ignore']
     return locals()
 
 
@@ -116,10 +140,28 @@ def is_enum_list(t, enum_t):
         return False
 
 
-def make_store_dataclass_action(data_cls: Any):
+def is_optional_field(field):
+    return (hasattr(field.type, "__args__")
+            and len(field.type.__args__) == 2
+            and field.type.__args__[-1] is type(None)
+            )
+
+def is_list_field(field):
+    return (not isinstance(field, type)
+            and hasattr(field.type, "__args__")
+            and len(field.type.__args__) == 1
+            and field.type._name == 'List'
+            )
+
+
+def make_store_dataclass_action(data_cls: Any, required_fields: List):
+    safe_separator = ":"
+    all_fields = fields_to_dict(data_cls, safe_separator=safe_separator)
+    required_fields.extend([field for name, field in all_fields.items() if field.metadata.get('required', False)])
+
     class DataClassAction(Action):
         def __call__(self, parser, args, values, option_string=None):
-            params = getattr(args, self.dest)
+            source_params = getattr(args, self.dest)
             for kv in values:
                 if len(kv.split('=')) == 2:
                     key, val = kv.split("=")
@@ -128,13 +170,19 @@ def make_store_dataclass_action(data_cls: Any):
 
                 # get parameter of data_cls
                 try:
-                    field = next(f for name, f in data_cls.__dataclass_fields__.items() if f.name == key)
-                except StopIteration:
-                    arguments = generate_argument_list(data_cls)
+                    name, field = None, None
+                    for name, f in all_fields.items():
+                        if name.replace(safe_separator, f.metadata.get('arg_mode_separator', '.')) == key:
+                            field = f
+                            break
+                    if field is None:
+                        raise KeyError()
+                except KeyError:
+                    arguments = [name.replace(safe_separator, field.metadata.get('arg_mode_separator', '.')) for name, field in all_fields.items()]
                     closest = None
                     for arg in arguments:
                         if key in arg:
-                            closest = key
+                            closest = arg
 
                     if not closest and len(arguments) > 0:
                         distances = {a: Levenshtein.distance(a, key) for a in arguments}
@@ -143,23 +191,42 @@ def make_store_dataclass_action(data_cls: Any):
                     str_args = argument_list_to_str(arguments)
                     raise AttributeError(f'Invalid argument {key}. Did you mean "{closest}={val}"? Available arguments {str_args}')
 
+                # get the correct params and set the non prefixed key (snake mode)
+                params = source_params
+                split_name = name.split(safe_separator)
+                key = split_name[-1]
+                for sub in split_name[:-1]:
+                    params = getattr(params, sub)
+
+                def cast(v, cast_fn, f):
+                    if is_optional_field(f) and v.lower() in {'none', 'null'}:
+                        return None
+                    return cast_fn(v)
+
+                def cast_list(v, cast_type_fn, cast_list_fn, f):
+                    if is_optional_field(f) and v.lower() in {'none', 'null'}:
+                        return None
+                    return cast_list_fn(v, cast_type_fn)
+
                 # Single
                 if field.type == Optional[str] or field.type == str:
-                    setattr(params, key, val)
+                    setattr(params, key, cast(val, str, field))
                 elif field.type == Optional[int] or field.type == int:
-                    setattr(params, key, int(val))
+                    setattr(params, key, cast(val, int, field))
                 elif field.type == Optional[float] or field.type == float:
-                    setattr(params, key, float(val))
+                    setattr(params, key, cast(val, float, field))
                 elif field.type == Optional[bool] or field.type == bool:
-                    setattr(params, key, str2bool(val))
+                    setattr(params, key, cast(val, str2bool, field))
+                elif field.type == Optional[Resource] or field.type == Resource:
+                    setattr(params, key, cast(val, Resource, field))
 
                 # Lists
                 elif field.type == Optional[List[str]] or field.type == List[str]:
-                    setattr(params, key, parse_list_arg(val, str))
+                    setattr(params, key, cast_list(val, str, parse_list_arg, field))
                 elif field.type == Optional[List[int]] or field.type == List[int]:
-                    setattr(params, key, parse_list_arg(val, int))
+                    setattr(params, key, cast_list(val, int, parse_list_arg, field))
                 elif field.type == Optional[List[float]] or field.type == List[float]:
-                    setattr(params, key, parse_list_arg(val, float))
+                    setattr(params, key, cast_list(val, float, parse_list_arg, field))
 
                 # Enum
                 elif is_int_enum(field.type):
@@ -176,10 +243,12 @@ def make_store_dataclass_action(data_cls: Any):
                     else:
                         setattr(params, key, list([str2str_enum(v, t) for v in l]))
 
-
                 # Unknown
                 else:
                     raise TypeError("Unknown type of field {}".format(field.type))
+
+                if field in required_fields:
+                    required_fields.remove(field)
 
     return DataClassAction
 
@@ -196,38 +265,62 @@ def extract_dataclass_from_field(field):
         return field.type.__args__[0]
 
 
+def fields_to_dict(data_cls, include_snake=True, d=None, prefix: str = '', safe_separator=":") -> Dict[str, Any]:
+    d = d if d is not None else {}
+    for name, f in data_cls.__dataclass_fields__.items():
+        if name.endswith('_') or ('arg_mode' in f.metadata and f.metadata['arg_mode'] == 'ignore'):
+            continue
+        if field_is_dataclass(f):
+            if include_snake and 'arg_mode' in f.metadata and f.metadata['arg_mode'] == 'snake':
+                fields_to_dict(extract_dataclass_from_field(f), include_snake, d, prefix + name + safe_separator)
+            continue
+        d[prefix + name] = f
+
+    return d
+
+
+def convert_value(p):
+    if isinstance(p, Resource):
+        return p.initial_path
+    elif issubclass(p.__class__, enum.Enum):
+        return p.value
+    return str(p)
+
+def get_default(p, name, safe_separator=":"):
+    for sub in name.split(safe_separator):
+        p = getattr(p, sub)
+    if isinstance(p, list):
+        return '[' + ','.join([convert_value(x) for x in p]) + ']'
+    return convert_value(p)
+
+def generate_help_for_field(field, name, default, safe_separator=":"):
+    enum_class = enum_class_from_field(field)
+    msg = f"{name.replace(safe_separator, field.metadata.get('arg_mode_separator', '.'))}={default}"
+    if enum_class:
+        vs = [str(e.value) for e in enum_class]
+        msg += " ∈ {" + ', '.join(vs) + "}"
+    if field.metadata:
+        if 'help' in field.metadata:
+            msg += f"\n    {field.metadata['help']}"
+    return msg
+
 def generate_help(data_cls: Any):
     default = data_cls()
-    all_fields = {name: f for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')}
-
-    def generate_help_for_field(name):
-        field = all_fields[name]
-        enum_class = enum_class_from_field(field)
-        msg = f"{name}={getattr(default, name)}"
-        if enum_class:
-            vs = [str(e.value) for e in enum_class]
-            msg += " ∈{" + ', '.join(vs) + "}"
-        if field.metadata:
-            if 'help' in field.metadata:
-                msg += f"\n    {field.metadata['help']}"
-        return msg
-
-    return "\n".join([generate_help_for_field(name) for name in sorted(all_fields.keys())])
-
-
-def generate_argument_list(data_cls: Any):
-    return [name for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')]
+    safe_separator = ":"
+    all_fields = fields_to_dict(data_cls, safe_separator=safe_separator)
+    return "\n".join([generate_help_for_field(all_fields[name], name, get_default(default, name)) for name in sorted(all_fields.keys())])
 
 
 def argument_list_to_str(arguments):
     return "[" + ', '.join(f"{name}" for name in arguments) + "]"
 
 
-def add_args_group(parser: ArgumentParser, group: str, params_cls: Any, default=None):
+def add_args_group(parser: TFAIPArgumentParser, group: str, params_cls: Any, default=None):
+    assert(isinstance(parser, TFAIPArgumentParser))
     default = default if default else params_cls()
     params_cls = default.__class__
     parser.add_argument("--" + group,
-                        action=make_store_dataclass_action(params_cls),
+                        action=make_store_dataclass_action(params_cls, parser.get_required_fields("--" + group)),
                         default=default,
                         nargs='*',
                         metavar="KEY=VAL",
@@ -235,4 +328,11 @@ def add_args_group(parser: ArgumentParser, group: str, params_cls: Any, default=
 
     for name, field in params_cls.__dataclass_fields__.items():
         if field_is_dataclass(field) and not name.endswith("_"):
-            add_args_group(parser, group=name, params_cls=extract_dataclass_from_field(field), default=getattr(default, name))
+            if 'arg_mode' not in field.metadata or field.metadata['arg_mode'] == 'flat':
+                add_args_group(parser, group=name, params_cls=extract_dataclass_from_field(field), default=getattr(default, name))
+            elif field.metadata['arg_mode'] == 'snake':
+                pass
+            elif field.metadata['arg_mode'] == 'ignore':
+                pass
+            else:
+                raise ValueError(f"Unknown arg_mode {field.metadata['arg_mode']}")

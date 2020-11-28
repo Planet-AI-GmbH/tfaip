@@ -16,13 +16,15 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from abc import abstractmethod, ABC
-from typing import Type, Dict, Any, Tuple, NamedTuple, Optional, List, TYPE_CHECKING
+from typing import Type, Dict, Any, Tuple, Optional, List, TYPE_CHECKING
 import tensorflow as tf
 from typeguard import typechecked
 import logging
 
 from tfaip.base.data.data import DataBase
 from tfaip.base.model.exportgraph import ExportGraph
+from tfaip.base.model.metric.multi import MultiMetricDefinition
+from tfaip.base.model.metric.simple import MetricDefinition
 from tfaip.base.model.modelbaseparams import ModelBaseParams
 from tfaip.util.typing import AnyNumpy
 
@@ -30,21 +32,6 @@ if TYPE_CHECKING:
     from tfaip.base.model import GraphBase
 
 logger = logging.getLogger(__name__)
-
-
-class SimpleMetric(NamedTuple):
-    """
-    A simple metric, e.g. keras.metrics.Accuracy.
-    Such a metric has access to one target, one output and the sample weights.
-
-    Attributes:
-        target (str): the dictionary key of the target which will be passed to metric.
-        output (str): the dictionary key of the models output
-        metric: The keras metric
-    """
-    target: str
-    output: str
-    metric: Any
 
 
 class ModelBase(ABC):
@@ -59,7 +46,7 @@ class ModelBase(ABC):
     @staticmethod
     @abstractmethod
     def get_params_cls() -> Type[ModelBaseParams]:
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def get_all_custom_objects(cls) -> Dict[str, Any]:
@@ -148,18 +135,28 @@ class ModelBase(ABC):
         return {}
 
     @typechecked
-    def metric(self) -> Dict[str, SimpleMetric]:
+    def metric(self) -> Dict[str, MetricDefinition]:
         """
         note: targets - holds input and output dict? eager execution is not working here, since it is
                 'map'ped on the tf.dataset
         Override _metric in a custom implementation. Standard metrics allow for one input and one target only, and also
         have access to the sample weights.
 
-        :return: A Dictionary of SimpleMetrics
+        :return: A Dictionary of MetricDefinition
         """
-        return self._metric()
+        metrics = self._metric()
+        # convert multi metrics to simple metrics
+        for k, v in self._multi_metric().items():
+            for c in v.metric.children:
+                metrics[c.name] = MetricDefinition(v.target, v.output, c)
+            metrics[k] = MetricDefinition(v.target, v.output, v.metric)
 
-    def _metric(self) -> Dict[str, SimpleMetric]:
+        return metrics
+
+    def _metric(self) -> Dict[str, MetricDefinition]:
+        return {}
+
+    def _multi_metric(self) -> Dict[str, MultiMetricDefinition]:
         return {}
 
     @typechecked
@@ -195,7 +192,7 @@ class ModelBase(ABC):
     @abstractmethod
     def _loss(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
         """use lambda layers, you can not use self.<variables> directly, it will result in pickle-error"""
-        raise NotImplemented
+        raise NotImplementedError
 
     @typechecked
     def loss_weights(self) -> Optional[Dict[str, float]]:
@@ -226,13 +223,6 @@ class ModelBase(ABC):
         # Default implementation that should be overwritten by the actual model
         target, prediction = self.target_prediction(targets, outputs, data)
         print_fn(f"\n    TARGET: {target}\nPREDICTION: {prediction}")
-
-    @typechecked
-    def print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
-        self._print_prediction(outputs, data, print_fn)
-
-    def _print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
-        print_fn(f"\n     PREDICTION:\n" + "\n".join([f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in outputs.items()]))
 
     @typechecked
     def target_prediction(self,

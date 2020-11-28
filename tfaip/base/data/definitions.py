@@ -15,11 +15,14 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import enum
+from abc import abstractmethod, ABC
+from typing import List
 
 from tfaip.util.enum import StrEnum
 
 
+
+# TODO: Move to correct place
 class Padding(StrEnum):
     Valid = "VALID"  # valid padding
     Same = "SAME"  # same padding

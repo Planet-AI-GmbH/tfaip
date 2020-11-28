@@ -27,12 +27,12 @@ from tfaip.scenario.tutorial.scenario import TutorialScenario
 
 
 def get_default_data_params():
-    return DataParams(
-        train_batch_size=1,
-        val_batch_size=1,
-        val_limit=10,
-        lav_lists=['VL1', 'VL2', 'VL3'],
-    )
+    params = DataParams()
+    params.train.batch_size = 1
+    params.train.limit = 50
+    params.val.batch_size = 1
+    params.val.limit = 50
+    return params
 
 
 def get_default_scenario_params():
@@ -66,6 +66,6 @@ class TestMultipleValLists(unittest.TestCase):
             trainer = TutorialScenario.create_trainer(trainer_params)
             trainer.train(callbacks=[store_logs_callback])
             train_logs = store_logs_callback.logs
-            for i in range(1, len(scenario_params.data_params.lav_lists)):
-                for m in ['acc', 'simple_acc']:
-                    self.assertEqual(train_logs[f'lav_l0_{m}_metric'], train_logs[f'lav_l{i}_{m}_metric'])
+            # Tutorial yields two LAV datasets (test and train)
+            for i in range(2):
+                self.assertAlmostEqual(train_logs[f'lav_l{i}_acc_metric'], train_logs[f'lav_l{i}_simple_acc_metric'])

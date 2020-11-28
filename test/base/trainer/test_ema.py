@@ -26,11 +26,12 @@ from tfaip.scenario.tutorial.scenario import TutorialScenario
 
 
 def get_default_data_params():
-    return DataParams(
-        train_batch_size=1,
-        val_batch_size=1,
-        val_limit=10,
-    )
+    params = DataParams()
+    params.dataset = 'fashion_mnist'
+    params.train.batch_size = 1
+    params.val.batch_size = 1
+    params.val.limit = 10
+    return params
 
 
 def get_default_scenario_params():

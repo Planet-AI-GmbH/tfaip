@@ -20,15 +20,15 @@ import unittest
 from tensorflow.python.keras.backend import clear_session
 
 from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
+from tfaip.base.data.data_base_params import DataGeneratorParams
 from tfaip.scenario.tutorial.data import DataParams, Data
 from tfaip.scenario.tutorial.scenario import TutorialScenario
 
 
 def get_default_data_params():
     return DataParams(
-        train_batch_size=1,
-        val_batch_size=1,
-        val_limit=5,
+        train=DataGeneratorParams(batch_size=1),
+        val=DataGeneratorParams(batch_size=1, limit=5),
     )
 
 
@@ -42,24 +42,27 @@ class TestTutorialData(unittest.TestCase):
     def setUp(self) -> None:
         clear_session()
 
+    def tearDown(self) -> None:
+        clear_session()
+
     def test_data_loading(self):
         data = Data(get_default_data_params())
-        with data:
-            train_data = next(data.get_train_data().as_numpy_iterator())
-            val_data = next(data.get_val_data().as_numpy_iterator())
+        with data.get_train_data() as rd:
+            train_data = next(rd.input_dataset().as_numpy_iterator())
+        with data.get_val_data() as rd:
+            val_data = next(rd.input_dataset().as_numpy_iterator())
 
-            def check(data):
-                self.assertEqual(len(data), 2, "Expected (input, output) tuple")
-                self.assertEqual(len(data[0]), 1, "Expected one inputs")
-                self.assertEqual(len(data[1]), 1, "Expected one outputs")
-                self.assertTrue('img' in data[0])
-                self.assertTrue('gt' in data[1])
-                self.assertTupleEqual(data[0]['img'].shape, (1, 28, 28))
-                self.assertTupleEqual(data[1]['gt'].shape, (1,))
+        def check(data):
+            self.assertEqual(len(data), 2, "Expected (input, output) tuple")
+            self.assertEqual(len(data[0]), 1, "Expected one inputs")
+            self.assertEqual(len(data[1]), 1, "Expected one outputs")
+            self.assertTrue('img' in data[0])
+            self.assertTrue('gt' in data[1])
+            self.assertTupleEqual(data[0]['img'].shape, (1, 28, 28))
+            self.assertTupleEqual(data[1]['gt'].shape, (1,))
 
-            check(train_data)
-            check(val_data)
-        clear_session()
+        check(train_data)
+        check(val_data)
 
 
 class TestTutorialTrain(unittest.TestCase):

@@ -43,7 +43,7 @@ def softmax_cross_entropy(onehot_labels, logits, tgt_len, label_smoothing=0.):
             onehot_labels, name="labels_stop_gradient")
         losses = tf.nn.softmax_cross_entropy_with_logits(labels=onehot_labels, logits=logits, name="xentropy")
 
-        loss_mask = tf.sequence_mask(tf.cast(tgt_len - 1, dtype=tf.int32),
+        loss_mask = tf.sequence_mask(tf.cast(tgt_len, dtype=tf.int32),
                                      tf.cast(tf.shape(onehot_labels)[1], dtype=tf.int32))
         losses = losses * tf.cast(loss_mask, dtype=tf.float32)
         return tf.reduce_sum(losses) / tf.reduce_sum(tf.cast(loss_mask, dtype=tf.float32))

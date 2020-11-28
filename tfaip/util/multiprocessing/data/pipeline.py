@@ -24,27 +24,40 @@ import logging
 
 from tfaip.util.multiprocessing.data.pool import WrappedPool
 from tfaip.util.multiprocessing.data.worker import DataWorker
+from tfaip.util.multiprocessing.join import Joinable, JoinableHolder
 
 context = multiprocessing.get_context("spawn")
 logging = logging.getLogger(__name__)
 
 
-class DataPipeline(ABC):
-    def __init__(self, data, processes: int, limit: int = -1, auto_repeat_input: bool = False):
-        # Auto repeat input should only be true during training
-        data.register_pipeline(self)
-        self.pool = None
-        self.processes = processes
-        self.pool = WrappedPool(processes=self.processes, worker_constructor=self.create_worker_func(), context=context, maxtasksperchild=data.params().preproc_max_tasks_per_child)
-        self.max_samples = processes * 32
+class ParallelPipeline(Joinable, ABC):
+    def __init__(self, holder: JoinableHolder,
+                 processes: int,
+                 limit: int = -1,
+                 auto_repeat_input: bool = False,
+                 max_tasks_per_child: int = 250,
+                 ):
+        super(ParallelPipeline, self).__init__(holder)
+
         self.limit = limit
         self.auto_repeat_input = auto_repeat_input
+        self.processes = processes
+        self.max_samples = processes * 32
+        self.pool = None
+        self.running = False
+
+        if processes > 1:
+            # Auto repeat input should only be true during training
+            self.pool = WrappedPool(processes=self.processes, worker_constructor=self.create_worker_func(), context=context, maxtasksperchild=max_tasks_per_child)
 
     def join(self):
+        self.running = False
         if self.pool:
             self.pool.close()
             self.pool.join()
             self.pool = None
+            
+        super(ParallelPipeline, self).join()
 
     @abstractmethod
     def create_worker_func(self) -> Callable[[], DataWorker]:
@@ -54,8 +67,12 @@ class DataPipeline(ABC):
     def generate_input(self):
         pass
 
+    def is_running(self):
+        return self.running or (self.pool and self.pool._state == RUN)
+
     def _max_size_input_generator(self):
-        while self.pool._state == RUN:
+        self.running = True
+        while self.is_running():
             logging.debug("Input generation start")
             for i, sample in enumerate(self.generate_input()):
                 while True:
@@ -63,7 +80,7 @@ class DataPipeline(ABC):
                         # Reached number of desired examples, stop
                         return
 
-                    if self.pool._state != RUN:
+                    if not self.is_running():
                         return
 
                     if self.max_samples > 0:
@@ -77,10 +94,22 @@ class DataPipeline(ABC):
                 break
 
     def output_generator(self):
-        assert(self.pool is not None)
-        for i, o in enumerate(self.pool.imap_gen(self._max_size_input_generator())):
-            if o is None:
-                logging.debug("Invalid data. Skipping")
-            else:
-                yield o
-            self.max_samples += 1
+        if self.pool is None:
+            # Only one thread, run in thread
+            worker = self.create_worker_func()()
+            worker.initialize_thread()
+            for i, o in enumerate(map(worker.process, self._max_size_input_generator())):
+                if o is None:
+                    logging.debug("Invalid data. Skipping")
+                else:
+                    yield o
+                self.max_samples += 1
+
+        else:
+            # Multiprocessing
+            for i, o in enumerate(self.pool.imap_gen(self._max_size_input_generator())):
+                if o is None:
+                    logging.debug("Invalid data. Skipping")
+                else:
+                    yield o
+                self.max_samples += 1

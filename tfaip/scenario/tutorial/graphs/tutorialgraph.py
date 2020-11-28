@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 
 from tfaip.base.model import GraphBase
 import tensorflow.keras.backend as K
+import tensorflow.keras as keras
 
 
 class TutorialGraph(GraphBase, ABC):
@@ -29,6 +30,7 @@ class TutorialGraph(GraphBase, ABC):
 
     def __init__(self, params, **kwargs):
         super(TutorialGraph, self).__init__(params, **kwargs)
+        self.acc = keras.metrics.Accuracy(name='internal_acc')
 
     def call(self, inputs, **kwargs):
         # call function that is shared by all other graphs
@@ -36,7 +38,13 @@ class TutorialGraph(GraphBase, ABC):
         logits = self._call(rescaled_img)  # call the actual graph (MLP or CNN)
         pred = K.softmax(logits, axis=-1)
         cls = K.argmax(pred, axis=-1)
-        return {'pred': pred, 'logits': logits, 'class': cls}
+        out = {'pred': pred, 'logits': logits, 'class': cls}
+
+        # Add a metric within the graph in the training model.
+        # This metric will however not be used in LAV
+        if 'gt' in inputs:
+            self.add_metric(self.acc(out['class'], inputs['gt']))
+        return out
 
     @abstractmethod
     def _call(self, inputs, **kwargs):

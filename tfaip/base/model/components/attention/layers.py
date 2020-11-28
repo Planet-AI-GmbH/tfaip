@@ -22,32 +22,53 @@ from tfaip.base.model.components.attention.multiheadattention import MultiHeadAt
 
 class SelfMutualAttentionPFFLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, dff, num_heads, rate=0.1, return_attn_coef=False, name="self_mutual_attention_pff",
-                 layer_norm=True, residual=True, self_attention_type=AttentionType.DotProduct,
+                 layer_norm=True, residual=True,
+                 self_attention_type=AttentionType.DotProduct, self_attention_params=None,
+                 mutual_attention_type=AttentionType.DotProduct, mutual_attention_params=None,
+                 self_attention_on_q=True,
+                 self_attention_on_kv=False,
                  **kwargs):
         super(SelfMutualAttentionPFFLayer, self).__init__(name=name, **kwargs)
-        self.self_attention = SelfAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual, attention_type=self_attention_type)
-        self.mutual_attention = MutualAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual)
+        self.self_attention = SelfAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual,
+                                                 attention_type=self_attention_type, attention_params=self_attention_params)
+        self.mutual_attention = MutualAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual,
+                                                     attention_type=mutual_attention_type, attention_params=mutual_attention_params)
         self.pff_layer = PFFLayer(d_model, dff, rate)
 
         self.return_attn_coef = return_attn_coef
+        self.self_attention_on_q = self_attention_on_q
+        self.self_attention_on_kv = self_attention_on_kv
 
     def call(self, inputs, single_step=False, mask_padding=None, mask_look_ahead=None):
-        x, y = inputs
-        self_att, self_att_coef = self.self_attention(x, single_step=single_step, mask=mask_look_ahead)
-        att, mut_att_coef = self.mutual_attention({'q': self_att, 'kv': y}, mask=mask_padding)
+        if isinstance(inputs, dict):
+            q, kv = inputs['q'], inputs['kv']
+        elif isinstance(inputs, tuple):
+            q, kv = inputs
+        else:
+            raise TypeError(f'Only tuple or dict allowed as inputs type but got {type(inputs)} with value {inputs}')
+
+        sa_coeffs = []
+        if self.self_attention_on_q:
+            q, self_att_coef_q = self.self_attention(q, single_step=single_step, mask=mask_look_ahead)
+            sa_coeffs.append(self_att_coef_q)
+        if self.self_attention_on_kv:
+            kv, self_att_coef_kv = self.self_attention(kv, single_step=single_step, mask=mask_look_ahead)
+            sa_coeffs.append(self_att_coef_kv)
+        att, mut_att_coef = self.mutual_attention({'q': q, 'kv': kv}, mask=mask_padding)
         out = self.pff_layer(att)
+
         if self.return_attn_coef:
-            return out, self_att_coef, mut_att_coef
+            return out, sa_coeffs, mut_att_coef
         else:
             return out
 
 
 class MutualAttentionPFFLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, dff, num_heads, rate=0.1, return_attn_coef=False, name='mutual_attention_pff',
-                 layer_norm=True, residual=True, attention_type=AttentionType.DotProduct,
+                 layer_norm=True, residual=True, attention_type=AttentionType.DotProduct, attention_params=None,
                  **kwargs):
         super(MutualAttentionPFFLayer, self).__init__(name=name, **kwargs)
-        self.mutual_attention = MutualAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual, attention_type=attention_type)
+        self.mutual_attention = MutualAttentionLayer(d_model, num_heads, rate, True, layer_norm=layer_norm, residual=residual, attention_type=attention_type, attention_params=attention_params)
         self.pff_layer = PFFLayer(d_model, dff, rate, residual=residual, layer_norm=layer_norm)
 
         self.return_attn_coef = return_attn_coef
@@ -63,12 +84,13 @@ class MutualAttentionPFFLayer(tf.keras.layers.Layer):
 
 class SelfAttentionPFFLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, dff, num_heads, rate=0.1, return_attn_coef=False, name='self_attention_pff',
-                 layer_norm=True, residual=True, attention_type=AttentionType.DotProduct,
+                 layer_norm=True, residual=True,
+                 attention_type=AttentionType.DotProduct, attention_params=None,
                  **kwargs):
         super(SelfAttentionPFFLayer, self).__init__(name=name, **kwargs)
         self.self_attention = SelfAttentionLayer(d_model=d_model, num_heads=num_heads, rate=rate,
                                                  return_attn_coef=True, layer_norm=layer_norm, residual=residual,
-                                                 attention_type=attention_type)
+                                                 attention_type=attention_type, attention_params=attention_params)
         self.pff_layer = PFFLayer(d_model=d_model, dff=dff, rate=rate, layer_norm=layer_norm, residual=residual)
 
         self.return_attn_coef = return_attn_coef
@@ -108,7 +130,8 @@ class PFFLayer(tf.keras.layers.Layer):
 
 class SelfAttentionLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, num_heads, rate=0.1, return_attn_coef=False, name='self_attention',
-                 layer_norm=True, residual=True, attention_type=AttentionType.DotProduct,
+                 layer_norm=True, residual=True,
+                 attention_type=AttentionType.DotProduct, attention_params=None,
                  **kwargs):
         super(SelfAttentionLayer, self).__init__(name=name, **kwargs)
 
@@ -118,7 +141,7 @@ class SelfAttentionLayer(tf.keras.layers.Layer):
         self.return_attn_coef = return_attn_coef
         self.use_residual = residual
 
-        self.mha = MultiHeadAttention(d_model, num_heads, return_attn_coef=True, attention_type=attention_type)
+        self.mha = MultiHeadAttention(d_model, num_heads, attention_type=attention_type, attention_params=attention_params)
         self.layernorm = tf.keras.layers.LayerNormalization(epsilon=1e-6, name='layer_norm') if layer_norm else None
         self.dropout = tf.keras.layers.Dropout(rate, name='dropout')
 
@@ -141,7 +164,8 @@ class SelfAttentionLayer(tf.keras.layers.Layer):
 
 class MutualAttentionLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, num_heads, rate=0.1, return_attn_coef=False, name='mutual_attention',
-                 layer_norm=True, residual=True, attention_type=AttentionType.DotProduct,
+                 layer_norm=True, residual=True,
+                 attention_type=AttentionType.DotProduct, attention_params=None,
                  **kwargs):
         super(MutualAttentionLayer, self).__init__(name=name, **kwargs)
 
@@ -151,15 +175,18 @@ class MutualAttentionLayer(tf.keras.layers.Layer):
         self.return_attn_coef = return_attn_coef
         self.residual = residual
 
-        self.mha = MultiHeadAttention(d_model, num_heads, return_attn_coef=True, attention_type=attention_type)
+        self.mha = MultiHeadAttention(d_model, num_heads, attention_type=attention_type, attention_params=attention_params)
         self.layernorm = tf.keras.layers.LayerNormalization(epsilon=1e-6) if layer_norm else None
         self.dropout = tf.keras.layers.Dropout(rate)
 
     def call(self, inputs, mask=None):
-        kv = inputs['kv']
+        if 'kv' in inputs:
+            k = v = inputs['kv']
+        else:
+            k, v = inputs['k'], inputs['v']
         q = inputs['q']
 
-        attn_output, attn_weights = self.mha({'k': kv, 'v': kv, 'q': q}, mask=mask)  # (batch_size, input_seq_len, d_model)
+        attn_output, attn_weights = self.mha({'k': k, 'v': v, 'q': q}, mask=mask)  # (batch_size, input_seq_len, d_model)
         attn_output = self.dropout(attn_output)
         out = q + attn_output if self.residual else attn_output
         if self.layernorm:

@@ -33,6 +33,11 @@ class ListIterablor(Iterator, Iterable):
     def __iter__(self):
         return self
 
+    def __len__(self):
+        if self._list is None:
+            return 0
+        return len(self._list)
+
     def next(self):
         if not self._repeat and self._index + 1 == len(self._list):
             raise StopIteration
@@ -49,7 +54,11 @@ class ThreadSafeIterablor(Iterator, Iterable):
     def __init__(self, it: Iterator):
         assert isinstance(it, Iterator)
         self._lock = Lock()
+        self._it = it
         self._iter = it.__iter__()
+
+    def __len__(self):
+        return len(self._it)
 
     def __iter__(self):
         return self

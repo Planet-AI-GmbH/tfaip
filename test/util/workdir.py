@@ -21,9 +21,16 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def get_workdir(name: str, *args):
+    # name expected to be a path .../test/scenario/{SCENARIO_NAME}/workdir
+    # or .../test/scenario/workdir (to support single scenario setups)
     scenario_dir = os.path.join('test', 'scenario')
+    name = os.path.abspath(name)
     assert(scenario_dir in name)
-    base_dir = name[:name.find('/', name.rfind(scenario_dir) + len(scenario_dir) + 1)]
+    pos = name.find('/', name.rfind(scenario_dir) + len(scenario_dir) + 1)
+    if pos >= 0:
+        base_dir = name[:pos]
+    else:
+        base_dir = os.path.dirname(name)
     wd = os.path.join(base_dir, 'workdir')
     assert(os.path.exists(wd))
     assert(os.path.isdir(wd))

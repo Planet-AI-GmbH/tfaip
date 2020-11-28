@@ -23,7 +23,8 @@ import tensorflow.keras as keras
 import tensorflow.keras.backend as K
 
 from tfaip.base.model import ModelBaseParams, ModelBase
-from tfaip.base.model.modelbase import SimpleMetric
+from tfaip.base.model.metric.multi import MultiMetricDefinition, MultiMetric
+from tfaip.base.model.modelbase import MetricDefinition
 from tfaip.base.model.util.graph_enum import create_graph_enum
 from tfaip.util.argument_parser import dc_meta
 from tfaip.util.typing import AnyNumpy
@@ -64,7 +65,15 @@ class TutorialModel(ModelBase):
             (inputs['gt'], outputs['pred']))}
 
     def _metric(self):
-        return {'simple_acc': SimpleMetric("gt", "class", keras.metrics.Accuracy())}
+        return {'simple_acc': MetricDefinition("gt", "class", keras.metrics.Accuracy())}
+
+    def _multi_metric(self) -> Dict[str, MultiMetricDefinition]:
+        # Example showing how to manipulate true and pred for sub metrics
+        class MyMultiMetric(MultiMetric):
+            def _precompute_values(self, y_true, y_pred, sample_weight):
+                return y_true, y_pred, sample_weight
+
+        return {'multi_metric': MultiMetricDefinition('gt', 'class', MyMultiMetric([keras.metrics.Accuracy(name='macc1'), keras.metrics.Accuracy(name='macc2')]))}
 
     def _print_evaluate(self, inputs, outputs: Dict[str, AnyNumpy], targets: Dict[str, AnyNumpy], data, print_fn=print):
         correct = outputs['class'] == targets['gt']

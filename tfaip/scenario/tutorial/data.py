@@ -15,14 +15,23 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+import glob
 from dataclasses import dataclass, field
 import logging
+from typing import Iterable, Type
+
 import tensorflow as tf
 import tensorflow.keras as keras
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBaseParams, DataBase
+from tfaip.base.data.data_base_params import DataGeneratorParams
+from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator, RawDataGenerator, RawDataPipeline
+from tfaip.base.data.listfile.listfiledata import ListFilePipelineParams
+from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
+from tfaip.base.data.pipeline.definitions import PipelineMode, InputTargetSample
 from tfaip.util.argument_parser import dc_meta
+from tfaip.util.imaging.io import load_image_from_img_file
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +39,44 @@ logger = logging.getLogger(__name__)
 @dataclass_json
 @dataclass
 class DataParams(DataBaseParams):
-    dataset: str = field(default='fashion_mnist', metadata=dc_meta(
-        help="The dataset to select."
+    dataset: str = field(default='mnist', metadata=dc_meta(
+        help="The dataset to select (chose also fashion_mnist)."
     ))
 
 
+def to_samples(samples):
+    return [InputTargetSample({'img': img}, {'gt': gt}) for img, gt in zip(*samples)]
+
+
 class Data(DataBase):
+    @classmethod
+    def data_processor_factory(cls) -> DataProcessorFactory:
+        pass
+
+    @classmethod
+    def data_pipeline_cls(cls) -> Type[DataPipeline]:
+        class TutorialPipeline(DataPipeline):
+            def create_data_generator(self) -> DataGenerator:
+                if self.mode == PipelineMode.Training:
+                    return RawDataGenerator(to_samples(self.data.train), self.mode, self.generator_params)
+                elif self.mode == PipelineMode.Evaluation:
+                    return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
+                elif self.mode == PipelineMode.Prediction:
+                    # Instead of loading images to a raw pipeline, you should create a custom preprocessing pipeline
+                    # That is used during training and prediction
+                    assert (type(self.generator_params) == ListFilePipelineParams)
+                    assert self.generator_params.list, "No images provided"
+                    return RawDataGenerator(
+                        [InputTargetSample({'img': img}, None) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
+                        self.mode, self.generator_params)
+                else:
+                    raise NotImplementedError
+        return TutorialPipeline
+
+    @classmethod
+    def prediction_generator_params_cls(cls) -> Type[DataGeneratorParams]:
+        return ListFilePipelineParams
+
     @staticmethod
     def get_params_cls():
         return DataParams
@@ -44,25 +85,18 @@ class Data(DataBase):
         super().__init__(params)
         self._params = params
 
-        # This tutorial is not based on lists, so just set them as dummy since the values are checked for non empty
-        self._params.train_lists = ['NOT_REQUIRED']
-        self._params.val_list = 'NOT_REQUIRED'
-
+        # Preload data for train and val pipeline
         dataset = getattr(keras.datasets, self._params.dataset)
-        self._train, self._test = dataset.load_data()
-
-    def _get_train_data(self):
-        def group(img, gt):
-            return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._train).repeat().map(group)
-
-    def _get_val_data(self, val_list):
-        def group(img, gt):
-            return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._test).map(group)
+        self.train, self.test = dataset.load_data()
 
     def _input_layer_specs(self):
         return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
 
     def _target_layer_specs(self):
         return {'gt': tf.TensorSpec(shape=[], dtype='uint8')}
+
+    def _list_lav_dataset(self) -> Iterable[DataPipeline]:
+        # Create two evaluation datasets using test and train data
+        test = RawDataPipeline(to_samples(self.test), PipelineMode.Evaluation, self, self._params.val)
+        train = RawDataPipeline(to_samples(self.train), PipelineMode.Evaluation, self, self._params.val)
+        return [test, train]

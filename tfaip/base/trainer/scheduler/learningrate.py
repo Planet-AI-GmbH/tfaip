@@ -56,7 +56,7 @@ class LearningRateSchedule(LearningRateScheduleBase, ABC):
 
     @abstractmethod
     def lr(self, epoch) -> float:
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class ExpDecay(LearningRateSchedule):

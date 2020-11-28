@@ -26,15 +26,15 @@ class TestLAVScript(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             check_call(['tfaip-train', 'tutorial',
                         '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train_batch_size=2',
+                        '--data_params', 'train.batch_size=2',
                         ])
             check_call(['tfaip-lav',
                         '--export_dir', os.path.join(d, 'best'),
-                        '--data_params', 'val_limit=10',
+                        '--data_params', 'val.limit=10',
                         ])
             check_call(['tfaip-lav',
                         '--export_dir', os.path.join(d, 'best'),
-                        '--data_params', 'val_limit=10',
+                        '--data_params', 'val.limit=10',
                         '--run_eagerly',
                         '--dump', os.path.join(d, 'dump.pkl'),
                         ])

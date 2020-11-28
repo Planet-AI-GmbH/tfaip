@@ -17,7 +17,8 @@
 # ==============================================================================
 import tensorflow as tf
 
-def _create_image_padding_mask(seq_len):
+
+def create_image_padding_mask(seq_len):
     """
     :param seq_len: int32 [batch_size]
     :return:
@@ -28,11 +29,14 @@ def _create_image_padding_mask(seq_len):
     # to the attention logits.
     return tf.cast(padding_mask, dtype=tf.float32)
 
-def _create_padding_mask(seq_len):
+
+def create_padding_mask(seq_len):
     """
     :param seq_len: int32 [batch_size]
     :return:
     """
+    if seq_len.shape.rank == 2:
+        seq_len = tf.squeeze(seq_len, axis=-1)
     padding_mask = tf.sequence_mask(seq_len, tf.reduce_max(seq_len), dtype=tf.int32)
     # (batch_size, max_len) -- > (batch_size, 1, 1, max_len)
     # add extra dimensions to add the padding
@@ -42,7 +46,7 @@ def _create_padding_mask(seq_len):
     return tf.cast(1 - padding_mask, dtype=tf.float32)
 
 
-def _create_look_ahead_mask(seq_len):
+def create_look_ahead_mask(seq_len):
     """
     Look ahead mask decoder step N is only allowed decoder outputs emitted prior to N
     :param seq_len: int32 scalar

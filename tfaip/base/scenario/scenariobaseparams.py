@@ -47,7 +47,7 @@ class ScenarioBaseParams:
         help="Number of evaluation examples to print per evaluation, use -1 to print all"
     ))
 
-    export_frozen: bool = field(default=True, metadata=dc_meta(
+    export_frozen: bool = field(default=False, metadata=dc_meta(
         help="Export the frozen graph alongside the saved model"
     ))
     export_serve: bool = field(default=True, metadata=dc_meta(
@@ -56,6 +56,16 @@ class ScenarioBaseParams:
 
     model_params: ModelBaseParams = field(default_factory=lambda: ModelBaseParams())
     data_params: DataBaseParams = field(default_factory=lambda: DataBaseParams())
+
+    # Additional export params
+    export_net_config_: bool = True
+    net_config_filename_: str = 'net_config.json'
+    frozen_dir_: str = 'frozen'
+    frozen_filename_: str = 'frozen_model.pb'
+    default_serve_dir_: str = 'serve'
+    additional_serve_dir_: str = 'additional'
+    trainer_params_filename_: str = 'trainer_params.json'
+    scenario_params_filename_: str = 'scenario_params.json'
 
     scenario_base_path_: str = None
     scenario_module_: str = None

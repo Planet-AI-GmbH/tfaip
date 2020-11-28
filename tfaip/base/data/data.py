@@ -16,15 +16,17 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from abc import ABC, abstractmethod
-from typing import Type, Dict, Generator, Optional
+from typing import Type, Dict, Iterable, Optional
 import tensorflow.keras as keras
 import tensorflow as tf
 import logging
-import os
 
 from typeguard import typechecked
 
-from tfaip.base.data.data_base_params import DataBaseParams
+from tfaip.base.data.data_base_params import DataBaseParams, DataGeneratorParams
+from tfaip.base.data.pipeline.datapipeline import DataPipeline
+from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
+from tfaip.base.data.pipeline.definitions import InputOutputSample, PipelineMode
 from tfaip.base.resource.manager import ResourceManager
 from tfaip.base.resource.resource import Resource
 
@@ -38,51 +40,47 @@ def dict_to_input_layers(d: Dict[str, tf.TensorSpec]) -> Dict[str, keras.layers.
     return {k: keras.layers.Input(shape=v.shape, dtype=v.dtype, name=k) for k, v in d.items()}
 
 
-def compute_limit(limit, batch_size):
-    assert(limit != 0)
-    if limit < 0:
-        return limit  # no limit
-    else:
-        return -(-limit // batch_size)  # ceiled integer div => 1 // 3 = 1; 3 // 3 => 1; 4 // 3 = 2
-
-
 class DataBase(ABC):
     """
     DataBase class to provide training and validation data.
 
-    Override _get_train_data, _get_val_data, _input_layer_specs, and _output_layer_specs in a custom implementation
+    Override _input_layer_specs, and _output_layer_specs in a custom implementation
     """
     @staticmethod
     def get_params_cls() -> Type[DataBaseParams]:
         return DataBaseParams
 
+    @classmethod
+    def prediction_generator_params_cls(cls) -> Type[DataGeneratorParams]:
+        return DataGeneratorParams
+
+    @classmethod
+    def get_default_params(cls) -> DataBaseParams:
+        return cls.get_params_cls()()
+
+    @classmethod
+    @abstractmethod
+    def data_processor_factory(cls) -> DataProcessorFactory:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def data_pipeline_cls(cls) -> Type[DataPipeline]:
+        raise NotImplementedError
+
     def __init__(self, params: DataBaseParams):
         # Flags to change from sub-class
         self._auto_batch = True
 
-        params.validate()
         self._params = params
-        self._current_val_list = 0
         self.resources = ResourceManager(params.resource_base_path_)
+        self.resources.register_all(params)
 
-        self._is_entered = False
-        self._pipelines = []
+        self._pipelines: Dict[PipelineMode, DataPipeline] = {}
 
-    def __enter__(self):
-        if self._is_entered:
-            raise ValueError("Calling with DataBase was called stacked.")
-
-        self._is_entered = True
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._is_entered = False
-        for pipeline in self._pipelines:
-            pipeline.join()
-        self._pipelines = []
-
-    def register_pipeline(self, pipeline):
-        self._pipelines.append(pipeline)
+    def preload(self, progress_bar=True):
+        # Convert all pipelines to raw pipelines
+        self._pipelines = {k: v.as_preloaded(progress_bar) for k, v in self._pipelines.items()}
 
     def print_params(self):
         logger.info("data_params=" + self._params.to_json(indent=2))
@@ -90,91 +88,49 @@ class DataBase(ABC):
     def params(self) -> DataBaseParams:
         return self._params
 
+    @typechecked
+    def padding_values(self) -> Dict[str, float]:
+        return self._padding_values()
+
     def _padding_values(self) -> Dict[str, float]:
         return {}
 
-    def _wrap_padded_batch(self, dataset: tf.data.Dataset, batch_size: int, drop_remainder: bool, predict: bool):
-        pad_values = self._padding_values()
-
-        def default(dtype):
-            return '' if dtype == tf.string else 0
-
-        if predict:
-            shapes = {k: v.shape for k, v in self.input_layer_specs().items()}
-            values = {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()}
-        else:
-            shapes = (
-                {k: v.shape for k, v in self.input_layer_specs().items()},
-                {k: v.shape for k, v in self.target_layer_specs().items()},
-            )
-            values = (
-                         {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.input_layer_specs().items()},
-                         {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in self.target_layer_specs().items()},
-                     )
-
-        return dataset.padded_batch(batch_size, shapes, values, drop_remainder=drop_remainder)
-
-    def _wrap_dataset(self, dataset, batch_size, prefetch, limit, drop_remainder, predict=False):
-        if self._auto_batch:
-            dataset = self._wrap_padded_batch(dataset, batch_size, drop_remainder, predict=predict)
-        if prefetch > 0:
-            dataset = dataset.prefetch(prefetch)
-        dataset = dataset.take(compute_limit(limit, batch_size))
-        return dataset
+    @typechecked
+    def get_train_data(self) -> DataPipeline:
+        return self.get_pipeline(PipelineMode.Training, self._params.train)
 
     @typechecked
-    def get_train_data(self) -> tf.data.Dataset:
-        if not self._is_entered:
-            raise ValueError("get_train_data must be called within a 'with data:' statement")
-        if not self._params.train_lists:
-            raise ValueError("Empty train list in data.")
-        return self._wrap_dataset(self._get_train_data(),
-                                  batch_size=self._params.train_batch_size,
-                                  prefetch=self._params.train_prefetch,
-                                  limit=self._params.train_limit,
-                                  drop_remainder=self._params.train_batch_drop_remainder,
-                                  )
+    def get_val_data(self) -> DataPipeline:
+        return self.get_pipeline(PipelineMode.Evaluation, self._params.val)
 
     @typechecked
-    def get_val_data(self, val_list: Optional[str] = None) -> tf.data.Dataset:
-        if val_list is None:
-            val_list = self._params.val_list
-
-        if not self._is_entered:
-            raise ValueError("get_val_data must be called withing a 'with data:' statement")
-        if not self._params.val_list:
-            raise ValueError("Empty validation list in data.")
-
-        return self._wrap_dataset(self._get_val_data(val_list),
-                                  batch_size=self._params.val_batch_size,
-                                  prefetch=self._params.val_prefetch,
-                                  limit=self._params.val_limit,
-                                  drop_remainder=self._params.val_batch_drop_remainder,
-                                  )
+    def get_predict_data(self, params: Optional[DataGeneratorParams] = None) -> DataPipeline:
+        return self.get_pipeline(PipelineMode.Prediction, params)
 
     @typechecked
-    def get_lav_datasets(self) -> Generator[tf.data.Dataset, None, None]:
-        lav_lists = self._params.lav_lists if self._params.lav_lists else [self._params.val_list]
-        for lav_list in lav_lists:
-            yield self.get_val_data(lav_list)
+    def get_targets_data(self, params: DataGeneratorParams) -> DataPipeline:
+        return self.get_pipeline(PipelineMode.Targets, params)
 
     @typechecked
-    def get_predict_data(self, predict_list: Optional[str] = None) -> tf.data.Dataset:
-        if predict_list is None:
-            predict_list = self._params.lav_lists[0] if self._params.lav_lists else self._params.val_list
+    def get_lav_datasets(self) -> Iterable[DataPipeline]:
+        return self._list_lav_dataset()
 
-        if not self._is_entered:
-            raise ValueError("get_val_data must be called withing a 'with data:' statement")
-        if not predict_list:
-            raise ValueError("Empty prediction list in")
+    def create_pipeline(self, mode: PipelineMode, params: DataGeneratorParams) -> DataPipeline:
+        return self.data_pipeline_cls()(mode,
+                                        self,
+                                        generator_params=params,
+                                        )
 
-        return self._wrap_dataset(self._get_predict_data(predict_list),
-                                  batch_size=self._params.val_batch_size,
-                                  prefetch=self._params.val_prefetch,
-                                  limit=self._params.val_limit,
-                                  drop_remainder=False,
-                                  predict=True,
-                                  )
+    def get_pipeline(self, mode: PipelineMode, params: Optional[DataGeneratorParams] = None) -> DataPipeline:
+        if mode in self._pipelines:
+            return self._pipelines[mode]
+        if params is None:
+            raise ValueError("Pipe not yet instantiated")
+        self._pipelines[mode] = self.create_pipeline(mode, params)
+        return self._pipelines[mode]
+
+    def _list_lav_dataset(self) -> Iterable[DataPipeline]:
+        return [self.get_val_data()]
 
     @typechecked
     def create_input_layers(self) -> Dict[str, keras.layers.Input]:
@@ -201,26 +157,15 @@ class DataBase(ABC):
         return self._target_layer_specs()
 
     @abstractmethod
-    def _get_train_data(self):
-        raise NotImplemented
+    def _input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
+        raise NotImplementedError
 
     @abstractmethod
-    def _get_val_data(self, val_list: str):
-        raise NotImplemented
-
-    def _get_predict_data(self, predict_list: str):
-        return self._get_val_data(predict_list).map(lambda inputs, targets: inputs)
-
-    @abstractmethod
-    def _input_layer_specs(self):
-        raise NotImplemented
-
-    @abstractmethod
-    def _target_layer_specs(self):
-        raise NotImplemented
+    def _target_layer_specs(self) -> Dict[str, tf.TensorSpec]:
+        raise NotImplementedError
 
     def register_resource_from_parameter(self, param_name: str) -> Resource:
-        return self.resources.register(Resource(param_name, getattr(self._params, param_name)))
+        return self.resources.register(param_name, Resource(getattr(self._params, param_name)))
 
     def dump_resources(self, root_path: str, data_params_dict: dict):
         # dump resources and adjust the paths in the dumped dict
@@ -229,34 +174,3 @@ class DataBase(ABC):
         for r_id, resource in self.resources.items():
             if r_id in data_params_dict:
                 data_params_dict[r_id] = resource.dump_path
-
-    def set_val_list(self, idx: int):
-        self._params.val_list = self._params.lav_lists[idx]
-
-    def reset_val_list(self):
-        if self._params.lav_lists:
-            self._params.val_list = self._params.lav_lists[0]
-
-    def next_val_list(self):
-        if not self._params.lav_lists or self._current_val_list + 1 >= len(self._params.lav_lists):
-            return False
-        self._current_val_list += 1
-        self._params.val_list = self._params.lav_lists[0]
-        return True
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-
-    class TestData(DataBase):
-        def _get_train_data(self):
-            pass
-
-        def _get_val_data(self, val_list):
-            pass
-
-    data = TestData(DataBaseParams(
-        val_list='test',
-        lav_lists=['asdf'],
-    ))
-    data.print_params()

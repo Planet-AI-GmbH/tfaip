@@ -24,7 +24,7 @@ def get_angles(pos, i, d_model):
     return pos * angle_rates
 
 
-def positional_encoding(position, d_model):
+def positional_encoding(position, d_model, random_roll=None):
     angle_rads = get_angles(np.arange(position)[:, np.newaxis],
                             np.arange(d_model)[np.newaxis, :],
                             d_model)
@@ -36,5 +36,15 @@ def positional_encoding(position, d_model):
     angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
 
     pos_encoding = angle_rads[np.newaxis, ...]
+
+    if random_roll is not None and random_roll > 0:
+        def call_random_roll():
+            shift = tf.random.uniform([1], 0, position // 4, dtype=tf.int32) * 2
+            return tf.roll(pos_encoding, shift=-shift[0], axis=1)
+
+        def noop():
+            return pos_encoding
+
+        pos_encoding = tf.cond(tf.less(tf.random.uniform([1]), random_roll), call_random_roll, noop)
 
     return tf.cast(pos_encoding, dtype=tf.float32)

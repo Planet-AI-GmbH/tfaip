@@ -42,7 +42,7 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
         trainer_params = TrainerParams(
             checkpoint_dir=tmp_dir,
             epochs=1,
-            samples_per_epoch=scenario_params.data_params.train_batch_size,
+            samples_per_epoch=scenario_params.data_params.train.batch_size,
             skip_model_load_test=True,  # not required in this test
             scenario_params=scenario_params,
             write_checkpoints=False,
@@ -81,7 +81,7 @@ def single_train_iter(test: unittest.TestCase, scenario, scenario_params: Scenar
     scenario_params.debug_graph_n_examples = 1
     trainer_params = TrainerParams(
         epochs=1,
-        samples_per_epoch=scenario_params.data_params.train_batch_size,
+        samples_per_epoch=scenario_params.data_params.train.batch_size,
         scenario_params=scenario_params,
         write_checkpoints=False,
         force_eager=debug,
@@ -119,23 +119,23 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
 
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
-        _, scenario_params = scenario.from_path(lav_params.model_path_)
+        scenario_params = scenario.params_from_path(lav_params.model_path_)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 5
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        _, scenario_params = scenario.from_path(lav_params.model_path_)
-        scenario_params.data_params.val_batch_size = 1
+        scenario_params = scenario.params_from_path(lav_params.model_path_)
+        scenario_params.data_params.val.batch_size = 1
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 1
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        _, scenario_params = scenario.from_path(lav_params.model_path_)
-        scenario_params.data_params.val_batch_size = 5
+        scenario_params = scenario.params_from_path(lav_params.model_path_)
+        scenario_params.data_params.val.batch_size = 5
         lav = scenario.create_lav(lav_params, scenario_params)
         bs5_results = next(lav.run())
         time.sleep(0.5)
@@ -150,7 +150,7 @@ def resume_training(test: unittest.TestCase, scenario, scenario_params):
         trainer_params = TrainerParams(
             checkpoint_dir=tmp_dir,
             epochs=1,
-            samples_per_epoch=scenario_params.data_params.train_batch_size,
+            samples_per_epoch=scenario_params.data_params.train.batch_size,
             skip_model_load_test=True,  # not required in this test
             export_final=False,
             export_best=False,

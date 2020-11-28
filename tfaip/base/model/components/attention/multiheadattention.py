@@ -33,8 +33,12 @@ class AttentionType(StrEnum):
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, attention_type=AttentionType.DotProduct, name="mha", **kwargs):
-        super(MultiHeadAttention, self).__init__(name=name)
+    def __init__(self, d_model, num_heads,
+                 attention_type=AttentionType.DotProduct, attention_params: dict = None,
+                 name="mha",
+                 **kwargs):
+        super(MultiHeadAttention, self).__init__(name=name, **kwargs)
+        attention_params = attention_params if attention_params else {}
         self.num_heads = num_heads
         self.d_model = d_model
 
@@ -42,14 +46,14 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         self.depth = d_model // self.num_heads
 
-        self.wq = tf.keras.layers.Dense(d_model, name='wq')
-        self.wk = tf.keras.layers.Dense(d_model, name='wk')
-        self.wv = tf.keras.layers.Dense(d_model, name='wv')
+        self.wq = tf.keras.layers.Dense(d_model, name='wq', kernel_initializer=attention_params.get('wq_initializer', 'glorot_uniform'))
+        self.wk = tf.keras.layers.Dense(d_model, name='wk', kernel_initializer=attention_params.get('wk_initializer', 'glorot_uniform'))
+        self.wv = tf.keras.layers.Dense(d_model, name='wv', kernel_initializer=attention_params.get('wv_initializer', 'glorot_uniform'))
 
         self.dense = tf.keras.layers.Dense(d_model, name='dense')
 
         self.attention_type = attention_type
-        self.attention_layer = attention_type.create_layer(**kwargs)
+        self.attention_layer = attention_type.create_layer(**attention_params)
 
     def split_heads(self, x, batch_size):
         """Split the last dimension into (num_heads, depth).
@@ -96,8 +100,11 @@ class Attention(tf.keras.layers.Layer):
 
 
 class ScaledDotProductAttention(Attention):
-    def __init__(self, **kwargs):
+    def __init__(self,
+                 softmax_axis=-1,
+                 **kwargs):
         super(ScaledDotProductAttention, self).__init__(name='scaled_dot_attention', **kwargs)
+        self.softmax_axis = softmax_axis
 
     def call(self, inputs, mask=None, **kwargs):
         """Calculate the attention weights.
@@ -130,36 +137,75 @@ class ScaledDotProductAttention(Attention):
 
         # softmax is normalized on the last axis (seq_len_k) so that the scores
         # add up to 1.
-        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
+        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=self.softmax_axis)  # (..., seq_len_q, seq_len_k)
 
         output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
 
         return output, attention_weights
 
 
+def calculate_padding(input, scaling_factor: int = 32):
+    def scale(i: int, f: int) -> int:
+        return (f - i % f) % f
+
+    shape = tf.shape(input=input)
+    px = scale(tf.gather(shape, 1), scaling_factor)
+    py = scale(tf.gather(shape, 2), scaling_factor)
+    px = 0
+    return px, py
+
+
+def pad(input_tensors):
+    input, padding = input_tensors[0], input_tensors[1]
+    px, py = padding
+    shape = tf.keras.backend.shape(input)
+    output = tf.image.pad_to_bounding_box(input, 0, 0, tf.keras.backend.gather(shape, 1) + px,
+                                          tf.keras.backend.gather(shape, 2) + py)
+    return output
+
+
+def crop(input_tensors):
+    input, padding = input_tensors[0], input_tensors[1]
+
+    if input is None:
+        return None
+
+    three_dims = len(input.get_shape()) == 3
+    if three_dims:
+        input = tf.expand_dims(input, axis=-1)
+
+    px, py = padding
+    shape = tf.shape(input=input)
+    output = tf.image.crop_to_bounding_box(input, 0, 0, tf.gather(shape, 1) - px, tf.gather(shape, 2) - py)
+    return output
+
+
 class ScaledDotProductRelativeAttention(Attention):
     def __init__(self,
                  max_relative_position=16,
+                 max_relative_position_keys=-1,
+                 max_relative_position_values=-1,
                  **kwargs,
                  ):
         super(ScaledDotProductRelativeAttention, self).__init__(
             name='scaled_dot_relative_attention',
             **kwargs)
 
-        self.max_relative_position = max_relative_position
-        if not max_relative_position:
-            raise ValueError("Max relative position (%s) should be > 0 when using "
-                             "relative self attention." % (max_relative_position))
+        self.max_relative_position_keys = max_relative_position_keys if max_relative_position_keys > 0 else max_relative_position
+        self.max_relative_position_values = max_relative_position_values if max_relative_position_values > 0 else max_relative_position
+        if self.max_relative_position_keys <= 0:
+            raise ValueError(f"Max relative position ({self.max_relative_position_keys}) must be > 0")
+        if self.max_relative_position_values <= 0:
+            raise ValueError(f"Max relative position ({self.max_relative_position_values}) must be > 0")
 
         self.rel_pos_lookup_k = None
         self.rel_pos_lookup_v = None
 
     def build(self, input_shape):
         q, k, v = input_shape
-        vocab_size = self.max_relative_position * 2 + 1
         depth = k[3]
-        self.rel_pos_lookup_k = tf.keras.layers.Embedding(vocab_size, depth, name="embedding_k")
-        self.rel_pos_lookup_v = tf.keras.layers.Embedding(vocab_size, depth, name="embedding_v")
+        self.rel_pos_lookup_k = tf.keras.layers.Embedding(self.max_relative_position_keys * 2 + 1, depth)
+        self.rel_pos_lookup_v = tf.keras.layers.Embedding(self.max_relative_position_values * 2 + 1, depth)
 
     def call(self, inputs, mask=None, single_step=False):
         """Calculate the attention weights.
@@ -179,9 +225,11 @@ class ScaledDotProductRelativeAttention(Attention):
         q, k, v = inputs
         keys_length = tf.shape(k)[2]
         query_length = tf.shape(q)[2]
-        relative_pos = relative_positions(query_length, keys_length, self.max_relative_position)
-        relative_repr_keys = self.rel_pos_lookup_k(relative_pos)
-        relative_repr_values = self.rel_pos_lookup_v(relative_pos)
+        relative_pos_keys = relative_positions(query_length, keys_length, self.max_relative_position_keys)
+        relative_pos_values = relative_positions(query_length, keys_length, self.max_relative_position_values)
+
+        relative_repr_keys = self.rel_pos_lookup_k(relative_pos_keys)
+        relative_repr_values = self.rel_pos_lookup_v(relative_pos_values)
         matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         matmul_qk += matmul_with_relative_representations(q, relative_repr_keys, transpose_b=True)
 
@@ -214,8 +262,17 @@ def relative_positions(length_q, length_k, maximum_position):
     if length_q is length_k:
         range_vec_q = range_vec_k = tf.range(length_q)
     else:
-        range_vec_k = tf.range(length_k)
-        range_vec_q = range_vec_k[-length_q:]
+        def k_q():
+            range_vec_k = tf.range(length_k)
+            range_vec_q = range_vec_k[-length_q:]
+            return range_vec_k, range_vec_q
+
+        def q_k():
+            range_vec_q = tf.range(length_q)
+            range_vec_k = range_vec_q[-length_k:]
+            return range_vec_k, range_vec_q
+
+        range_vec_k, range_vec_q = tf.cond(tf.greater(length_k, length_q), k_q, q_k)
     distance = range_vec_k[None, :] - range_vec_q[:, None]
     distance = tf.clip_by_value(distance, -maximum_position, maximum_position)
     return distance + maximum_position  # Return positive indices.

@@ -16,7 +16,8 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import shutil
-from typing import Dict
+from dataclasses import fields
+from typing import Dict, Optional
 import os
 import logging
 
@@ -32,17 +33,30 @@ class ResourceManager:
         self.dump_prefix_dir = dump_prefix_dir
         self._resources: Dict[str, Resource] = {}
 
-    def register(self, resource: Resource):
-        if resource.id in self._resources:
-            raise KeyError(f"A resource with id {resource.id} already exists.")
+    def register_all(self, params):
+        for field in fields(params):
+            value = getattr(params, field.name)
+            if value is None:
+                continue
 
-        if resource.abs_path is None:
-            resource.abs_path = os.path.abspath(os.path.join(resource.rel_path))
+            if isinstance(value, Resource):
+                self.register(field.name, value)
+            elif isinstance(value, str) and (field.type == Resource or field.type == Optional[Resource]):
+                self.register(field.name, Resource(value))
 
-        resource.basename = os.path.basename(resource.rel_path)
-        resource.dump_path = os.path.join(self.dump_prefix_dir, resource.dump_dir, resource.basename)
+    def register(self, r_id: str, resource: Resource):
+        if r_id in self._resources:
+            raise KeyError(f"A resource with id {r_id} already exists.")
 
-        self._resources[resource.id] = resource
+        if not resource.initialized:
+            if resource.abs_path is None:
+                resource.abs_path = os.path.abspath(os.path.join(self.working_dir, resource.rel_path))
+
+            resource.basename = os.path.basename(resource.rel_path)
+            resource.dump_path = os.path.join(self.dump_prefix_dir, resource.dump_dir, resource.basename)
+
+        resource.initialized = True
+        self._resources[r_id] = resource
         return resource
 
     def items(self):
@@ -55,9 +69,9 @@ class ResourceManager:
         return self._resources[resource_id]
 
     def dump(self, location: str):
-        for _, resource in self._resources.items():
+        for r_id, resource in self._resources.items():
             dump_dir = os.path.join(location, self.dump_prefix_dir, resource.dump_dir)
             abs_dump_path = os.path.join(location, resource.dump_path)
-            logger.debug(f"Exporting resource {resource.id} to {dump_dir}")
+            logger.debug(f"Exporting resource {r_id} to {dump_dir}")
             os.makedirs(dump_dir, exist_ok=True)
             shutil.copy(resource.abs_path, abs_dump_path)

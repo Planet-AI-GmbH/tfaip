@@ -22,10 +22,11 @@ import os
 import sys
 import tempfile
 from abc import ABC, abstractmethod
+from contextlib import ExitStack
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import logging
-from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict
+from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, Union
 import tensorflow as tf
 import tensorflow.keras as keras
 import re
@@ -33,6 +34,8 @@ import re
 from tensorflow_addons.optimizers import MovingAverage
 
 from tfaip.base.data.data import DataBase
+from tfaip.base.data.data_base_params import DataBaseParams
+from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.scenario.scenariobaseparams import ScenarioBaseParams, NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.base.scenario.util.keras_debug_model import KerasDebugModel
@@ -44,7 +47,7 @@ if TYPE_CHECKING:
     from tfaip.base.trainer import TrainerParams
     from tfaip.base.model import ModelBase
     from tfaip.base.lav import LAVParams, LAV
-    from tfaip.base.predict import Predictor, PredictorParams
+    from tfaip.base.predict import Predictor, PredictorParams, MultiModelPredictor
 
 logger = logging.getLogger(__name__)
 
@@ -94,34 +97,80 @@ class ScenarioBase(ABC):
         scenario_params.scenario_base_path_ = inspect.getfile(cls)
         scenario_params.scenario_module_ = cls.__module__
         scenario_params.model_params = cls.model_cls().get_params_cls()()
-        scenario_params.data_params = cls.data_cls().get_params_cls()()
+        scenario_params.data_params = cls.data_cls().get_default_params()
         return scenario_params
 
     @classmethod
+    def default_trainer_params(cls) -> 'TrainerParams':
+        trainer_params = cls.trainer_cls().get_params_cls()()
+        trainer_params.scenario_params = cls.default_params()
+        return trainer_params
+
+    @classmethod
     def params_from_dict(cls, d: dict) -> ScenarioBaseParams:
+        if cls == ScenarioBase:
+            raise ValueError("You are calling this method from the ScenarioBaseClass. This is not supported. "
+                             "Call this method from an actual Scenario or call from_dict to obtain the real class "
+                             "automatically.")
         params: ScenarioBaseParams = cls.get_params_cls().from_dict(d)
         params.model_params = cls.model_cls().get_params_cls().from_dict(d['model_params'])
         params.data_params = cls.data_cls().get_params_cls().from_dict(d['data_params'])
         return params
 
     @classmethod
-    def from_path(cls, path: str) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
-        trainer_params_json_path = os.path.join(path, 'trainer_params.json')
-        scenario_params_json_path = os.path.join(path, 'scenario_params.json')
-        if os.path.exists(trainer_params_json_path):
-            with open(trainer_params_json_path) as f:
-                scenario_params_dict = json.load(f)['scenario_params']
-        elif os.path.exists(scenario_params_json_path):
-            with open(scenario_params_json_path) as f:
-                scenario_params_dict = json.load(f)
-        else:
-            raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
+    def params_from_path(cls, path: str) -> ScenarioBaseParams:
+        if cls == ScenarioBase:
+            raise ValueError("You are calling this method from the ScenarioBaseClass. This is not supported. "
+                             "Call this method from an actual Scenario or call from_path to obtain the real class "
+                             "automatically.")
+        return cls.params_from_dict(cls.read_params_dict_from_path(path))
 
-        scenario_params_dict['data_params']['resource_base_path'] = path
-        return cls.from_dict(scenario_params_dict)
+    @classmethod
+    def read_params_dict_from_path(cls, path: str) -> dict:
+        if os.path.isfile(path):
+            # already a json file
+            with open(path) as f:
+                d = json.load(f)
+                if 'scenario_params' in d:
+                    scenario_params_dict = d['scenario_params']
+                else:
+                    scenario_params_dict = d
+        else:
+            trainer_params_json_path = os.path.join(path, 'trainer_params.json')
+            scenario_params_json_path = os.path.join(path, 'scenario_params.json')
+            if os.path.exists(trainer_params_json_path):
+                with open(trainer_params_json_path) as f:
+                    scenario_params_dict = json.load(f)['scenario_params']
+            elif os.path.exists(scenario_params_json_path):
+                with open(scenario_params_json_path) as f:
+                    scenario_params_dict = json.load(f)
+            else:
+                raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
+
+        scenario_params_dict['data_params']['resource_base_path_'] = path
+        return scenario_params_dict
+
+    @classmethod
+    def trainer_params_from_dict(cls, d: dict) -> 'TrainerParams':
+        if cls == ScenarioBase:
+            raise ValueError("You are calling this method from the ScenarioBaseClass. This is not supported. "
+                             "Call this method from an actual Scenario or call from_dict to obtain the real class "
+                             "automatically.")
+        scenario_params = cls.params_from_dict(d['scenario_params'])
+        trainer_params = cls.trainer_cls().get_params_cls().from_dict(d)
+        trainer_params.scenario_params = scenario_params
+        return trainer_params
+
+    @classmethod
+    def from_path(cls, path: str) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
+        if cls != ScenarioBase:
+            raise ValueError("You are calling this method from a real Scenario class. Call params_from_path instead")
+        return cls.from_dict(cls.read_params_dict_from_path(path))
 
     @classmethod
     def from_dict(cls, d: dict) -> Tuple[Type['ScenarioBase'], ScenarioBaseParams]:
+        if cls != ScenarioBase:
+            raise ValueError("You are calling this method from a real Scenario class. Call params_from_dict instead")
         scenario_params = ScenarioBaseParams.from_dict(d)
         spec = importlib.util.spec_from_file_location(scenario_params.scenario_module_,
                                                       scenario_params.scenario_base_path_)
@@ -150,12 +199,12 @@ class ScenarioBase(ABC):
     @classmethod
     @abstractmethod
     def data_cls(cls) -> Type['DataBase']:
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
     def model_cls(cls) -> Type['ModelBase']:
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def trainer_cls(cls) -> Type['Trainer']:
@@ -173,6 +222,15 @@ class ScenarioBase(ABC):
         return Predictor
 
     @classmethod
+    def evaluator_cls(cls) -> Type['Evaluator']:
+        return None
+
+    @classmethod
+    def multi_predictor_cls(cls) -> Type['MultiModelPredictor']:
+        from tfaip.base.predict.multimodelpredictor import MultiModelPredictor
+        return MultiModelPredictor
+
+    @classmethod
     def create_trainer(cls, trainer_params: 'TrainerParams', restore=False) -> 'Trainer':
         return cls.trainer_cls()(trainer_params, cls(trainer_params.scenario_params), restore)
 
@@ -182,8 +240,26 @@ class ScenarioBase(ABC):
                              lambda: cls.model_cls()(scenario_params.model_params))
 
     @classmethod
-    def create_predictor(cls, params: 'PredictorParams', scenario_params: 'ScenarioBaseParams') -> 'Predictor':
-        return cls.predictor_cls()(params, cls.model_cls()(scenario_params.model_params), cls.data_cls()(scenario_params.data_params))
+    def create_predictor(cls, model: str, params: 'PredictorParams') -> 'Predictor':
+        data_params = cls.params_from_path(model).data_params
+        predictor = cls.predictor_cls()(params, cls.data_cls()(data_params))
+        if isinstance(model, str):
+            model = keras.models.load_model(os.path.join(model, 'serve'),
+                                            compile=False,
+                                            custom_objects=cls.model_cls().get_all_custom_objects(),
+                                            )
+
+        predictor.set_model(model)
+        return predictor
+
+    @classmethod
+    def create_multi_predictor(cls, paths: List[str], params: 'PredictorParams') -> 'MultiModelPredictor':
+        predictor_cls = cls.multi_predictor_cls()
+        return predictor_cls.from_paths(paths, params, cls)
+
+    @classmethod
+    def create_evaluator(cls) -> Evaluator:
+        return cls.evaluator_cls()()
 
     @staticmethod
     def get_params_cls() -> Type[ScenarioBaseParams]:
@@ -252,34 +328,35 @@ class ScenarioBase(ABC):
             # lower_control_flow=True enables tf1 compatibility by disabling tf2 control flow for ops like if/while
             frozen_func = convert_variables_to_constants_v2(full_model_concrete, lower_control_flow=True)
             frozen_func.graph.as_graph_def()
-            path_frozen = os.path.join(path, 'frozen')
+            path_frozen = os.path.join(path, self._params.frozen_dir_)
             os.makedirs(path_frozen, exist_ok=True)
-            id_frozen = 'frozen_model.pb'
             tf.io.write_graph(graph_or_graph_def=frozen_func.graph,
                               logdir=path_frozen,
-                              name=id_frozen,
+                              name=self._params.frozen_filename_,
                               as_text=False)
 
         # Export serve models
         if self._params.export_serve:
             for label, export_graph in self._export_graphs.items():
                 if label == 'default':
-                    path_serve = os.path.join(path, 'serve')  # default model handled separately
+                    path_serve = os.path.join(path, self._params.default_serve_dir_)  # default model handled separately
                 else:
-                    path_serve = os.path.join(path, 'additional', label)
-                os.makedirs(path_serve, exist_ok=True)
+                    path_serve = os.path.join(path, self._params.additional_serve_dir_, label)
+                os.makedirs(os.path.dirname(path_serve), exist_ok=True)
                 export_graph.model.save(path_serve, include_optimizer=False)
 
-        with open(os.path.join(path, 'net_config.json'), 'w') as f:
-            json.dump(self.net_config().to_dict(), f, indent=2)
+
+        if self._params.export_net_config_:
+            with open(os.path.join(path, self._params.net_config_filename_), 'w') as f:
+                json.dump(self.net_config().to_dict(), f, indent=2)
 
         if trainer_params_dict:
-            params_path = os.path.join(path, 'trainer_params.json')
+            params_path = os.path.join(path, self._params.trainer_params_filename_)
             logger.debug("Storing trainer params to '{}'".format(params_path))
             with open(params_path, 'w') as f:
                 json.dump(trainer_params_dict, f, indent=2)
         else:
-            params_path = os.path.join(path, 'scenario_params.json')
+            params_path = os.path.join(path, self._params.scenario_params_filename_)
             with open(params_path, 'w') as f:
                 json.dump(scenario_params_dict, f, indent=2)
 
@@ -319,9 +396,9 @@ class ScenarioBase(ABC):
             logger.info("Debugging Graph Construction. Breakpoints during construction are supported")
             # process one example in KerasDebugModel which builds the graph based on this example
             keras_debug_model = KerasDebugModel(self.model)
-            with self.data:
+            with self.data.get_train_data() as train_data:
                 out = keras_debug_model.predict(
-                    self._wrapped_train_data(steps_per_epoch=1).take(self._params.debug_graph_n_examples))
+                    self._wrap_data(train_data.input_dataset(), steps_per_epoch=1).take(self._params.debug_graph_n_examples))
             logger.info("Mean values of debug model output: {}".format({k: v.mean() for k, v in out.items()}))
 
         # This regroups all inputs/targets as input to allow to access the complete data during training
@@ -420,21 +497,26 @@ class ScenarioBase(ABC):
                 keras.models.load_model(tmp)
             logger.info("Model can be successfully loaded")
 
-    def _wrap_data(self, dataset, steps_per_epoch, batch_size):
+    def _wrap_data(self, dataset, steps_per_epoch):
+        if dataset is None:
+            return None
+
         # wrapper for model fit (allows for other arguments)
-        def regroup(inputs, targets):
+        def regroup(inputs: Dict[str, tf.Tensor], targets: Dict[str, tf.Tensor]):
+            batch_size = tf.shape(next(iter(inputs.values() if len(inputs) > 0 else targets.values())))[0]
             # see setup_training
             # regroup data for training into all as input, and only loss and metrics as output
             # this is required to allow for custom losses with multiple inputs
+            zeros = tf.repeat(tf.constant(0, dtype=tf.int64), batch_size)
             if self._keras_train_model:
-                step_epoch = {'step': [self._keras_train_model.optimizer.iterations] * batch_size,
-                              'epoch': [self._keras_train_model.optimizer.iterations // steps_per_epoch] * batch_size}
+                step_epoch = {'step': zeros + self._keras_train_model.optimizer.iterations,
+                              'epoch': zeros + self._keras_train_model.optimizer.iterations // steps_per_epoch}
             else:
                 # No train model exists, this happens on model debug
-                step_epoch = {'step': [0] * batch_size,
-                              'epoch': [0] * batch_size}
+                step_epoch = {'step': zeros,
+                              'epoch': zeros}
             wrapped_inputs = {**inputs, **targets, **step_epoch}
-            wrapped_targets = {**{l: [0] * batch_size for l in
+            wrapped_targets = {**{l: zeros for l in
                                   self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names},
                                **{k: targets[v.target] for k, v in self.model.metric().items() if v.target in targets}
                                }
@@ -442,12 +524,6 @@ class ScenarioBase(ABC):
             return wrapped_inputs, wrapped_targets, wrapped_weights
 
         return dataset.map(regroup)
-
-    def _wrapped_train_data(self, steps_per_epoch):
-        return self._wrap_data(self.data.get_train_data(), steps_per_epoch, self._params.data_params.train_batch_size)
-
-    def _wrapped_val_data(self, steps_per_epoch):
-        return self._wrap_data(self.data.get_val_data(), steps_per_epoch, self._params.data_params.val_batch_size)
 
     def fit(self,
             epochs,
@@ -457,13 +533,21 @@ class ScenarioBase(ABC):
             **kwargs):
         self._keras_train_model.summary(print_fn=logger.info)
 
-        with self.data:
-            self._keras_train_model.fit(self._wrapped_train_data(steps_per_epoch),
+        with ExitStack() as stack:
+            train_dataset = stack.enter_context(self.data.get_train_data()).input_dataset()
+            try:
+                val_dataset = stack.enter_context(self.data.get_val_data()).input_dataset()
+            except ValueError:
+                logger.warning("Training without validation.")
+                # No val dataset available
+                val_dataset = None
+
+            self._keras_train_model.fit(self._wrap_data(train_dataset, steps_per_epoch),
                                         epochs=epochs,
                                         callbacks=callbacks,
                                         steps_per_epoch=steps_per_epoch,
                                         initial_epoch=initial_epoch,
-                                        validation_data=self._wrapped_val_data(steps_per_epoch),
+                                        validation_data=self._wrap_data(val_dataset, steps_per_epoch),
                                         shuffle=False,
                                         **kwargs
                                         )

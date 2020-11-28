@@ -20,7 +20,7 @@ from abc import ABC
 import logging
 import os
 from datetime import datetime
-from typing import Type, Tuple, Union
+from typing import Type, Tuple, Union, Callable
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ProgbarLogger
 from typeguard import typechecked
@@ -38,6 +38,7 @@ from tfaip.base.trainer.callbacks.train_params_logger import TrainParamsLoggerCa
 from tfaip.base.trainer.callbacks.fix_metric_labels import FixMetricLabelsCallback
 from tfaip.base.trainer.optimizer.gradient_accumulation_optimizer import create_gradient_accumulation_optimizer
 from tfaip.base.trainer.trainerparams import TrainerParams
+from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.base.trainer.warmstart.warmstarter import Warmstarter
 from tfaip.base.trainer.optimizer.weights_moving_average import WeightsMovingAverage
 from tfaip.util.random import set_global_random_seed
@@ -56,21 +57,26 @@ class Trainer(ABC):
         return TrainerParams
 
     @staticmethod
-    def restore_trainer(checkpoint: Union[str, dict]) -> 'Trainer':
+    def trainer_from_dict(params_dict: dict, restore_weights=False) -> 'Trainer':
+        d = params_dict
+        scenario, scenario_params = ScenarioBase.from_dict(d['scenario_params'])
+        trainer_params: TrainerParams = scenario.trainer_cls().get_params_cls().from_dict(d)
+        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
+
+        # Load the actual scenario params for the particular scenario
+        trainer_params.scenario_params = scenario_params
+        trainer = scenario.create_trainer(trainer_params, restore=restore_weights)
+        return trainer
+
+    @classmethod
+    def restore_trainer(cls, checkpoint: Union[str, dict]) -> 'Trainer':
         if isinstance(checkpoint, str):
             with open(os.path.join(checkpoint, 'trainer_params.json')) as f:
                 d = json.load(f)
         else:
             d = checkpoint
 
-        trainer_params: TrainerParams = TrainerParams.from_dict(d)
-        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
-        scenario, scenario_params = ScenarioBase.from_dict(d['scenario_params'])
-
-        # Load the actual scenario params for the particular scenario
-        trainer_params.scenario_params = scenario_params
-        trainer = scenario.create_trainer(trainer_params, restore=True)
-        return trainer
+        return cls.trainer_from_dict(d, restore_weights=True)
 
     @typechecked
     def __init__(self, params: TrainerParams, scenario: ScenarioBase, restore=False):
@@ -100,19 +106,20 @@ class Trainer(ABC):
         if self._params.force_eager:
             tf.config.run_functions_eagerly(run_eagerly=True)
 
-        self._warmstarter = Warmstarter(self._params.warmstart_params)
         self._scenario = scenario
         scenario.setup()
         self._data = scenario.data
         self._model = scenario.model
         self.stop_training = False
 
-        self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train_batch_size
+        self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train.batch_size
         if self._steps_per_epoch <= 0:
             raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "
-                             f"{self._params.samples_per_epoch} < {self._data.params().train_batch_size}")
+                             f"{self._params.samples_per_epoch} < {self._data.params().train.batch_size}")
 
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(self._params.tf_cpp_min_log_level)
+
+        self._callbacks = []
 
     @property
     def scenario(self):
@@ -123,7 +130,10 @@ class Trainer(ABC):
         return self._params
 
     @distribute_strategy
-    def train(self, callbacks=None):
+    def train(self,
+              callbacks=None,
+              warmstart_fn: Callable[[WarmstartParams], Warmstarter] = Warmstarter,
+              ):
         external_callbacks = callbacks
         callbacks = []
 
@@ -138,11 +148,12 @@ class Trainer(ABC):
             logger.info("Restoring from checkpoint '{}'".format(self._params.checkpoint_dir))
             # load_weights also restores the optimizer weights!
             self._scenario.keras_train_model.load_weights(
-                os.path.join(self._params.checkpoint_dir, 'variables', 'variables'))
+                os.path.join(self._params.checkpoint_dir, self._params.saved_checkpoint_sub_dir_, 'variables', 'variables'))
             if self._params.warmstart_params.model:
                 logger.warning("Ignoring warmstart since training is resumed from a checkpoint")
         else:
-            self._warmstarter.warmstart(self._scenario.keras_train_model)
+            custom_objects = self._model.__class__.get_all_custom_objects()
+            warmstart_fn(self.params.warmstart_params).warmstart(self._scenario.keras_train_model, custom_objects)
 
         callbacks.append(FixMetricLabelsCallback())
         callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
@@ -154,12 +165,20 @@ class Trainer(ABC):
             callbacks.append(LAVCallback(self._params, self._scenario))
 
         if self._params.checkpoint_dir:
+            save_freq = self._params.checkpoint_save_freq_
             if self._params.write_checkpoints:
                 # we need only weights to restore the training, the graph will be reconstructed
-                variables_path = os.path.join(self._params.checkpoint_dir, 'variables', 'variables')
-                callbacks.append(tf.keras.callbacks.ModelCheckpoint(variables_path, save_weights_only=True))
+                variables_path = os.path.join(self._params.checkpoint_dir, self._params.checkpoint_sub_dir_, 'variables', 'variables')
+                if isinstance(save_freq, str) and save_freq.isdigit():
+                    save_freq = int(save_freq)
+                if isinstance(save_freq, int):
+                    save_freq = save_freq * self._steps_per_epoch
+                if save_freq == 0:
+                    save_freq = None
+        else:
+            save_freq = None
 
-        callbacks.append(TrainParamsLoggerCallback(self._params, self._params.checkpoint_dir))
+        callbacks.append(TrainParamsLoggerCallback(self._params, save_freq))
 
         if self._params.calc_ema:
             # EMA must be before export best to export ema
@@ -191,16 +210,22 @@ class Trainer(ABC):
                 # Set fixed random seed for training if desired, this makes training independent of previous operations
                 # such as loading/creating model from scratch
                 set_global_random_seed(self._params.random_seed + 1)
-            self._scenario.fit(epochs=self._params.epochs,
-                               initial_epoch=self._params.current_epoch,
-                               steps_per_epoch=self._steps_per_epoch,
-                               callbacks=callbacks,
-                               )
+
+            self._callbacks = callbacks
+            self.fit()
 
         # export the model to "checkpoint_dir/export"
         if self._params.checkpoint_dir and self._params.export_final:
             logger.info("Final export of the model.")
             self._scenario.export(os.path.join(self._params.checkpoint_dir, 'export'))
+
+    def fit(self):
+        self._scenario.fit(epochs=self._params.epochs,
+                           initial_epoch=self._params.current_epoch,
+                           steps_per_epoch=self._steps_per_epoch,
+                           validation_freq=self._params.val_every_n,
+                           callbacks=self._callbacks,
+                           )
 
     @typechecked
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:

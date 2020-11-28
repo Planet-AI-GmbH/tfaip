@@ -16,3 +16,4 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from tfaip.base.predict.predictor import Predictor, PredictorParams
+from tfaip.base.predict.multimodelpredictor import MultiModelPredictor

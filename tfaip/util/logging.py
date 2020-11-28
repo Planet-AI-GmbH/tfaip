@@ -19,6 +19,8 @@ import os
 import logging
 
 # Initialize logging
+import sys
+
 FORMAT = '{levelname:<8s} {asctime} {name:>30.30s}: {message}'
 formatter = logging.Formatter(FORMAT, style='{')
 logger = logging.getLogger(__name__)
@@ -27,6 +29,17 @@ logging.getLogger().handlers[0].setFormatter(formatter)
 
 for handler in logging.getLogger("tensorflow").handlers:
     handler.setFormatter(formatter)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 
 def setup_log(log_dir, append, log_name='train.log'):

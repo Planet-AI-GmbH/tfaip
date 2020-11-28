@@ -19,17 +19,16 @@ import tensorflow.keras as keras
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
-from tfaip.base.model.components.attention.masking import _create_padding_mask, _create_image_padding_mask
+from tfaip.base.model.components.attention.masking import create_padding_mask, create_image_padding_mask
 from tfaip.base.model.components.conv import Conv2D
 from tfaip.base.model.components.normalization import NormalizeImage
 from tfaip.base.model.components.pool import MaxPool2D
 
 
 class ConvLayers3(keras.layers.Layer):
-    def __init__(self, subsampling: int, num_classes, mvn: bool = True, sobel_filter=False, drop_rate=0.0, auto_masking=True):
+    def __init__(self, subsampling: int, mvn: bool = True, sobel_filter=False, drop_rate=0.0, auto_masking=True):
         super(ConvLayers3, self).__init__()
         self._subsampling = subsampling
-        self._num_classes = num_classes
         self._mvn = mvn
         self._sobel_filter = sobel_filter
         self._auto_masking = auto_masking
@@ -71,7 +70,7 @@ class ConvLayers3(keras.layers.Layer):
 
         def create_mask(sl):
             if self._auto_masking:
-                return K.expand_dims(_create_image_padding_mask(sl))
+                return K.expand_dims(create_image_padding_mask(sl))
             return None
 
         conv1 = self._conv1(images, training=training, mask=create_mask(seq_length))
@@ -98,6 +97,6 @@ def concat_sobel(images):
     f_sobel_x = tf.reshape(f_sobel_x, (3, 3, 1, 1))
     f_sobel_y = tf.constant([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=tf.float32)
     f_sobel_y = tf.reshape(f_sobel_y, (3, 3, 1, 1))
-    sobel_x = tf.nn.conv2d(images, f_sobel_x, padding='SAME')
-    sobel_y = tf.nn.conv2d(images, f_sobel_y, padding='SAME')
+    sobel_x = tf.nn.conv2d(images, f_sobel_x, strides=1, padding='SAME')
+    sobel_y = tf.nn.conv2d(images, f_sobel_y, strides=1, padding='SAME')
     return tf.concat([images, sobel_x, sobel_y], axis=-1)

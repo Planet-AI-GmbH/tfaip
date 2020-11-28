@@ -17,10 +17,9 @@
 # ==============================================================================
 import logging
 from tfaip.util.logging import setup_log
-from argparse import ArgumentParser, RawTextHelpFormatter
+from argparse import RawTextHelpFormatter
 from tfaip.scenario import scenarios
-from tfaip.util.argument_parser import add_args_group
-
+from tfaip.util.argument_parser import add_args_group, TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ def main(args):
 
 
 def parse_args(args=None):
-    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser = TFAIPArgumentParser(formatter_class=RawTextHelpFormatter)
 
     # setup scenarios as subparsers (all available)
     sub_parsers = parser.add_subparsers(dest='scenario', required=True)
@@ -54,9 +53,8 @@ def parse_args(args=None):
     for scenario_def in scenarios():
         # add scenario parameters as sub parameters
         p = sub_parsers.add_parser(scenario_def.name, formatter_class=parser.formatter_class)
-        default_trainer_params = scenario_def.scenario.trainer_cls().get_params_cls()()
-        default_trainer_params.scenario_params = scenario_def.scenario.default_params()
-        add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=scenario_def.scenario.trainer_cls().get_params_cls())
+        default_trainer_params = scenario_def.scenario.default_trainer_params()
+        add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=default_trainer_params.__class__)
 
     return parser.parse_args(args)
 

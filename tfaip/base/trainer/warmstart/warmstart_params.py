@@ -38,7 +38,10 @@ class WarmstartParams:
              "changed"
     ))
     rename: List[str] = field(default_factory=list, metadata=dc_meta(
-        help="A list of renaming rules to perform on the weights. Format: [FROM->TO,FROM->TO,...]"
+        help="A list of renaming rules to perform on the loaded weights. Format: [FROM->TO,FROM->TO,...]"
+    ))
+    rename_targets: List[str] = field(default_factory=list, metadata=dc_meta(
+        help="A list of renaming rules to perform on the target weights. Format: [FROM->TO,FROM->TO,...]"
     ))
 
     exclude: str = field(default=None, metadata=dc_meta(
@@ -47,4 +50,6 @@ class WarmstartParams:
     include: str = field(default=None, metadata=dc_meta(
         help="A regex applied on the loaded weights to include from loading."
     ))
+
+    auto_remove_numbers_for: List[str] = field(default_factory=lambda: ['lstm_cell'])
 

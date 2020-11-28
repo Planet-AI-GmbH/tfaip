@@ -17,7 +17,7 @@
 # ==============================================================================
 from functools import partial
 
-from tfaip.util.multiprocessing.data.pipeline import DataPipeline
+from tfaip.util.multiprocessing.data.pipeline import ParallelPipeline
 from typing import TYPE_CHECKING, Callable
 
 from tfaip.util.multiprocessing.data.worker import DataWorker
@@ -41,7 +41,7 @@ def create_worker(func):
     return ParallelMapWorker(func)
 
 
-class ParallelMapPipeline(DataPipeline):
+class ParallelMapPipeline(ParallelPipeline):
     def __init__(self, data, dataset: 'tf.data.Dataset', worker_func: Callable[[], DataWorker], processes: int, auto_repeat_input: bool = False):
         self.dataset = dataset
         self.worker_func = worker_func

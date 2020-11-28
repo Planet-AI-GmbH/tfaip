@@ -73,17 +73,23 @@ class Parameter:
 
             return ["--" + self.flag, value]
 
-class GPU(NamedTuple):
-    gpu: int
-    label: str
 
+class Device(NamedTuple):
+    device_id: int
+    label: str
+    is_gpu: bool
 
 
 class XLSXExperimenter:
-    def __init__(self, xlsx_path, gpus=None, dry_run=False, python=None, use_ts=False):
+    def __init__(self, xlsx_path, gpus=None, cpus=None, dry_run=False, python=None, use_ts=False):
+        gpus = gpus if gpus else []
+        cpus = cpus if cpus else []
+        assert not (use_ts and not gpus and not cpus)
+        assert not (gpus and cpus)
+
         self.xlsx_path = xlsx_path
         self.with_gpu = gpus and len(gpus) > 0
-        self.gpus = [GPU(int(gpu[0]), gpu) for gpu in gpus] if gpus else None
+        self.devices = [Device(int(gpu[0]), gpu, True) for gpu in gpus] + [Device(int(d[0]), d, False) for d in cpus]
         self.dry_run = dry_run
         self.python = python
         self.use_ts = use_ts
@@ -177,27 +183,34 @@ class XLSXExperimenter:
 
         print("Starting {} calls".format(len(all_commands)))
 
-        gpu_idx = 0
+        device_idx = 0
         for c in all_commands:
-            ts_socket ='cpu'
-            if self.with_gpu:
-                ts_socket = 'gpu{}'.format(self.gpus[gpu_idx].label)
+            if not self.use_ts:
+                ts_socket = None
+            elif self.with_gpu:
+                ts_socket = 'gpu{}'.format(self.devices[device_idx].label)
+            else:
+                ts_socket = 'cpu{}'.format(self.devices[device_idx].label)
 
+            tsp_call = []
             env = os.environ.copy()
-            env['TS_SOCKET'] = ts_socket
             env['ID'] = str(c.id)
             env['PYTHON'] = self.python
+            if self.use_ts:
+                env['TS_SOCKET'] = ts_socket
+                tsp_call = ['tsp', '-L', c.id]
 
             def single_param(k, v):
                 return get_parameter_by_flag(k).to_str(v)
 
-            call = ((['tsp', '-L', c.id] if self.use_ts else [])
+            call = (tsp_call
                     + [c.command, c.scenario]
-                    + (['--device_params', f'gpus={self.gpus[gpu_idx].gpu}'] if self.with_gpu else [])
+                    + (['--device_params', f'gpus={self.devices[device_idx].device_id}'] if self.with_gpu else [])
                     + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
-                    + sum([['--{}'.format(group_name)] + [single_param(k, v) for k, v in group.items()] for group_name, group in c.grouped_commands.items()], [])
+                    + sum([['--{}'.format(group_name)] + [single_param(k, v) for k, v in group.items()] for
+                           group_name, group in c.grouped_commands.items()], [])
                     )
-            call = [c for c in call if c]
+            call = [str(c) for c in call if c]
             if not self.dry_run:
                 if c.cleanup:
                     print('Cleanup not implemented yet')
@@ -213,5 +226,5 @@ class XLSXExperimenter:
             else:
                 print('DRY RUN [{}, {}]>> {}'.format(ts_socket, c.id, ' '.join(call)))
 
-            if self.with_gpu:
-                gpu_idx = (gpu_idx + 1) % len(self.gpus)
+            if self.use_ts:
+                device_idx = (device_idx + 1) % len(self.devices)

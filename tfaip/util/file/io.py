@@ -47,7 +47,7 @@ def file_path_with_mkdirs(path_with_filen_name):
 
 class IOContext(object):
     def get_io_filepath(self, filepath: str):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class DefaultIOContext(IOContext):

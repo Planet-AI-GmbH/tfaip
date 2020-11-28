@@ -147,63 +147,62 @@ class LAV(ABC):
         _keras_model.run_eagerly = run_eagerly
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model
-        with self._data:
-            eval_inputs = {**_keras_model.input, **self._data.create_target_as_input_layers()}
-            metric_outputs = self._model.extended_metric(eval_inputs, _keras_model.output)
-            simple_metrics = self._model.metric()
-            eval_model = keras.Model(eval_inputs, {**metric_outputs, **_keras_model.output})
-            eval_model.run_eagerly = run_eagerly
+        eval_inputs = {**_keras_model.input, **self._data.create_target_as_input_layers()}
+        metric_outputs = self._model.extended_metric(eval_inputs, _keras_model.output)
+        simple_metrics = self._model.metric()
+        eval_model = keras.Model(eval_inputs, {**metric_outputs, **_keras_model.output})
+        eval_model.run_eagerly = run_eagerly
 
-            # accumulate the mean
-            metrics_accum = MetricsAccumulator()
-            for val_data in self._data.get_lav_datasets():
-                self.benchmark_results = LAVBenchmarkResults()
-                val_data = val_data.take(self._params.max_iter)
-                with MeasureTime() as total_time:
-                    for step, (inputs, targets) in enumerate(val_data):
-                        combined_batch = {**inputs, **targets}
-                        with MeasureTime() as time_of_batch:
-                            r = eval_model.predict_on_batch(combined_batch)
-                        batch_size = next(iter(inputs.values())).shape[0]  # Take an arbitrary input to get the first dimension
-                        self.benchmark_results.n_batches += 1
-                        self.benchmark_results.n_samples += batch_size
-                        self.benchmark_results.avg_time_per_batch += time_of_batch.duration
-                        self.benchmark_results.avg_time_per_sample += time_of_batch.duration
-                        for i in range(batch_size):
-                            un_batched_inputs = {k: v[i].numpy() for k, v in inputs.items()}
-                            un_batched_targets = {k: v[i].numpy() for k, v in targets.items()}
-                            un_batched_outputs = {k: v[i] for k, v in r.items()}
-                            self._on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
-                            for cb in callbacks:
-                                cb.on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
-                            if not self._params.silent:
-                                self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets, self._data)
-
-                        sample_weights = self._model.sample_weights(inputs, targets)
-                        for k, metric in simple_metrics.items():
-                            metric.metric.update_state(combined_batch[metric.target], r[metric.output], sample_weights.get(k, None))
-
-                        metrics_r = {k: r[k] for k in metric_outputs.keys()}
-                        sample_weights = {k: v.numpy() for k, v in sample_weights.items()}
-                        metrics_accum.accumulate_dict_sum(metrics_r, sample_weights)
-                        self._on_step_end(inputs, targets, r, metrics_r)
+        # accumulate the mean
+        metrics_accum = MetricsAccumulator()
+        for val_data in self._data.get_lav_datasets():
+            self.benchmark_results = LAVBenchmarkResults()
+            with MeasureTime() as total_time, val_data as rvd:
+                dataset = rvd.input_dataset().take(self._params.max_iter)
+                for step, (inputs, targets) in enumerate(dataset):
+                    combined_batch = {**inputs, **targets}
+                    with MeasureTime() as time_of_batch:
+                        r = eval_model.predict_on_batch(combined_batch)
+                    batch_size = next(iter(inputs.values())).shape[0]  # Take an arbitrary input to get the first dimension
+                    self.benchmark_results.n_batches += 1
+                    self.benchmark_results.n_samples += batch_size
+                    self.benchmark_results.avg_time_per_batch += time_of_batch.duration
+                    self.benchmark_results.avg_time_per_sample += time_of_batch.duration
+                    for i in range(batch_size):
+                        un_batched_inputs = {k: v[i].numpy() for k, v in inputs.items()}
+                        un_batched_targets = {k: v[i].numpy() for k, v in targets.items()}
+                        un_batched_outputs = {k: v[i] for k, v in r.items()}
+                        self._on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
                         for cb in callbacks:
-                            cb.on_step_end(inputs, targets, r, metrics_r)
+                            cb.on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
+                        if not self._params.silent:
+                            self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets, self._data)
 
-                self.benchmark_results.total_time = total_time.duration
-                self.benchmark_results.avg_time_per_batch /= self.benchmark_results.n_batches
-                self.benchmark_results.avg_time_per_sample /= self.benchmark_results.n_samples
-                self.benchmark_results.batches_per_second = 1 / self.benchmark_results.avg_time_per_batch
-                self.benchmark_results.samples_per_second = 1 / self.benchmark_results.avg_time_per_sample
+                    sample_weights = self._model.sample_weights(inputs, targets)
+                    for k, metric in simple_metrics.items():
+                        metric.metric.update_state(combined_batch[metric.target], r[metric.output], sample_weights.get(k, None))
 
-                # print the output
-                all_metric_results = {**metrics_accum.final(), **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items()}}
-                self._on_lav_end(all_metric_results)
-                for cb in callbacks:
-                    cb.on_lav_end(all_metric_results)
-                if not self._params.silent:
-                    print(json.dumps(all_metric_results, indent=2))
-                yield all_metric_results
+                    metrics_r = {k: r[k] for k in metric_outputs.keys()}
+                    sample_weights = {k: v.numpy() for k, v in sample_weights.items()}
+                    metrics_accum.accumulate_dict_sum(metrics_r, sample_weights)
+                    self._on_step_end(inputs, targets, r, metrics_r)
+                    for cb in callbacks:
+                        cb.on_step_end(inputs, targets, r, metrics_r)
+
+            self.benchmark_results.total_time = total_time.duration
+            self.benchmark_results.avg_time_per_batch /= self.benchmark_results.n_batches
+            self.benchmark_results.avg_time_per_sample /= self.benchmark_results.n_samples
+            self.benchmark_results.batches_per_second = 1 / self.benchmark_results.avg_time_per_batch
+            self.benchmark_results.samples_per_second = 1 / self.benchmark_results.avg_time_per_sample
+
+            # print the output
+            all_metric_results = {**metrics_accum.final(), **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items()}}
+            self._on_lav_end(all_metric_results)
+            for cb in callbacks:
+                cb.on_lav_end(all_metric_results)
+            if not self._params.silent:
+                print(json.dumps(all_metric_results, indent=2))
+            yield all_metric_results
 
     def _on_sample_end(self, inputs, targets, outputs):
         pass

@@ -17,6 +17,7 @@
 # ==============================================================================
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
+import tensorflow as tf
 
 
 def rnn_transpose_time(x):
@@ -85,3 +86,27 @@ class BRNNLayer(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         out = self._bidirectional(inputs, **kwargs)
         return out
+
+
+class ReversePadded(keras.layers.Layer):
+    def call(self, inputs, **kwargs):
+        values, enc_len = inputs
+        seq_len = tf.shape(values)[1]
+        batch_size = tf.shape(values)[0]
+
+        batch = tf.constant(0, shape=[])
+        def cond(b, x):
+            return tf.less(b, batch_size)
+
+        values_0 = tf.zeros(shape=tf.concat(([0], tf.shape(values)[1:]), axis=0), dtype=values.dtype)
+
+        def loop(b, prev_values):
+            el = tf.squeeze(tf.gather(enc_len, b))
+            new_values = tf.roll(tf.reshape(tf.gather(values, b, axis=0), tf.shape(values)[1:]), shift=seq_len - el, axis=0)[::-1]
+            return tf.add(b, 1), tf.concat((prev_values, tf.expand_dims(new_values, axis=0)), axis=0)
+
+        value_shape_invariant = [None]
+        value_shape_invariant.extend(values.shape[1:])
+        value_shape_invariant = tf.TensorShape(value_shape_invariant)
+        _, inv_values = tf.while_loop(cond, loop, [batch, values_0], shape_invariants=[batch.shape, value_shape_invariant])
+        return inv_values

@@ -15,12 +15,8 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import json
-import os
-from argparse import ArgumentParser
-
 from tfaip.base.lav.callbacks.dump_results import DumpResultsCallback
-from tfaip.util.argument_parser import add_args_group
+from tfaip.util.argument_parser import add_args_group, TFAIPArgumentParser
 
 import logging
 
@@ -50,7 +46,7 @@ def main(args, scenario_meta, scenario_params):
 
 def parse_args(args=None):
     from tfaip.base.scenario import ScenarioBase
-    parser = ArgumentParser()
+    parser = TFAIPArgumentParser()
     parser.add_argument('--export_dir', required=True)
     parser.add_argument('--run_eagerly', action='store_true', help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!")
     parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
@@ -61,7 +57,7 @@ def parse_args(args=None):
     lav_params = scenario.lav_cls().get_params_cls()()
     lav_params.model_path_ = args.export_dir
 
-    parser = ArgumentParser()
+    parser = TFAIPArgumentParser()
     add_args_group(parser, group='data_params', default=scenario_params.data_params, params_cls=scenario.data_cls().get_params_cls())
     add_args_group(parser, group='lav_params', default=lav_params, params_cls=scenario.lav_cls().get_params_cls())
 

@@ -26,7 +26,8 @@ class FixMetricLabelsCallback(cb.Callback):
 
     def on_train_begin(self, logs=None):
         # store original metric names
-        self.original_metrics = self.model.compiled_metrics._weighted_metrics
+        if len(self.original_metrics) == 0:
+            self.original_metrics = self.model.compiled_metrics._weighted_metrics
 
     def on_epoch_end(self, epoch, logs=None):
         self.fix(logs)
@@ -40,9 +41,13 @@ class FixMetricLabelsCallback(cb.Callback):
     def on_test_batch_end(self, batch, logs=None):
         self.fix(logs)
 
-    def fix(self, logs):
+    def fix(self, logs: dict):
         if logs is None:
             return
+
+        for name in list(logs.keys()):
+            if 'multi_metric' in name:
+                del logs[name]
 
         for n, m in self.original_metrics.items():
             if not m or not hasattr(m, 'name') or m.name == n:
@@ -50,4 +55,3 @@ class FixMetricLabelsCallback(cb.Callback):
             if m.name in logs and n not in logs:
                 logs[n] = logs[m.name]
                 del logs[m.name]
-

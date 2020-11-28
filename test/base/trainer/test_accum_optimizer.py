@@ -26,11 +26,12 @@ from tfaip.scenario.tutorial.scenario import TutorialScenario
 
 
 def get_default_data_params():
-    return DataParams(
-        train_batch_size=1,
-        val_batch_size=1,
-        val_limit=10,
-    )
+    params = DataParams()
+    params.dataset = 'fashion_mnist'
+    params.train.batch_size = 1
+    params.val.batch_size = 1
+    params.val.limit = 10
+    return params
 
 
 def get_default_scenario_params():
@@ -49,7 +50,7 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         accum = 10
         store_logs_callback = StoreLogsCallback()
         scenario_params = get_default_scenario_params()
-        scenario_params.data_params.train_batch_size = accum
+        scenario_params.data_params.train.batch_size = accum
         trainer_params = TrainerParams(
             epochs=10,
             samples_per_epoch=accum,
@@ -64,7 +65,7 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         first_train_logs = store_logs_callback.logs
 
         clear_session()
-        scenario_params.data_params.train_batch_size = 1
+        scenario_params.data_params.train.batch_size = 1
         trainer_params.train_accum_steps = accum
         trainer_params.current_epoch = 0
         trainer_params.calc_ema = True
@@ -90,7 +91,7 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         accum = 3
         store_logs_callback = StoreLogsCallback()
         scenario_params = get_default_scenario_params()
-        scenario_params.data_params.train_batch_size = accum
+        scenario_params.data_params.train.batch_size = accum
         trainer_params = TrainerParams(
             epochs=3,
             samples_per_epoch=accum,
@@ -105,7 +106,7 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         first_train_logs = store_logs_callback.logs
 
         clear_session()
-        scenario_params.data_params.train_batch_size = 1
+        scenario_params.data_params.train.batch_size = 1
         trainer_params.train_accum_steps = accum
         trainer_params.current_epoch = 0
 

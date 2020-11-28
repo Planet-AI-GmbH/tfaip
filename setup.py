@@ -37,6 +37,7 @@ setup(
             'tfaip-predict=tfaip.scripts.predict:run',
             'tfaip-experimenter=tfaip.scripts.experimenter:main',
             'tfaip-resume-training=tfaip.scripts.resume_training:main',
+            'tfaip-train-from-params=tfaip.scripts.train_from_params:main',
         ],
     },
     python_requires='>=3.7',

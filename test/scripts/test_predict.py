@@ -21,15 +21,17 @@ import tempfile
 import os
 
 
+work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scenario', 'tutorial', 'workdir'))
+
+
 class TestPredictScript(unittest.TestCase):
     def test_predict_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
             check_call(['tfaip-train', 'tutorial',
                         '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train_batch_size=2',
+                        '--data_params', 'train.batch_size=2',
                         ])
             check_call(['tfaip-predict',
-                        '--predict_lists', 'NONE',
+                        '--data', 'list=' + os.path.join(work_dir, 'data', '*.png'),
                         '--export_dir', os.path.join(d, 'best'),
-                        '--data_params', 'val_limit=10',
                         ])

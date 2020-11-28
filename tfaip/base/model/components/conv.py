@@ -47,7 +47,6 @@ class ConvToRnn(keras.layers.Layer):
         else:
             raise Exception(f"Only NCHW and NHWC are supported, but got {self._data_format}")
 
-
         shape_static = rnn_in.get_shape().as_list()
         y = shape_static[2]
         z = shape_static[3]
@@ -66,7 +65,7 @@ class Conv2D(keras.layers.Layer):
                  filters: int,
                  strides: Tuple[int, int] = (1, 1),
                  activation: Optional[str] = 'relu',
-                 padding: str = 'valid',
+                 padding: str = 'same',
                  use_bias: bool = True,
                  init_opt: int = 0,
                  bias_init: float = 0.1,

@@ -27,11 +27,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def get_default_data_params():
-    return DataParams(
-        train_batch_size=1,
-        val_batch_size=1,
-        val_limit=10,
-    )
+    params = DataParams()
+    params.dataset = "fashion_mnist"
+    params.train.batch_size = 1
+    params.val.batch_size = 1
+    params.val.limit = 10
+    return params
 
 
 def get_default_scenario_params():
@@ -79,7 +80,7 @@ class TestEarlyStopping(unittest.TestCase):
         trainer = TutorialScenario.create_trainer(trainer_params)
         trainer.train()
 
-        self.assertEqual(trainer_params.current_epoch, 5)
+        self.assertLess(trainer_params.current_epoch, trainer_params.epochs)
 
     def test_early_stopping_n_max(self):
         scenario_params = get_default_scenario_params()

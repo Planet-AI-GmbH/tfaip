@@ -15,17 +15,17 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from argparse import ArgumentParser
 from tfaip.base.trainer import Trainer
 import logging
 
+from tfaip.util.argument_parser import TFAIPArgumentParser
 from tfaip.util.logging import setup_log
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = ArgumentParser()
+    parser = TFAIPArgumentParser()
 
     parser.add_argument('checkpoint_dir', type=str, help='path to the checkpoint dir to resume from')
 

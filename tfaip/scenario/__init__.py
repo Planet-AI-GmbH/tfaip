@@ -82,3 +82,10 @@ def scenarios():
             load_all_scenarios(external_dir, os.path.split(external_dir)[-1], root_dir=external_dir)
 
     return _scenarios
+
+
+def get_scenario_by_name(name: str) -> ScenarioDefinition:
+    for scenario in scenarios():
+        if scenario.name == name:
+            return scenario
+    raise IndexError(f"Scenario of name {name} not found. Available scenarios {', '.join(s.name for s in scenarios())}")

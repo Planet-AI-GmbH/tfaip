@@ -25,14 +25,20 @@ def main():
     parser = ArgumentParser()
 
     parser.add_argument('--xlsx', required=True)
+    parser.add_argument('--no_use_tsp', action='store_true', default=False)
     parser.add_argument('--gpus', nargs='+', type=str, required=False, help="The gpus to use. For multiple runs on the same gpu use e.g. --gpus 3a 3b 3b")
+    parser.add_argument('--cpus', nargs='+', type=str, required=False, help="The cpu devices. e.g. --cpus 0 1 2 3 4 to schedule on 5 cpus")
     parser.add_argument('--dry_run', action='store_true')
     parser.add_argument('--python', default=sys.executable)
-    parser.add_argument('--no_use_ts', action='store_true', default=False)
 
     args = parser.parse_args()
 
-    exp = XLSXExperimenter(args.xlsx, args.gpus, args.dry_run, args.python, not args.no_use_ts)
+    if not args.no_use_tsp and not args.gpus and not args.cpus:
+        raise ValueError("No devices (gpu or cpu) found. Disable task spooler (--use_no_tsp) or use --gpus --cpus")
+    if args.gpus and args.cpus:
+        raise ValueError("Do not mix gpu and cpu calls.")
+
+    exp = XLSXExperimenter(args.xlsx, args.gpus, args.cpus, args.dry_run, args.python, not args.no_use_tsp)
     exp.run()
 
 
