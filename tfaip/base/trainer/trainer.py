@@ -114,6 +114,15 @@ class Trainer(ABC):
         self._model = scenario.model
         self.stop_training = False
 
+        if self._params.samples_per_epoch < 0:
+            logger.info("Got negative samples per epoch. Setting samples per epoch to dataset size. Note that this "
+                        "requires the creation of the data generator once before training.")
+            self._params.samples_per_epoch = len(self._data.get_train_data().create_data_generator())
+            if self._params.samples_per_epoch <= 0:
+                raise ValueError("Could not compute the number of samples per epoch based on the size of the data "
+                                 "generator. Please implement __len__ correctly.")
+            logger.info(f"Set samples per epoch to {self._params.samples_per_epoch}")
+
         self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train.batch_size
         if self._steps_per_epoch <= 0:
             raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "

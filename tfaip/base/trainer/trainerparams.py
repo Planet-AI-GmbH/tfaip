@@ -67,8 +67,8 @@ class TrainerParams:
     current_epoch: int = field(default=0, metadata=dc_meta(
         help="The epoch to start with. Usually 0, but can be overwritten for resume training."
     ))
-    samples_per_epoch: int = field(default=1000, metadata=dc_meta(
-        help="The number of samples (not batches!) to process per epoch."
+    samples_per_epoch: int = field(default=-1, metadata=dc_meta(
+        help="The number of samples (not batches!) to process per epoch. By default the size fo the training dataset"
     ))
     train_accum_steps: int = field(default=1, metadata=dc_meta(
         help="Artificially increase the batch size by accumulating the gradients of n_steps(=batches) before applying "
