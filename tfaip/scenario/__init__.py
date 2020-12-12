@@ -32,6 +32,7 @@ class ScenarioDefinition:
     path: str
     name: str
     scenario: Type['ScenarioBase']
+    module: str
 
 
 _scenarios: List[ScenarioDefinition] = []
@@ -63,7 +64,8 @@ def load_all_scenarios(dir_name, root_package='', root_dir=None):
                     register_scenario(ScenarioDefinition(
                         dir_name,
                         os.path.relpath(dir_name, root_dir).replace("/", '.'),
-                        scenario_cls
+                        scenario_cls,
+                        scenario_cls.__module__,
                     ))
 
         load_all_scenarios(os.path.join(dir_name, package_name), '.'.join([root_package, package_name]), root_dir)
@@ -89,3 +91,10 @@ def get_scenario_by_name(name: str) -> ScenarioDefinition:
         if scenario.name == name:
             return scenario
     raise IndexError(f"Scenario of name {name} not found. Available scenarios {', '.join(s.name for s in scenarios())}")
+
+
+def get_scenario_by_module(module: str) -> ScenarioDefinition:
+    for scenario in scenarios():
+        if scenario.module == module:
+            return scenario
+    raise IndexError(f"Scenario of module {module} not found. Available scenarios {', '.join(s.module for s in scenarios())}")

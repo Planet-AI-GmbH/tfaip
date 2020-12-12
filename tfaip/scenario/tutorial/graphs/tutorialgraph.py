@@ -35,10 +35,15 @@ class TutorialGraph(GraphBase, ABC):
     def call(self, inputs, **kwargs):
         # call function that is shared by all other graphs
         rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
-        logits = self._call(rescaled_img)  # call the actual graph (MLP or CNN)
+        backbone_out = self._call(rescaled_img)  # call the actual graph (MLP or CNN)
+        logits = backbone_out['logits']
         pred = K.softmax(logits, axis=-1)
         cls = K.argmax(pred, axis=-1)
         out = {'pred': pred, 'logits': logits, 'class': cls}
+
+        # Add conv out to outputs to show how to visualize using tensorboard
+        if 'conv_out' in backbone_out:
+            out['conv_out'] = backbone_out['conv_out']
 
         # Add a metric within the graph in the training model.
         # This metric will however not be used in LAV

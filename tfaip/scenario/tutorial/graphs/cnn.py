@@ -43,4 +43,7 @@ class ConvLayers(TutorialGraph):
 
     def _call(self, images, **kwargs):
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(images, **kwargs), **kwargs), **kwargs), **kwargs)
-        return self.logits(self.ff(self.flatten(conv_out), **kwargs), **kwargs)
+        return {
+            'logits': self.logits(self.ff(self.flatten(conv_out), **kwargs), **kwargs),
+            'conv_out': conv_out,
+        }

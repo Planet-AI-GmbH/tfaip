@@ -15,15 +15,14 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from typing import List, TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional
 
-from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory, DataProcessor, SequenceProcessor
-from tfaip.base.data.pipeline.definitions import PipelineMode, InputTargetSample, DataProcessorFactoryParams, \
-    inputs_pipeline_modes, targets_pipeline_modes
+from tfaip.base.data.pipeline.dataprocessor import SequenceProcessor
+from tfaip.base.data.pipeline.definitions import PipelineMode
 from tfaip.util.multiprocessing.data.worker import DataWorker
 
 if TYPE_CHECKING:
-    from tfaip.base.data.data_base_params import DataBaseParams
+    from tfaip.base.data.databaseparams import DataBaseParams
 
 
 class PreprocWorker(DataWorker):
@@ -35,7 +34,7 @@ class PreprocWorker(DataWorker):
         self.params = params
         self.mode = mode
         self.data_processor_fn = data_processor_fn
-        self.processors: SequenceProcessor = None
+        self.processors: Optional[SequenceProcessor] = None
 
     def initialize_thread(self):
         self.processors = self.data_processor_fn()

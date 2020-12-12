@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import json
 import os
 from abc import abstractmethod, ABC
@@ -5,20 +22,21 @@ from typing import Union, TYPE_CHECKING, List, Iterable, Type
 
 from tensorflow import keras
 
+from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline
-from tfaip.base.data.pipeline.definitions import InputOutputSample
+from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.predict.predictorbase import PredictorBase, PredictorParams
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
     from tfaip.base.scenario import ScenarioBase
     from tfaip.base.data.data import DataBase
-    from tfaip.base.data.data_base_params import DataBaseParams
+    from tfaip.base.data.databaseparams import DataBaseParams
 
 
 class MultiModelVoter(ABC):
     @abstractmethod
-    def vote(self, sample: InputOutputSample) -> InputOutputSample:
+    def vote(self, sample: Sample) -> Sample:
         raise NotImplementedError
 
 
@@ -75,23 +93,23 @@ class MultiModelPredictor(PredictorBase):
         for i in range(batch_size):
             un_batched_outputs = [{k: v[i] for k, v in output.items()} for output in outputs]
             un_batched_inputs = {k: v[i] for k, v in inputs.items()}
-            sample = InputOutputSample(un_batched_inputs, un_batched_outputs)
+            sample = Sample(un_batched_inputs, un_batched_outputs)
 
             yield sample
 
-    def _print_prediction(self, sample: InputOutputSample, print_fn):
+    def _print_prediction(self, sample: Sample, print_fn):
         for i, output in enumerate(sample.outputs):
             print_fn(f"\n     PREDICTION {i:02d}:\n" + "\n".join([f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in output.items()]))
 
-    def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[InputOutputSample]:
+    def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[Sample]:
         voter = self.create_voter(self._data.params())
         post_processors = [d.get_predict_data(pipeline.generator_params).create_output_pipeline() for d in self._datas]
         with pipeline as rd:
-            def split(sample: InputOutputSample):
-                return [InputOutputSample(sample.inputs, output, sample.meta) for output in sample.outputs]
+            def split(sample: Sample):
+                return [Sample(sample.inputs, output, sample.meta) for output in sample.outputs]
 
-            def join(samples: List[InputOutputSample]):
-                return InputOutputSample(samples[0].inputs, [s.targets for s in samples], [s.meta for s in samples])
+            def join(samples: List[Sample]):
+                return Sample(samples[0].inputs, [s.targets for s in samples], [s.meta for s in samples])
 
             results = tqdm_wrapper(self.predict_database(rd.input_dataset()),
                                    progress_bar=self._params.progress_bar,

@@ -19,15 +19,15 @@ import itertools
 from abc import ABC
 from dataclasses import dataclass, field, fields
 from random import Random
-from typing import List, Iterable, Type
+from typing import List, Iterable, Type, Optional
 
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBase
-from tfaip.base.data.data_base_params import DataBaseParams, DataGeneratorParams
+from tfaip.base.data.databaseparams import DataBaseParams, DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataGenerator, DataPipeline
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
-from tfaip.base.data.pipeline.definitions import PipelineMode, InputTargetSample
+from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 from tfaip.util.argument_parser import dc_meta
 from tfaip.base.data.listfile.data_list_helpers import ListMixDefinition, FileListProviderFn, FileListIterablor
 from tfaip.util.math.iter_helpers import ThreadSafeIterablor
@@ -36,10 +36,10 @@ from tfaip.util.math.iter_helpers import ThreadSafeIterablor
 @dataclass_json
 @dataclass
 class ListsFilePipelineParams(DataGeneratorParams):
-    lists: List[str] = field(default=None, metadata=dc_meta(
+    lists: Optional[List[str]] = field(default_factory=list, metadata=dc_meta(
         help="Training list files."
     ))
-    list_ratios: List[float] = field(default=None, metadata=dc_meta(
+    list_ratios: Optional[List[float]] = field(default=None, metadata=dc_meta(
         help="Ratios of picking list files. Must be supported by the scenario"
     ))
 
@@ -101,12 +101,12 @@ class ListsFileDataGenerator(DataGenerator):
 
         return file_names_it
 
-    def generate(self) -> Iterable[InputTargetSample]:
+    def generate(self) -> Iterable[Sample]:
         iterator = self._create_iterator()
         if self.params.limit > 0:
             iterator = itertools.islice(iterator, self.params.limit)
 
-        return map(lambda fn: InputTargetSample(fn, fn), iterator)
+        return map(lambda fn: Sample(fn, fn), iterator)
 
 
 class ListsFileDataPipeline(DataPipeline, ABC):

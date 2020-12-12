@@ -26,19 +26,21 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import logging
-from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, Union
+from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict
 import tensorflow as tf
 import tensorflow.keras as keras
 import re
 
+from tensorflow.python.keras.metrics import MeanMetricWrapper
 from tensorflow_addons.optimizers import MovingAverage
 
 from tfaip.base.data.data import DataBase
-from tfaip.base.data.data_base_params import DataBaseParams
 from tfaip.base.evaluator.evaluator import Evaluator
+from tfaip.base.evaluator.params import EvaluatorParams
 from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.scenario.scenariobaseparams import ScenarioBaseParams, NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.base.scenario.util.keras_debug_model import KerasDebugModel
+from tfaip.base.scenario.util.outputholder import OutputHolderMetricWrapper
 from tfaip.base.scenario.util.print_evaluate_layer import PrintEvaluateLayer
 
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
@@ -50,11 +52,6 @@ if TYPE_CHECKING:
     from tfaip.base.predict import Predictor, PredictorParams, MultiModelPredictor
 
 logger = logging.getLogger(__name__)
-
-
-# Label metric because it is used by keras fit as output suffix (e.g. ACC_metric)
-def metric(t, p):
-    return p
 
 
 def list_scenarios_in_module(module) -> List[Tuple[str, Type['ScenarioBase']]]:
@@ -70,6 +67,7 @@ def list_scenarios_in_module(module) -> List[Tuple[str, Type['ScenarioBase']]]:
 class KerasModelData:
     loss_names: List[str]
     extended_metric_names: List[str]
+    tensorboard_output_names: List[str]
 
 
 class ScenarioBase(ABC):
@@ -223,7 +221,7 @@ class ScenarioBase(ABC):
 
     @classmethod
     def evaluator_cls(cls) -> Type['Evaluator']:
-        return None
+        return Evaluator
 
     @classmethod
     def multi_predictor_cls(cls) -> Type['MultiModelPredictor']:
@@ -236,8 +234,12 @@ class ScenarioBase(ABC):
 
     @classmethod
     def create_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams') -> 'LAV':
-        return cls.lav_cls()(lav_params, lambda: cls.data_cls()(scenario_params.data_params),
-                             lambda: cls.model_cls()(scenario_params.model_params))
+        return cls.lav_cls()(lav_params,
+                             data_fn=lambda: cls.data_cls()(scenario_params.data_params),
+                             model_fn=lambda: cls.model_cls()(scenario_params.model_params),
+                             predictor_fn=cls.predictor_cls(),
+                             evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator_params),
+                             )
 
     @classmethod
     def create_predictor(cls, model: str, params: 'PredictorParams') -> 'Predictor':
@@ -258,8 +260,10 @@ class ScenarioBase(ABC):
         return predictor_cls.from_paths(paths, params, cls)
 
     @classmethod
-    def create_evaluator(cls) -> Evaluator:
-        return cls.evaluator_cls()()
+    def create_evaluator(cls, params: EvaluatorParams) -> Evaluator:
+        if cls.evaluator_cls() is None:
+            raise NotImplementedError
+        return cls.evaluator_cls()(params)
 
     @staticmethod
     def get_params_cls() -> Type[ScenarioBaseParams]:
@@ -277,7 +281,7 @@ class ScenarioBase(ABC):
         self._params = params
 
         # Track the global step
-        self._keras_model_data = KerasModelData([], [])
+        self._keras_model_data = KerasModelData([], [], [])
         self._keras_train_model: keras.Model = None
         self._export_graphs: Dict[str, ExportGraph] = {}
         self._keras_predict_model: keras.Model = None
@@ -453,10 +457,12 @@ class ScenarioBase(ABC):
             **real_outputs, **_losses, **_extended_metrics, **_additional_outputs,
             **{k: extended_outputs[v.output] for k, v in _simple_metrics.items()}
         }
+        _tensorboard_outputs = self.model.tensorboard_handler.setup(real_inputs, real_outputs)
 
         self._keras_model_data = KerasModelData(
             list(_losses.keys()),
             list(_extended_metrics.keys()),
+            list(_tensorboard_outputs.keys()),
         )
 
         # create the model (and a second one for exporting)
@@ -480,7 +486,8 @@ class ScenarioBase(ABC):
         self._keras_train_model.compile(optimizer=optimizer,
                                         loss={k: wrap_loss for k, _ in _losses.items()},
                                         loss_weights=self.model.loss_weights(),
-                                        weighted_metrics={**{k: metric for k, _ in _extended_metrics.items()},
+                                        metrics={k: OutputHolderMetricWrapper(v.shape, self._params.tensorboard_logger_history_size, name=k) for k, v in _tensorboard_outputs.items()},
+                                        weighted_metrics={**{k: MeanMetricWrapper(lambda t, p: p, name=k) for k, _ in _extended_metrics.items()},
                                                           **{k: v.metric for k, v in _simple_metrics.items()}},
                                         run_eagerly=run_eagerly,
                                         )
@@ -517,7 +524,7 @@ class ScenarioBase(ABC):
                               'epoch': zeros}
             wrapped_inputs = {**inputs, **targets, **step_epoch}
             wrapped_targets = {**{l: zeros for l in
-                                  self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names},
+                                  self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names + self._keras_model_data.tensorboard_output_names},
                                **{k: targets[v.target] for k, v in self.model.metric().items() if v.target in targets}
                                }
             wrapped_weights = self.model.sample_weights(inputs, targets)

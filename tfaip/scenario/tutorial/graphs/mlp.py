@@ -35,4 +35,6 @@ class MLPLayers(TutorialGraph):
         self.logits = FF(out_dimension=params.n_classes, activation=None, name='classify')
 
     def _call(self, images, **kwargs):
-        return self.logits(self.ff(self.flatten(images), **kwargs), **kwargs)
+        return {
+            'logits': self.logits(self.ff(self.flatten(images), **kwargs), **kwargs),
+        }

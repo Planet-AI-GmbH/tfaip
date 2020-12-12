@@ -19,7 +19,7 @@ import itertools
 from functools import partial
 from typing import Callable, TYPE_CHECKING, Iterable
 
-from tfaip.base.data.pipeline.definitions import InputTargetSample
+from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.data.pipeline.worker import PreprocWorker
 from tfaip.util.multiprocessing.data.pipeline import ParallelPipeline
 from tfaip.util.multiprocessing.data.worker import DataWorker
@@ -35,7 +35,7 @@ def create_preproc_worker(*args):
 class ParallelDataProcessorPipeline(ParallelPipeline):
     def __init__(self,
                  data_pipeline: 'DataPipeline',
-                 sample_generator: Iterable[InputTargetSample],
+                 sample_generator: Iterable[Sample],
                  create_processor_fn,
                  auto_repeat_input: bool,
                  ):

@@ -18,6 +18,7 @@
 from dataclasses import dataclass, field
 import logging
 import os
+from typing import Optional
 
 from dataclasses_json import dataclass_json
 
@@ -69,8 +70,8 @@ class DataBaseParams:
     ))
 
     # Store pre- and post-processing
-    pre_processors_: SamplePipelineParams = None
-    post_processors_: SamplePipelineParams = None
+    pre_processors_: Optional[SamplePipelineParams] = None
+    post_processors_: Optional[SamplePipelineParams] = None
 
     # Other params
     resource_base_path_: str = os.getcwd()

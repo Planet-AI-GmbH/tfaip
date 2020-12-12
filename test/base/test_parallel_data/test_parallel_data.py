@@ -20,7 +20,7 @@ from typing import Callable, Iterable, Type
 
 from tfaip.base.data.pipeline.datapipeline import SimpleDataPipeline, DataPipeline
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
-from tfaip.base.data.pipeline.definitions import PipelineMode, InputTargetSample
+from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 
 
 class TestParallelData(unittest.TestCase):
@@ -35,17 +35,17 @@ class TestParallelData(unittest.TestCase):
             @classmethod
             def data_pipeline_cls(cls) -> Type[DataPipeline]:
                 class PPipeline(SimpleDataPipeline):
-                    def generate_samples(self) -> Iterable[InputTargetSample]:
-                        return [InputTargetSample({'data': i}, {'targets': i}) for i in range(1000)]
+                    def generate_samples(self) -> Iterable[Sample]:
+                        return [Sample({'data': [i]}, {'targets': [i]}) for i in range(1000)]
                 return PPipeline
 
             def _input_layer_specs(self):
                 import tensorflow as tf
-                return {"data": tf.TensorSpec(shape=[], dtype=tf.int32)}
+                return {"data": tf.TensorSpec(shape=[1], dtype=tf.int32)}
 
             def _target_layer_specs(self):
                 import tensorflow as tf
-                return {"targets": tf.TensorSpec(shape=[], dtype=tf.int32)}
+                return {"targets": tf.TensorSpec(shape=[1], dtype=tf.int32)}
 
         params = DataBaseParams()
         params.train.num_processes = 8

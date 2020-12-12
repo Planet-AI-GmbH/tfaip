@@ -18,7 +18,7 @@
 from tfaip.base.trainer import Trainer
 import logging
 
-from tfaip.util.argument_parser import TFAIPArgumentParser
+from tfaip.util.argument_parser import TFAIPArgumentParser, add_args_group
 from tfaip.util.logging import setup_log
 
 logger = logging.getLogger(__name__)
@@ -29,14 +29,22 @@ def main():
 
     parser.add_argument('checkpoint_dir', type=str, help='path to the checkpoint dir to resume from')
 
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
     setup_log(args.checkpoint_dir, append=True)
 
     logger.info("=================================================================")
     logger.info(f"RESUMING TRAINING from {args.checkpoint_dir}")
     logger.info("=================================================================")
 
-    trainer = Trainer.restore_trainer(args.checkpoint_dir)
+    trainer_params, scenario = Trainer.parse_trainer_params(args.checkpoint_dir)
+
+    # parse additional args
+    parser = TFAIPArgumentParser(ignore_required=True)
+    add_args_group(parser, group='trainer_params', default=trainer_params, params_cls=trainer_params)
+    parser.parse_args(unknown_args)
+
+    # create the trainer
+    trainer = scenario.create_trainer(trainer_params, restore=True)
     trainer.train()
 
 

@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import copy
 import gc
 from abc import ABC, abstractmethod
@@ -9,15 +26,15 @@ import logging
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory, SequenceProcessor, DataProcessor
-from tfaip.base.data.pipeline.definitions import InputTargetSample, PipelineMode, DataProcessorFactoryParams, \
-    all_pipeline_modes
+from tfaip.base.data.pipeline.definitions import Sample, PipelineMode, DataProcessorFactoryParams, \
+    GENERAL_PROCESSOR
 from tfaip.base.data.pipeline.parallelpipeline import ParallelDataProcessorPipeline
+from tfaip.base.data.pipeline.tfdatasetgenerator import TFDatasetGenerator
 from tfaip.util.multiprocessing.join import JoinableHolder
-from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
     from tfaip.base.data.data import DataBase
-    from tfaip.base.data.data_base_params import DataGeneratorParams
+    from tfaip.base.data.databaseparams import DataGeneratorParams
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +60,7 @@ class SampleProcessorPipeline:
         self.data_pipeline = data_pipeline
         self.create_processor_fn = processor_fn
 
-    def apply(self, samples: Iterable[InputTargetSample]) -> Iterable[InputTargetSample]:
+    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
         if not self.create_processor_fn:
             for sample in samples:
                 yield sample
@@ -56,7 +73,7 @@ class SampleProcessorPipeline:
 
 
 class ParallelSampleProcessingPipeline(SampleProcessorPipeline):
-    def apply(self, samples: Iterable[InputTargetSample]) -> Iterable[InputTargetSample]:
+    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
         parallel_pipeline = ParallelDataProcessorPipeline(self.data_pipeline, samples,
                                                           create_processor_fn=self.create_processor_fn,
                                                           auto_repeat_input=False)
@@ -77,19 +94,19 @@ class DataGenerator(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate(self) -> Iterable[InputTargetSample]:
+    def generate(self) -> Iterable[Sample]:
         raise NotImplementedError
 
 
 class RawDataGenerator(DataGenerator):
-    def __init__(self, raw_data: List[InputTargetSample], mode: PipelineMode, params: 'DataGeneratorParams'):
+    def __init__(self, raw_data: List[Sample], mode: PipelineMode, params: 'DataGeneratorParams'):
         super(RawDataGenerator, self).__init__(mode, params)
         self.raw_data = raw_data
 
     def __len__(self):
         return len(self.raw_data)
 
-    def generate(self) -> Iterable[InputTargetSample]:
+    def generate(self) -> Iterable[Sample]:
         return self.raw_data
 
 
@@ -122,7 +139,7 @@ class DataPipeline(JoinableHolder, ABC):
         # output processors are used always
         if self._output_processors:
             for op in self._output_processors.sample_processors:
-                op.modes = all_pipeline_modes
+                op.modes = GENERAL_PROCESSOR
 
     def to_mode(self, mode: PipelineMode) -> 'DataPipeline':
         return self.__class__(mode, self.data, self.generator_params, self._input_processors, self._output_processors)
@@ -180,6 +197,9 @@ class DataPipeline(JoinableHolder, ABC):
         else:
             return SampleProcessorPipeline(self)
 
+    def create_tf_dataset_generator(self) -> TFDatasetGenerator:
+        return TFDatasetGenerator(self)
+
     def create_output_pipeline(self) -> Optional[SampleProcessorPipeline]:
         params: SamplePipelineParams = self._output_processors
         if params:
@@ -203,7 +223,7 @@ class DataPipeline(JoinableHolder, ABC):
 
 class SimpleDataPipeline(DataPipeline, ABC):
     @abstractmethod
-    def generate_samples(self) -> Iterable[InputTargetSample]:
+    def generate_samples(self) -> Iterable[Sample]:
         raise NotImplementedError
 
     def number_of_samples(self) -> int:
@@ -217,7 +237,7 @@ class SimpleDataPipeline(DataPipeline, ABC):
             def __len__(self):
                 return number_of_samples
 
-            def generate(self) -> Iterable[InputTargetSample]:
+            def generate(self) -> Iterable[Sample]:
                 return generator
 
         return SimpleDataGenerator(self.mode, self.generator_params)
@@ -225,7 +245,7 @@ class SimpleDataPipeline(DataPipeline, ABC):
 
 class RawDataPipeline(DataPipeline):
     def __init__(self,
-                 samples: List[InputTargetSample],
+                 samples: List[Sample],
                  mode: PipelineMode,
                  data_base: 'DataBase',
                  generator_params: 'DataGeneratorParams',

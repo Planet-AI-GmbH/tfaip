@@ -24,11 +24,13 @@ from tfaip.util.enum import StrEnum
 class AttentionType(StrEnum):
     DotProduct = 'DotProduct'
     DotProductRelative = 'DotProductRelative'
+    WindowedSelfAttention = 'WindowedSelfAttention'
 
     def create_layer(self, *args, **kwargs):
         return {
             AttentionType.DotProduct: ScaledDotProductAttention,
             AttentionType.DotProductRelative: ScaledDotProductRelativeAttention,
+            AttentionType.WindowedSelfAttention: WindowedSelfAttention,
         }[self](*args, **kwargs)
 
 
@@ -142,6 +144,44 @@ class ScaledDotProductAttention(Attention):
         output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
 
         return output, attention_weights
+
+
+class WindowedSelfAttention(Attention):
+    def __init__(self,
+                 look_ahead=True,
+                 width=5,
+                 **kwargs):
+        super(WindowedSelfAttention, self).__init__(name='sparse_scaled_dot_attention', **kwargs)
+        self.look_ahead = look_ahead
+        self.width = width
+        # if look ahead is set, we can only observe values from the past (negative values)
+        self.rng = list(range(-(self.width // 2), (self.width // 2 if self.look_ahead else 0) + 1))
+
+    def call(self, inputs, mask=None, **kwargs):
+        q, k, v = inputs
+
+        seq_len = tf.shape(q)[2]
+        rng = self.rng
+
+        # speed up in T=1 case (decoder), roll is not required, just make the normal mat mul and keep the last n entries
+        windowed_qk = tf.stack([tf.reduce_sum(q * tf.roll(k, axis=2, shift=-i), axis=-1) for i in rng], axis=0)  # W x B x H x T
+        windowed_qk = windowed_qk[:, :, :, -seq_len:]
+
+        scalar = tf.math.reciprocal(tf.math.sqrt(tf.cast(tf.shape(k)[-1], tf.float32)))
+        scaled_attention_logits = tf.math.scalar_mul(scalar, windowed_qk)
+
+        if mask is not None:
+            mask = mask[:, :, :, -seq_len:]
+            scaled_attention_logits += mask * -1e9
+
+        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=0)  # W x B x H xT
+        attention_weights = tf.unstack(tf.expand_dims(attention_weights, axis=-1), axis=0)
+
+        outputs_f = tf.stack([tf.roll(v, axis=2, shift=-i) * d for i, d in zip(rng, attention_weights)])  # W X B X T x F
+        outputs_f = outputs_f[:, :, :, -seq_len:]
+        outputs = tf.reduce_sum(outputs_f, axis=0)
+
+        return outputs, None
 
 
 def calculate_padding(input, scaling_factor: int = 32):

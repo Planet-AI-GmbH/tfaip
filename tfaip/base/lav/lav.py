@@ -22,14 +22,18 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator, Optional
 
-import prettytable
+import numpy as np
 import tensorflow.keras as keras
 from dataclasses_json import dataclass_json
 
+from tfaip.base.data.pipeline.definitions import Sample, OutputTargetsSample
 from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
+from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.lav.callbacks.lav_callback import LAVCallback
+from tfaip.base.predict import Predictor, PredictorParams
+from tfaip.base.predict.predictorbase import PredictorBenchmarkResults
 from tfaip.util.file.oshelper import ChDir
-from tfaip.util.time import MeasureTime
+from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
     from tfaip.base.data.data import DataBase
@@ -42,11 +46,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LAVParams:
     max_iter: int = -1
-
     model_path_: str = None
-
     device_params: DeviceConfigParams = field(default_factory=lambda: DeviceConfigParams())
-
     silent: bool = False
 
 
@@ -63,41 +64,22 @@ class MetricsAccumulator:
         self.running_sum: Dict[str, float] = {}
         self.running_weight: Dict[str, float] = {}
 
-    def accumulate_dict_sum(self, new_values: Dict[str, List[float]], sample_weights: Dict[str, List[float]]):
-        def weighted_sum(values, weights):
-            if weights is None:
-                return sum(values)
+    def accumulate_dict_sum(self, new_values: Dict[str, float], sample_weights: Dict[str, float]):
+        def weighted(value, weight):
+            if weight is None:
+                return value
 
-            return sum(a * w for a, w in zip(values, weights))
+            return value * weight
 
         if len(self.running_sum) == 0:
             self.running_sum = {k: 0 for k, v in new_values.items()}
             self.running_weight = {k: 0 for k, v in new_values.items()}
 
-        self.running_sum = {k: (self.running_sum[k] + weighted_sum(v, sample_weights.get(k, None))) for k, v in new_values.items()}
-        self.running_weight = {k: (v + (len(new_values[k]) if k not in sample_weights else sum(sample_weights[k]))) for k, v in
-                               self.running_weight.items()}
+        self.running_sum = {k: (self.running_sum[k] + weighted(v, sample_weights.get(k, None))) for k, v in new_values.items()}
+        self.running_weight = {k: (v + (1 if k not in sample_weights else sample_weights[k])) for k, v in self.running_weight.items()}
 
     def final(self):
         return {k: v / self.running_weight[k] for k, v in self.running_sum.items()}
-
-
-@dataclass
-class LAVBenchmarkResults:
-    n_batches: float = 0
-    n_samples: float = 0
-    total_time: float = 0
-    avg_time_per_batch: float = 0
-    avg_time_per_sample: float = 0
-    batches_per_second: float = 0
-    samples_per_second: float = 0
-
-    def pretty_print(self):
-        table = prettytable.PrettyTable(['', "Total", "Batch", "Sample"])
-        table.add_row(['Count', 1, self.n_batches, self.n_samples])
-        table.add_row(['Time Per', self.total_time, self.avg_time_per_batch, self.avg_time_per_sample])
-        table.add_row(['Per Second', 1 / self.total_time, self.batches_per_second, self.samples_per_second])
-        print(table)
 
 
 class LAV(ABC):
@@ -116,23 +98,39 @@ class LAV(ABC):
     def get_params_cls(cls) -> Type[LAVParams]:
         return LAVParams
 
-    def __init__(self, params: LAVParams, data_fn: Callable[[], 'DataBase'], model_fn: Callable[[], 'ModelBase']):
+    def __init__(self,
+                 params: LAVParams,
+                 data_fn: Callable[[], 'DataBase'],
+                 model_fn: Callable[[], 'ModelBase'],
+                 predictor_fn: Callable[[PredictorParams, 'DataBase'], Predictor],
+                 evaluator_fn: Callable[[], Evaluator],
+                 ):
         assert params.model_path_
         self._params = params
         self._data_fn = data_fn
+        self._predictor_fn = predictor_fn
         self._model_fn = model_fn
+        self._evaluator_fn = evaluator_fn
         self.device_config = DeviceConfig(self._params.device_params)
         self._data: Optional['DataBase'] = None
         self._model: Optional['ModelBase'] = None
-        self.benchmark_results = LAVBenchmarkResults()
+        self.benchmark_results = PredictorBenchmarkResults()
 
     @distribute_strategy
-    def run(self, model: keras.Model = None, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
+    def run(self,
+            model: keras.Model = None,
+            run_eagerly=False,
+            callbacks: List[LAVCallback] = None,
+            ) -> Generator[Dict[str, float], None, None]:
         callbacks = callbacks if callbacks else []
         with ChDir(os.path.join(self._params.model_path_)):
             # resources are located in parent dir
             self._data = self._data_fn()
         self._model = self._model_fn()
+        predictor_params = PredictorParams(self._params.device_params, silent=True, progress_bar=True)
+        predictor: Predictor = self._predictor_fn(predictor_params, self._data)
+        evaluator: Evaluator = self._evaluator_fn()
+
         for cb in callbacks:
             cb.lav, cb.data, cb.model = self, self._data, self._model
 
@@ -143,71 +141,93 @@ class LAV(ABC):
         else:
             custom_objects = None
 
-        _keras_model: keras.Model = model if model else keras.models.load_model(os.path.join(self._params.model_path_, 'serve'), compile=False, custom_objects=custom_objects)
-        _keras_model.run_eagerly = run_eagerly
+        _keras_model: keras.Model = model
+        if not model:
+            _keras_model = keras.models.load_model(os.path.join(self._params.model_path_, 'serve'),
+                                                   compile=False, custom_objects=custom_objects)
+
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model
-        eval_inputs = {**_keras_model.input, **self._data.create_target_as_input_layers()}
+        real_inputs = _keras_model.input
+        real_targets = self._data.create_target_as_input_layers()
+        eval_inputs = {**real_inputs, **real_targets}
+        sample_weights = {k + '_sample_weight': v for k, v in self._model.sample_weights(real_inputs, real_targets).items()}
         metric_outputs = self._model.extended_metric(eval_inputs, _keras_model.output)
         simple_metrics = self._model.metric()
-        eval_model = keras.Model(eval_inputs, {**metric_outputs, **_keras_model.output})
-        eval_model.run_eagerly = run_eagerly
+        eval_model = keras.Model(eval_inputs,
+                                 [{**real_inputs, **real_targets, **sample_weights},
+                                  {**metric_outputs, **_keras_model.output}])
+        predictor._keras_model = eval_model  # I know what I am doing: already wrapped inputs and targets
+
+        def predict_pipeline(pipeline):
+            with pipeline as rd:
+                def regroup(i, t):
+                    return {**i, **t}, t
+
+                input_dataset = rd.input_dataset().map(regroup)
+
+                def extract_metric(s: Sample):
+                    i, o, m = s
+                    m = m or {}
+                    # Add metrics as meta information
+                    return Sample(i,
+                                  {k: v for k, v in o.items() if k not in metric_outputs},
+                                  {**m, 'lav_metrics': {k: v for k, v in o.items() if k in metric_outputs}},
+                                  )
+
+                for r in tqdm_wrapper(
+                        rd.process_output(map(extract_metric, predictor.predict_database(input_dataset))),
+                        progress_bar=predictor_params.progress_bar,
+                        desc="LAV",
+                        total=len(rd),
+                ):
+                    yield r
 
         # accumulate the mean
         metrics_accum = MetricsAccumulator()
         for val_data in self._data.get_lav_datasets():
-            self.benchmark_results = LAVBenchmarkResults()
-            with MeasureTime() as total_time, val_data as rvd:
-                dataset = rvd.input_dataset().take(self._params.max_iter)
-                for step, (inputs, targets) in enumerate(dataset):
-                    combined_batch = {**inputs, **targets}
-                    with MeasureTime() as time_of_batch:
-                        r = eval_model.predict_on_batch(combined_batch)
-                    batch_size = next(iter(inputs.values())).shape[0]  # Take an arbitrary input to get the first dimension
-                    self.benchmark_results.n_batches += 1
-                    self.benchmark_results.n_samples += batch_size
-                    self.benchmark_results.avg_time_per_batch += time_of_batch.duration
-                    self.benchmark_results.avg_time_per_sample += time_of_batch.duration
-                    for i in range(batch_size):
-                        un_batched_inputs = {k: v[i].numpy() for k, v in inputs.items()}
-                        un_batched_targets = {k: v[i].numpy() for k, v in targets.items()}
-                        un_batched_outputs = {k: v[i] for k, v in r.items()}
-                        self._on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
-                        for cb in callbacks:
-                            cb.on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
-                        if not self._params.silent:
-                            self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets, self._data)
+            with evaluator:
+                for step, sample in enumerate(predict_pipeline(val_data)):
+                    un_batched_inputs = {k: v for k, v in sample.inputs.items() if k in real_inputs}
+                    un_batched_targets = {k: v for k, v in sample.inputs.items() if k in real_targets}
+                    un_batched_outputs = sample.outputs
+                    un_batched_metric_outputs = sample.meta['lav_metrics']
+                    un_batched_sample_weights = {k[:-14]: v for k, v in sample.inputs.items() if k in sample_weights}
+                    if not self._params.silent:
+                        self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets, self._data)
 
-                    sample_weights = self._model.sample_weights(inputs, targets)
                     for k, metric in simple_metrics.items():
-                        metric.metric.update_state(combined_batch[metric.target], r[metric.output], sample_weights.get(k, None))
+                        # metrics expect a batch dimension, thus wrap into a list
+                        metric.metric.update_state(
+                            np.expand_dims(un_batched_targets[metric.target], axis=0),
+                            np.expand_dims(un_batched_outputs[metric.output], axis=0),
+                            np.expand_dims(un_batched_sample_weights[k], axis=0) if k in un_batched_sample_weights else None)
 
-                    metrics_r = {k: r[k] for k in metric_outputs.keys()}
-                    sample_weights = {k: v.numpy() for k, v in sample_weights.items()}
-                    metrics_accum.accumulate_dict_sum(metrics_r, sample_weights)
-                    self._on_step_end(inputs, targets, r, metrics_r)
+                    metrics_accum.accumulate_dict_sum(un_batched_metric_outputs, un_batched_sample_weights)
+
+                    self._on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
                     for cb in callbacks:
-                        cb.on_step_end(inputs, targets, r, metrics_r)
+                        cb.on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
 
-            self.benchmark_results.total_time = total_time.duration
-            self.benchmark_results.avg_time_per_batch /= self.benchmark_results.n_batches
-            self.benchmark_results.avg_time_per_sample /= self.benchmark_results.n_samples
-            self.benchmark_results.batches_per_second = 1 / self.benchmark_results.avg_time_per_batch
-            self.benchmark_results.samples_per_second = 1 / self.benchmark_results.avg_time_per_sample
+                    evaluator.update_state(OutputTargetsSample(un_batched_outputs, un_batched_targets, sample.meta))
 
-            # print the output
-            all_metric_results = {**metrics_accum.final(), **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items()}}
+            all_metric_results = {
+                **metrics_accum.final(),
+                **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
+                   not isinstance(v.metric.result().numpy(), (bytes, bytearray))},
+                **evaluator.result(),
+            }
             self._on_lav_end(all_metric_results)
             for cb in callbacks:
                 cb.on_lav_end(all_metric_results)
+
             if not self._params.silent:
                 print(json.dumps(all_metric_results, indent=2))
+
+            self.benchmark_results = predictor.benchmark_results
             yield all_metric_results
 
     def _on_sample_end(self, inputs, targets, outputs):
-        pass
-
-    def _on_step_end(self, inputs, targets, outputs, metrics):
         pass
 
     def _on_lav_end(self, result):

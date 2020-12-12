@@ -24,7 +24,8 @@ import sys
 FORMAT = '{levelname:<8s} {asctime} {name:>30.30s}: {message}'
 formatter = logging.Formatter(FORMAT, style='{')
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=getattr(logging, os.environ.get('TFAIP_LOG_LEVEL', 'INFO').upper()))
+TFAIP_LOG_LEVEL = getattr(logging, os.environ.get('TFAIP_LOG_LEVEL', 'INFO').upper())
+logging.basicConfig(level=TFAIP_LOG_LEVEL)
 logging.getLogger().handlers[0].setFormatter(formatter)
 
 for handler in logging.getLogger("tensorflow").handlers:
@@ -47,6 +48,6 @@ def setup_log(log_dir, append, log_name='train.log'):
     filename = os.path.join(log_dir, log_name)
     file_handler = logging.FileHandler(filename, 'a' if append else 'w')
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(level=logging.INFO)
+    file_handler.setLevel(level=TFAIP_LOG_LEVEL)
     logging.getLogger().addHandler(file_handler)
     logger.info(f"Logging training progress to '{filename}'")

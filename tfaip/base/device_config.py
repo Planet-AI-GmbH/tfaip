@@ -57,6 +57,8 @@ class DeviceConfigParams:
 class DeviceConfig:
     def __init__(self, params: DeviceConfigParams):
         import tensorflow as tf
+        if params.dist_strategy is None:
+            params.dist_strategy = DistributionStrategy.Default
 
         logger.info("Setting up device config {}".format(params))
         self._params = params

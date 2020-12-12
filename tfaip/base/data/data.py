@@ -23,10 +23,10 @@ import logging
 
 from typeguard import typechecked
 
-from tfaip.base.data.data_base_params import DataBaseParams, DataGeneratorParams
+from tfaip.base.data.databaseparams import DataBaseParams, DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
-from tfaip.base.data.pipeline.definitions import InputOutputSample, PipelineMode
+from tfaip.base.data.pipeline.definitions import PipelineMode
 from tfaip.base.resource.manager import ResourceManager
 from tfaip.base.resource.resource import Resource
 
@@ -38,6 +38,21 @@ def dict_to_input_layers(d: Dict[str, tf.TensorSpec]) -> Dict[str, keras.layers.
         assert isinstance(spec, tf.TensorSpec)
 
     return {k: keras.layers.Input(shape=v.shape, dtype=v.dtype, name=k) for k, v in d.items()}
+
+
+def validate_specs(func):
+    def wrapper(*args, **kwargs):
+        retval = func(*args, **kwargs)
+        for s, spec in retval.items():
+            if len(spec.shape) == 0:
+                # Reason: keras.predict automatically calls "expand_2d" which will expand 1d tensors (batch size) to
+                # 2D tensors, which is not performed during training. This can lead to non-desired behaviour.
+                raise ValueError(f"Shape of tensor spec must be at least one dimensional (excluding the "
+                                 f"batch dimension), but got {spec.shape} for tensor {s}. Use (1, ) or [1] to "
+                                 f"denote one dimensional data.")
+
+        return retval
+    return wrapper
 
 
 class DataBase(ABC):
@@ -140,6 +155,7 @@ class DataBase(ABC):
     def create_target_as_input_layers(self) -> Dict[str, keras.layers.Input]:
         return dict_to_input_layers(self.target_layer_specs())
 
+    @validate_specs
     @typechecked
     def input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         """
@@ -149,6 +165,7 @@ class DataBase(ABC):
         """
         return self._input_layer_specs()
 
+    @validate_specs
     @typechecked
     def target_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         """

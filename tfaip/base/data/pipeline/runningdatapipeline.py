@@ -1,8 +1,27 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
+import json
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
+import numpy as np
 import tensorflow as tf
 
-from tfaip.base.data.pipeline.definitions import InputTargetSample, PipelineMode, InputOutputSample
+from tfaip.base.data.pipeline.definitions import Sample, PipelineMode
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
@@ -26,8 +45,22 @@ class RunningDataPipeline:
     def __len__(self):
         return len(self.data_generator)
 
-    def process_output(self, samples: Iterable[InputOutputSample]) -> Iterable[InputOutputSample]:
+    def process_output(self, samples: Iterable[Sample]) -> Iterable[Sample]:
         output_pipeline = self.data_pipeline.create_output_pipeline()
+
+        def extract_meta(sample: Sample) -> Sample:
+            meta = sample.meta or {}
+            if 'meta' in sample.inputs:
+                input_meta = sample.inputs['meta']
+                if isinstance(input_meta, list) or isinstance(input_meta, np.ndarray):
+                    assert(len(input_meta) == 1)
+                    input_meta = input_meta[0]
+
+                meta.update(**json.loads(input_meta))
+            return Sample(sample.inputs, sample.outputs, meta)
+
+        samples = map(extract_meta, samples)
+
         if output_pipeline:
             return output_pipeline.apply(samples)
         return samples
@@ -37,33 +70,11 @@ class RunningDataPipeline:
             # Empty set
             return None
 
-        mode = self.mode
-        def wrap():
-            samples = self.generate_input_samples(auto_repeat)
-            for sample in samples:
-                if isinstance(sample, InputTargetSample):
-                    if mode == PipelineMode.Prediction:
-                        yield sample.inputs
-                    elif mode == PipelineMode.Targets:
-                        yield sample.targets
-                    else:
-                        yield sample.inputs, sample.targets
-                else:
-                    yield sample
-
-        input_types = {k: v.dtype for k, v in self.data_pipeline.data.input_layer_specs().items()}
-        target_types = {k: v.dtype for k, v in self.data_pipeline.data.target_layer_specs().items()}
-        if self.mode == PipelineMode.Prediction:
-            output_types = input_types
-        elif self.mode == PipelineMode.Targets:
-            output_types = target_types
-        else:
-            output_types = (input_types, target_types)
-
-        dataset = tf.data.Dataset.from_generator(wrap, output_types=output_types)
+        tf_dataset_generator = self.data_pipeline.create_tf_dataset_generator()
+        dataset = tf_dataset_generator.create(lambda: self.generate_input_samples(auto_repeat))
         return self._wrap_dataset(dataset)
 
-    def preload_input_samples(self, progress_bar=True, non_preloadable_params=[]) -> List[InputTargetSample]:
+    def preload_input_samples(self, progress_bar=True, non_preloadable_params=[]) -> List[Sample]:
         data_generator = self.data_generator
         old_limit = data_generator.params.limit
         data_generator.params.limit = len(data_generator)
@@ -81,7 +92,7 @@ class RunningDataPipeline:
         data_generator.params.limit = old_limit
         return last_generator
 
-    def generate_input_samples(self, auto_repeat=None) -> Iterable[InputTargetSample]:
+    def generate_input_samples(self, auto_repeat=None) -> Iterable[Sample]:
         data_generator = self.data_generator
         if auto_repeat is None:
             auto_repeat = self.mode == PipelineMode.Training and data_generator.params.limit < 0

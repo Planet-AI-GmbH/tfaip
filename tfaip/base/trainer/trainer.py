@@ -23,6 +23,7 @@ from datetime import datetime
 from typing import Type, Tuple, Union, Callable
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ProgbarLogger
+from tfaip.base.trainer.callbacks.extract_logs import ExtractLogsCallback
 from typeguard import typechecked
 
 from tfaip.base.device_config import DeviceConfig, distribute_strategy
@@ -57,26 +58,27 @@ class Trainer(ABC):
         return TrainerParams
 
     @staticmethod
-    def trainer_from_dict(params_dict: dict, restore_weights=False) -> 'Trainer':
-        d = params_dict
+    def parse_trainer_params(d: Union[str, dict]) -> Tuple['TrainerParams', Type[ScenarioBase]]:
+        if isinstance(d, str):
+            if not d.endswith('.json'):
+                d = os.path.join(d, 'trainer_params.json')
+
+            with open(d) as f:
+                d = json.load(f)
         scenario, scenario_params = ScenarioBase.from_dict(d['scenario_params'])
         trainer_params: TrainerParams = scenario.trainer_cls().get_params_cls().from_dict(d)
         logger.info("trainer_params=" + trainer_params.to_json(indent=2))
 
         # Load the actual scenario params for the particular scenario
         trainer_params.scenario_params = scenario_params
-        trainer = scenario.create_trainer(trainer_params, restore=restore_weights)
-        return trainer
+        return trainer_params, scenario
 
     @classmethod
     def restore_trainer(cls, checkpoint: Union[str, dict]) -> 'Trainer':
-        if isinstance(checkpoint, str):
-            with open(os.path.join(checkpoint, 'trainer_params.json')) as f:
-                d = json.load(f)
-        else:
-            d = checkpoint
-
-        return cls.trainer_from_dict(d, restore_weights=True)
+        trainer_params, scenario = cls.parse_trainer_params(checkpoint)
+        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
+        trainer = scenario.create_trainer(trainer_params, restore=True)
+        return trainer
 
     @typechecked
     def __init__(self, params: TrainerParams, scenario: ScenarioBase, restore=False):
@@ -136,6 +138,7 @@ class Trainer(ABC):
               ):
         external_callbacks = callbacks
         callbacks = []
+        tensorboard_data_handler = self._model.tensorboard_handler
 
         self._params.learning_rate_params.epochs_ = self._params.epochs
         self._params.learning_rate_params.steps_per_epoch_ = self._steps_per_epoch
@@ -156,6 +159,8 @@ class Trainer(ABC):
             warmstart_fn(self.params.warmstart_params).warmstart(self._scenario.keras_train_model, custom_objects)
 
         callbacks.append(FixMetricLabelsCallback())
+        extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
+        callbacks.append(extract_logs_cb)
         callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
         callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback())
@@ -191,6 +196,8 @@ class Trainer(ABC):
             # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
             callbacks.append(TensorBoardCallback(log_dir=self._params.checkpoint_dir,
                                                  steps_per_epoch=self._steps_per_epoch,
+                                                 extracted_logs_cb=extract_logs_cb,
+                                                 data_handler=tensorboard_data_handler,
                                                  reset=self._params.current_epoch == 0,
                                                  profile="10,20" if self._params.profile else 0))
 

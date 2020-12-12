@@ -30,6 +30,7 @@ from tfaip.util.typing import AnyNumpy
 
 if TYPE_CHECKING:
     from tfaip.base.model import GraphBase
+    from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ class ModelBase(ABC):
         super(ModelBase, self).__init__(*args, **kwargs)
         self._params = params
         self._graph = None
+        self._tensorboard_handler: TensorBoardDataHandler = self._create_tensorboard_handler()
 
     def params(self) -> ModelBaseParams:
         return self._params
@@ -269,3 +271,12 @@ class ModelBase(ABC):
                        targets: Dict[str, tf.Tensor],
                        ) -> List[ExportGraph]:
         return [ExportGraph("default", inputs=inputs, outputs=outputs)]
+
+
+    @property
+    def tensorboard_handler(self):
+        return self._tensorboard_handler
+
+    def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
+        from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
+        return TensorBoardDataHandler()

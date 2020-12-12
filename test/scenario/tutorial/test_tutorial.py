@@ -20,7 +20,7 @@ import unittest
 from tensorflow.python.keras.backend import clear_session
 
 from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
-from tfaip.base.data.data_base_params import DataGeneratorParams
+from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.scenario.tutorial.data import DataParams, Data
 from tfaip.scenario.tutorial.scenario import TutorialScenario
 
@@ -59,7 +59,7 @@ class TestTutorialData(unittest.TestCase):
             self.assertTrue('img' in data[0])
             self.assertTrue('gt' in data[1])
             self.assertTupleEqual(data[0]['img'].shape, (1, 28, 28))
-            self.assertTupleEqual(data[1]['gt'].shape, (1,))
+            self.assertTupleEqual(data[1]['gt'].shape, (1, 1))
 
         check(train_data)
         check(val_data)

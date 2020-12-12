@@ -25,11 +25,11 @@ import tensorflow.keras as keras
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBaseParams, DataBase
-from tfaip.base.data.data_base_params import DataGeneratorParams
+from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator, RawDataGenerator, RawDataPipeline
 from tfaip.base.data.listfile.listfiledata import ListFilePipelineParams
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
-from tfaip.base.data.pipeline.definitions import PipelineMode, InputTargetSample
+from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 from tfaip.util.argument_parser import dc_meta
 from tfaip.util.imaging.io import load_image_from_img_file
 
@@ -45,7 +45,7 @@ class DataParams(DataBaseParams):
 
 
 def to_samples(samples):
-    return [InputTargetSample({'img': img}, {'gt': gt}) for img, gt in zip(*samples)]
+    return [Sample({'img': img}, {'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
 class Data(DataBase):
@@ -67,7 +67,7 @@ class Data(DataBase):
                     assert (type(self.generator_params) == ListFilePipelineParams)
                     assert self.generator_params.list, "No images provided"
                     return RawDataGenerator(
-                        [InputTargetSample({'img': img}, None) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
+                        [Sample({'img': img}, None) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
                         self.mode, self.generator_params)
                 else:
                     raise NotImplementedError
@@ -93,7 +93,7 @@ class Data(DataBase):
         return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
 
     def _target_layer_specs(self):
-        return {'gt': tf.TensorSpec(shape=[], dtype='uint8')}
+        return {'gt': tf.TensorSpec(shape=[1], dtype='uint8')}
 
     def _list_lav_dataset(self) -> Iterable[DataPipeline]:
         # Create two evaluation datasets using test and train data

@@ -28,9 +28,9 @@ import tensorflow as tf
 from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.keras.utils import tf_utils
 
-from tfaip.base.data.data_base_params import DataGeneratorParams
+from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline, RawDataPipeline, DataGenerator
-from tfaip.base.data.pipeline.definitions import InputOutputSample, PipelineMode, InputTargetSample
+from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 from tfaip.util.time import MeasureTime
@@ -107,14 +107,14 @@ class PredictorBase(ABC):
                                        outputs=(inputs, outputs))
         return model
 
-    def predict(self, params: DataGeneratorParams) -> Iterable[InputOutputSample]:
+    def predict(self, params: DataGeneratorParams) -> Iterable[Sample]:
         return self.predict_pipeline(self._data.get_predict_data(params))
 
     @abstractmethod
     def _unwrap_batch(self, inputs, r) -> Iterable:
         raise NotImplementedError
     
-    def predict_raw(self, inputs: Iterable[Any], *, size=None, batch_size=1) ->Iterable[InputOutputSample]:
+    def predict_raw(self, inputs: Iterable[Any], *, size=None, batch_size=1) ->Iterable[Sample]:
         if size is None:
             try:
                 size = len(inputs)
@@ -127,8 +127,8 @@ class PredictorBase(ABC):
             def __len__(self):
                 return size
 
-            def generate(self) -> Iterable[InputTargetSample]:
-                return map(lambda x: InputTargetSample(x, None, {}), inputs)
+            def generate(self) -> Iterable[Sample]:
+                return map(lambda x: Sample(x, None, {}), inputs)
 
         class RawInputsPipeline(DataPipeline):
             def create_data_generator(self) -> DataGenerator:
@@ -141,7 +141,7 @@ class PredictorBase(ABC):
         )
         return self.predict_pipeline(pipeline)
 
-    def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[InputOutputSample]:
+    def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[Sample]:
         with pipeline as rd:
             for r in tqdm_wrapper(
                     rd.process_output(self.predict_database(rd.input_dataset())),
@@ -152,7 +152,7 @@ class PredictorBase(ABC):
                 yield r
 
     @distribute_strategy
-    def predict_database(self, dataset: tf.data.Dataset) -> Iterable[InputOutputSample]:
+    def predict_database(self, dataset: tf.data.Dataset) -> Iterable[Sample]:
         if self._keras_model is None:
             raise ValueError("No model set. Call predictor.set_model(model)")
         with MeasureTime() as total_time:
@@ -177,7 +177,7 @@ class PredictorBase(ABC):
                             self.benchmark_results.n_samples += batch_size
                             self.benchmark_results.avg_time_per_batch += batch_time.duration
                             self.benchmark_results.avg_time_per_sample += batch_time.duration
-                            self._on_step_end(InputOutputSample(inputs, r))
+                            self._on_step_end(Sample(inputs, r))
 
         self.benchmark_results.total_time = total_time.duration
         self.benchmark_results.avg_time_per_batch /= self.benchmark_results.n_batches
@@ -189,7 +189,7 @@ class PredictorBase(ABC):
         self._on_predict_end()
 
     @abstractmethod
-    def _print_prediction(self, sample: InputOutputSample, print_fn):
+    def _print_prediction(self, sample: Sample, print_fn):
         raise NotImplementedError
 
     def _on_sample_end(self, outputs):

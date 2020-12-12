@@ -21,8 +21,8 @@ import logging
 
 from typeguard import typechecked
 
-from tfaip.base.data.pipeline.definitions import DataProcessorFactoryParams, inputs_pipeline_modes, \
-    targets_pipeline_modes, InputTargetSample, PipelineMode
+from tfaip.base.data.pipeline.definitions import DataProcessorFactoryParams, INPUT_PROCESSOR, \
+    TARGETS_PROCESSOR, Sample, PipelineMode
 from tfaip.util.multiprocessing.parallelmap import parallel_map
 
 
@@ -46,27 +46,27 @@ class DataProcessor(ABC):
         return True
 
     @typechecked
-    def __call__(self, inputs: Any, targets: Any, meta: dict) -> Tuple[Any, Any]:
-        return self.apply(inputs, targets, meta)
+    def __call__(self, first: Any, second: Any, meta: dict) -> Tuple[Any, Any]:
+        return self.apply(first, second, meta)
 
     @abstractmethod
-    def apply(self, inputs, targets, meta: dict):
+    def apply(self, first, second, meta: dict):
         raise NotImplementedError
 
     def preload(self,
-                samples: List[InputTargetSample],
+                samples: List[Sample],
                 num_processes=1,
                 drop_invalid=True,
                 progress_bar=False,
-                ) -> Iterable[InputTargetSample]:
+                ) -> Iterable[Sample]:
         return self.apply_on_samples(samples, num_processes, drop_invalid, progress_bar)
 
     def apply_on_samples(self,
-                         samples: Iterable[InputTargetSample],
+                         samples: Iterable[Sample],
                          num_processes=1,
                          drop_invalid=True,
                          progress_bar=False,
-                         ) -> Iterator[InputTargetSample]:
+                         ) -> Iterator[Sample]:
         mapped = parallel_map(self.apply_on_sample, samples, processes=num_processes, progress_bar=progress_bar,
                               desc=f"Applying data processor {self.__class__.__name__}"
                               )
@@ -74,14 +74,14 @@ class DataProcessor(ABC):
             mapped = filter(lambda s: s is not None, mapped)
         return mapped
 
-    def apply_on_sample(self, sample: InputTargetSample):
-        inputs, targets, meta = sample
+    def apply_on_sample(self, sample: Sample):
+        first, second, meta = sample
         if meta is None:
             meta = {}
-        r = self.apply(inputs, targets, meta)
+        r = self.apply(first, second, meta)
         if r is None:
             return r
-        return InputTargetSample(*r, meta)
+        return Sample(*r, meta)
 
 
 class SequenceProcessor(DataProcessor):
@@ -97,9 +97,9 @@ class SequenceProcessor(DataProcessor):
         return self.split_by_processor(i)
 
     def is_valid_sample(self, inputs, targets):
-        if inputs is None and self.mode in inputs_pipeline_modes:
+        if inputs is None and self.mode in INPUT_PROCESSOR:
             return False
-        if targets is None and self.mode in targets_pipeline_modes:
+        if targets is None and self.mode in TARGETS_PROCESSOR:
             return False
         return True
 
@@ -130,7 +130,7 @@ class DataProcessorFactory:
 
     def create(self, factory_params: DataProcessorFactoryParams, params, mode) -> Optional[DataProcessor]:
         if mode in factory_params.modes:
-            cls: DataProcessor = self.processors[factory_params.name]
+            cls: Type[DataProcessor] = self.processors[factory_params.name]
             args = factory_params.args if factory_params.args is not None else cls.default_params()
             return cls(params=params, mode=mode, **args)
 

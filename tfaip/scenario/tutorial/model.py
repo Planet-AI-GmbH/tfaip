@@ -21,11 +21,13 @@ from typing import Dict, Any
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
+import numpy as np
 
 from tfaip.base.model import ModelBaseParams, ModelBase
 from tfaip.base.model.metric.multi import MultiMetricDefinition, MultiMetric
 from tfaip.base.model.modelbase import MetricDefinition
 from tfaip.base.model.util.graph_enum import create_graph_enum
+from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 from tfaip.util.argument_parser import dc_meta
 from tfaip.util.typing import AnyNumpy
 
@@ -78,3 +80,23 @@ class TutorialModel(ModelBase):
     def _print_evaluate(self, inputs, outputs: Dict[str, AnyNumpy], targets: Dict[str, AnyNumpy], data, print_fn=print):
         correct = outputs['class'] == targets['gt']
         print_fn(f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})")
+
+    def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
+        class TutorialTBHandler(TensorBoardDataHandler):
+            def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, tf.Tensor]:
+                return {k: v for k, v in outputs.items() if k in ['conv_out']}
+
+            def handle(self, name, name_for_tb, value, step):
+                if name == 'conv_out':
+                    b, w, h, c = value.shape
+                    ax_dims = int(np.ceil(np.sqrt(c)))
+                    out_conv_v = np.zeros([b, w * ax_dims, h * ax_dims, 1])
+                    for i in range(c):
+                        x = i % ax_dims
+                        y = i // ax_dims
+                        out_conv_v[:,x*w:(x+1)*w,y*h:(y+1)*h, 0] = value[:,:,:,i]
+                    tf.summary.image(name_for_tb, out_conv_v, step=step)
+                else:
+                    super(TutorialTBHandler, self).handle(name, name_for_tb, value, step)
+
+        return TutorialTBHandler()

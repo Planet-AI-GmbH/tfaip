@@ -58,4 +58,6 @@ class LAVCallback(Callback):
             logs_str = ' - '.join(f"{k}: {r[k]:.4f}" for k in sorted(r.keys()))
             logger.info(f"LAV l{i} Metrics (dt={(time.time() - start)/60:.2f}min) - {logs_str}")
             for k, v in r.items():
-                logs[f"lav_l{i}_{k}_metric"] = v
+                if 'multi_metric' in k:
+                    continue
+                logs[f"lav_l{i}_{k}"] = v

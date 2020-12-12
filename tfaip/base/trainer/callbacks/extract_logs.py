@@ -15,46 +15,40 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+import tensorflow as tf
 import tensorflow.keras.callbacks as cb
+from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 
 
-class FixMetricLabelsCallback(cb.Callback):
-    def __init__(self):
-        super(FixMetricLabelsCallback, self).__init__()
+class ExtractLogsCallback(cb.Callback):
+    def __init__(self, tensorboard_data_handler: TensorBoardDataHandler):
+        super(ExtractLogsCallback, self).__init__()
         self._supports_tf_logs = True
-        self.original_metrics = {}
+        self.tensorboard_data_handler = tensorboard_data_handler
+        self.extracted_logs = {}
 
     def on_train_begin(self, logs=None):
-        # store original metric names
-        if len(self.original_metrics) == 0:
-            self.original_metrics = {
-                **self.model.compiled_metrics._weighted_metrics,
-                **self.model.compiled_metrics._metrics,
-            }
+        self.extracted_logs = {}
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.extracted_logs = {}
 
     def on_epoch_end(self, epoch, logs=None):
-        self.fix(logs)
+        self.extract(logs)
 
     def on_train_batch_end(self, batch, logs=None):
-        self.fix(logs)
+        self.extract(logs)
 
     def on_predict_batch_end(self, batch, logs=None):
-        self.fix(logs)
+        self.extract(logs)
 
     def on_test_batch_end(self, batch, logs=None):
-        self.fix(logs)
+        self.extract(logs, prefix="val_")
 
-    def fix(self, logs: dict):
+    def extract(self, logs, prefix=''):
         if logs is None:
             return
-
-        for name in list(logs.keys()):
-            if 'multi_metric' in name:
-                del logs[name]
-
-        for n, m in self.original_metrics.items():
-            if not m or not hasattr(m, 'name') or m.name == n:
-                continue
-            if m.name in logs and n not in logs:
-                logs[n] = logs[m.name]
-                del logs[m.name]
+        for k in list(logs.keys()):
+            if k in self.tensorboard_data_handler.all_tensorboard_keys:
+                self.extracted_logs[prefix + k] = logs[k].numpy()
+                del logs[k]

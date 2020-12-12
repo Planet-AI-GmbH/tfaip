@@ -33,9 +33,6 @@ class DumpResultsCallback(LAVCallback):
         targets, prediction = self.model.target_prediction(targets, outputs, self.data)
         self.target_prediction_pairs.append((targets, prediction))
 
-    def on_step_end(self, inputs, targets, outputs, metrics):
-        pass
-
     def on_lav_end(self, result):
         logger.info(f"Dumping results {self.filepath}.")
         with open(self.filepath, 'wb') as f:

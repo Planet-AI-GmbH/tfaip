@@ -46,6 +46,18 @@ def create_padding_mask(seq_len):
     return tf.cast(1 - padding_mask, dtype=tf.float32)
 
 
+def create_sparse_mask(seq_len, sparse_width):
+    padding_mask = create_padding_mask(seq_len)
+    s_max = tf.reduce_max(seq_len)
+    rng = list(range(-(sparse_width // 2), sparse_width // 2 + 1))
+    seq_mask = tf.stack([tf.sequence_mask(seq_len + min(-i, 0), s_max, dtype=tf.float32) - tf.sequence_mask(
+        max(-i, 0), s_max, dtype=tf.float32) for i in rng], axis=0)
+    seq_mask = 1 - tf.expand_dims(seq_mask, axis=2)
+
+    combined_mask = tf.maximum(tf.expand_dims(tf.squeeze(padding_mask, axis=2), axis=0), seq_mask)
+    return combined_mask
+
+
 def create_look_ahead_mask(seq_len):
     """
     Look ahead mask decoder step N is only allowed decoder outputs emitted prior to N

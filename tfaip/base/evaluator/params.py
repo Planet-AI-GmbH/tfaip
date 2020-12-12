@@ -15,14 +15,12 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from abc import abstractmethod, ABC
-from typing import List
+from dataclasses import dataclass
 
-from tfaip.util.enum import StrEnum
-
+from dataclasses_json import dataclass_json
 
 
-# TODO: Move to correct place
-class Padding(StrEnum):
-    Valid = "VALID"  # valid padding
-    Same = "SAME"  # same padding
+@dataclass_json
+@dataclass
+class EvaluatorParams:
+    pass

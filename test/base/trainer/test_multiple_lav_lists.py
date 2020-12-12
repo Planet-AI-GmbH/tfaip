@@ -68,4 +68,4 @@ class TestMultipleValLists(unittest.TestCase):
             train_logs = store_logs_callback.logs
             # Tutorial yields two LAV datasets (test and train)
             for i in range(2):
-                self.assertAlmostEqual(train_logs[f'lav_l{i}_acc_metric'], train_logs[f'lav_l{i}_simple_acc_metric'])
+                self.assertAlmostEqual(train_logs[f'lav_l{i}_acc'], train_logs[f'lav_l{i}_simple_acc'])

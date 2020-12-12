@@ -40,6 +40,17 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         self.limit_reached = False
         self.limit = limit
         self._still_allowed = tf.Variable(self.limit, trainable=False, name='_print_limit')
+        if scenario is None:
+            logger.warning("You are instantiating a PrintEvaluateLayer without a scenario. This is not supported. "
+                           "Probably you loaded the keras model with keras.models.load instead of reinstantiating "
+                           "the full graph (e.g. using tfaip-resume-training). This will not result in an error, but "
+                           "no outputs will be generated.")
+
+    def get_config(self):
+        # Implement this to get rid of warning.
+        cfg = super(PrintEvaluateLayer, self).get_config()
+        cfg['scenario'] = None  # No scenario
+        return cfg
 
     def operation(self, inputs, training=None):
         # IDEA:
@@ -48,6 +59,10 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         # during prediction: call print on batch, and reduce counter by batch size
 
         v = inputs[0]   # This is the output of the operation as 'identity'
+        if self.scenario is None:
+            # No scenario set. This should usually not be the case, only when loading a training Graph
+            # Instead recreate full graph.
+            return v
 
         def print_op():
             # Only print if we didnt reach the limit

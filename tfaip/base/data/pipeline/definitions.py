@@ -30,26 +30,39 @@ class PipelineMode(StrEnum):
     Targets = 'targets'             # Targets
 
 
-inputs_pipeline_modes = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Prediction}
-targets_pipeline_modes = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Targets}
-all_pipeline_modes = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Prediction, PipelineMode.Targets}
+INPUT_PROCESSOR = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Prediction}
+TARGETS_PROCESSOR = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Targets}
+GENERAL_PROCESSOR = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Prediction, PipelineMode.Targets}
 
 
-class InputTargetSample(NamedTuple):
-    inputs: Any
+class OutputTargetsSample(NamedTuple):
+    outputs: Any
     targets: Any
+    meta: Any = None
+
+
+class Sample(NamedTuple):
+    first: Any      # Inputs (always)
+    second: Any     # Targets (preproc) or outputs (postproc)
     meta: Any = None  # Meta information (optional). Can e. g. be used to identify a sample (e.g. an ID)
 
+    # Alias
+    @property
+    def inputs(self) -> Any:
+        return self.first
 
-class InputOutputSample(NamedTuple):
-    inputs: Any
-    outputs: Any
-    meta: Any = None
+    @property
+    def outputs(self) -> Any:
+        return self.second
+
+    @property
+    def targets(self) -> Any:
+        return self.second
 
 
 @dataclass_json
 @dataclass
 class DataProcessorFactoryParams:
     name: str
-    modes: Set[PipelineMode] = field(default_factory=all_pipeline_modes.copy)
+    modes: Set[PipelineMode] = field(default_factory=GENERAL_PROCESSOR.copy)
     args: Optional[dict] = None

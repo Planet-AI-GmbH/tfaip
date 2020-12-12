@@ -73,6 +73,6 @@ class TestEMA(unittest.TestCase):
 
         # loss and acc on train must be equal, but lower on val
         self.assertEqual(first_train_logs['loss_loss'], store_logs_callback.logs['loss_loss'])
-        self.assertEqual(first_train_logs['acc_metric'], store_logs_callback.logs['acc_metric'])
+        self.assertEqual(first_train_logs['acc'], store_logs_callback.logs['acc'])
         self.assertLess(first_train_logs['val_loss'], store_logs_callback.logs['val_loss'])
-        self.assertGreater(first_train_logs['val_acc_metric'], store_logs_callback.logs['val_acc_metric'])
+        self.assertGreater(first_train_logs['val_acc'], store_logs_callback.logs['val_acc'])

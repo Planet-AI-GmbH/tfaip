@@ -35,9 +35,5 @@ class LAVCallback(ABC):
         pass
 
     @abstractmethod
-    def on_step_end(self, inputs, targets, outputs, metrics):
-        pass
-
-    @abstractmethod
     def on_lav_end(self, result):
         pass

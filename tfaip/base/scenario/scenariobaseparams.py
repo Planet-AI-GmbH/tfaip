@@ -20,7 +20,8 @@ from typing import List, Dict
 
 from dataclasses_json import dataclass_json, config, LetterCase
 
-from tfaip.base.data.data_base_params import DataBaseParams
+from tfaip.base.data.databaseparams import DataBaseParams
+from tfaip.base.evaluator.params import EvaluatorParams
 from tfaip.base.model import ModelBaseParams
 from tfaip.util.argument_parser import dc_meta
 from tfaip.util.versioning import get_commit_hash
@@ -47,6 +48,10 @@ class ScenarioBaseParams:
         help="Number of evaluation examples to print per evaluation, use -1 to print all"
     ))
 
+    tensorboard_logger_history_size: int = field(default=5, metadata=dc_meta(
+        help="Number of instances to store for outputing into tensorboard. Default (last n=5)"
+    ))
+
     export_frozen: bool = field(default=False, metadata=dc_meta(
         help="Export the frozen graph alongside the saved model"
     ))
@@ -54,8 +59,9 @@ class ScenarioBaseParams:
         help="Export the serving model (saved model format)"
     ))
 
-    model_params: ModelBaseParams = field(default_factory=lambda: ModelBaseParams())
-    data_params: DataBaseParams = field(default_factory=lambda: DataBaseParams())
+    model_params: ModelBaseParams = field(default_factory=ModelBaseParams)
+    data_params: DataBaseParams = field(default_factory=DataBaseParams)
+    evaluator_params: EvaluatorParams = field(default_factory=EvaluatorParams)
 
     # Additional export params
     export_net_config_: bool = True

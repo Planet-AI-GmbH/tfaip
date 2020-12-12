@@ -19,14 +19,18 @@ import enum
 from argparse import ArgumentParser, Action
 from typing import Optional, List, Union, Any, Type, Dict
 import Levenshtein
+import logging
 
 from tfaip.base.resource.resource import Resource
 
+logger = logging.getLogger(__name__)
+
 
 class TFAIPArgumentParser(ArgumentParser):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ignore_required=False, *args, **kwargs):
         super(TFAIPArgumentParser, self).__init__(*args, **kwargs)
         self._required_fields = {}
+        self._ignore_required = ignore_required
 
     def get_required_fields(self, group):
         if group not in self._required_fields:
@@ -36,10 +40,11 @@ class TFAIPArgumentParser(ArgumentParser):
     def parse_known_args(self, *args, **kwargs):
         r = super(TFAIPArgumentParser, self).parse_known_args(*args, **kwargs)
 
-        not_set_fields = {k: v for k, v in self._required_fields.items() if len(v) > 0}
-        if len(not_set_fields) > 0:
-            s = [f"{group} {' '.join([f.name for f in fields])}" for group, fields in not_set_fields.items()]
-            raise ValueError(f"Required arguments '{' '.join(s)}' were not set.")
+        if not self._ignore_required:
+            not_set_fields = {k: v for k, v in self._required_fields.items() if len(v) > 0}
+            if len(not_set_fields) > 0:
+                s = [f"{group} {' '.join([f.name for f in fields])}" for group, fields in not_set_fields.items()]
+                raise ValueError(f"Required arguments '{' '.join(s)}' were not set.")
         return r
 
 
@@ -146,11 +151,17 @@ def is_optional_field(field):
             and field.type.__args__[-1] is type(None)
             )
 
+
 def is_list_field(field):
-    return (not isinstance(field, type)
-            and hasattr(field.type, "__args__")
-            and len(field.type.__args__) == 1
-            and field.type._name == 'List'
+    if isinstance(field, type):
+        return
+    if hasattr(field, "__args__"):
+        ftype = field
+    else:
+        ftype = field.type
+    return (hasattr(ftype, "__args__")
+            and len(ftype.__args__) == 1
+            and ftype._name == 'List'
             )
 
 
@@ -163,92 +174,97 @@ def make_store_dataclass_action(data_cls: Any, required_fields: List):
         def __call__(self, parser, args, values, option_string=None):
             source_params = getattr(args, self.dest)
             for kv in values:
-                if len(kv.split('=')) == 2:
-                    key, val = kv.split("=")
-                else:
-                    raise ValueError(f"Could not parse '{kv}' must by KEY=VALUE")
-
-                # get parameter of data_cls
                 try:
-                    name, field = None, None
-                    for name, f in all_fields.items():
-                        if name.replace(safe_separator, f.metadata.get('arg_mode_separator', '.')) == key:
-                            field = f
-                            break
-                    if field is None:
-                        raise KeyError()
-                except KeyError:
-                    arguments = [name.replace(safe_separator, field.metadata.get('arg_mode_separator', '.')) for name, field in all_fields.items()]
-                    closest = None
-                    for arg in arguments:
-                        if key in arg:
-                            closest = arg
-
-                    if not closest and len(arguments) > 0:
-                        distances = {a: Levenshtein.distance(a, key) for a in arguments}
-                        closest = sorted(arguments, key=lambda a: distances[a])[0]
-
-                    str_args = argument_list_to_str(arguments)
-                    raise AttributeError(f'Invalid argument {key}. Did you mean "{closest}={val}"? Available arguments {str_args}')
-
-                # get the correct params and set the non prefixed key (snake mode)
-                params = source_params
-                split_name = name.split(safe_separator)
-                key = split_name[-1]
-                for sub in split_name[:-1]:
-                    params = getattr(params, sub)
-
-                def cast(v, cast_fn, f):
-                    if is_optional_field(f) and v.lower() in {'none', 'null'}:
-                        return None
-                    return cast_fn(v)
-
-                def cast_list(v, cast_type_fn, cast_list_fn, f):
-                    if is_optional_field(f) and v.lower() in {'none', 'null'}:
-                        return None
-                    return cast_list_fn(v, cast_type_fn)
-
-                # Single
-                if field.type == Optional[str] or field.type == str:
-                    setattr(params, key, cast(val, str, field))
-                elif field.type == Optional[int] or field.type == int:
-                    setattr(params, key, cast(val, int, field))
-                elif field.type == Optional[float] or field.type == float:
-                    setattr(params, key, cast(val, float, field))
-                elif field.type == Optional[bool] or field.type == bool:
-                    setattr(params, key, cast(val, str2bool, field))
-                elif field.type == Optional[Resource] or field.type == Resource:
-                    setattr(params, key, cast(val, Resource, field))
-
-                # Lists
-                elif field.type == Optional[List[str]] or field.type == List[str]:
-                    setattr(params, key, cast_list(val, str, parse_list_arg, field))
-                elif field.type == Optional[List[int]] or field.type == List[int]:
-                    setattr(params, key, cast_list(val, int, parse_list_arg, field))
-                elif field.type == Optional[List[float]] or field.type == List[float]:
-                    setattr(params, key, cast_list(val, float, parse_list_arg, field))
-
-                # Enum
-                elif is_int_enum(field.type):
-                    setattr(params, key, str2int_enum(val, field.type))
-                elif is_str_enum(field.type):
-                    setattr(params, key, str2str_enum(val, field.type))
-
-                # Enum Lists
-                elif is_enum_list(field.type, enum.Enum):
-                    t = extract_list_enum_type(field.type)
-                    l = parse_list_arg(val, str)
-                    if is_int_enum(field.type):
-                        setattr(params, key, list([str2int_enum(v, t) for v in l]))
+                    if len(kv.split('=')) == 2:
+                        key, val = kv.split("=")
                     else:
-                        setattr(params, key, list([str2str_enum(v, t) for v in l]))
+                        raise ValueError(f"Could not parse '{kv}' must by KEY=VALUE")
 
-                # Unknown
-                else:
-                    raise TypeError("Unknown type of field {}".format(field.type))
+                    # get parameter of data_cls
+                    try:
+                        name, field = None, None
+                        for name, f in all_fields.items():
+                            if name.replace(safe_separator, f.metadata.get('arg_mode_separator', '.')) == key:
+                                field = f
+                                break
+                        if field is None:
+                            raise KeyError()
+                    except KeyError:
+                        arguments = [name.replace(safe_separator, field.metadata.get('arg_mode_separator', '.')) for name, field in all_fields.items()]
+                        closest = None
+                        for arg in arguments:
+                            if key in arg:
+                                closest = arg
 
-                if field in required_fields:
-                    required_fields.remove(field)
+                        if not closest and len(arguments) > 0:
+                            distances = {a: Levenshtein.distance(a, key) for a in arguments}
+                            closest = sorted(arguments, key=lambda a: distances[a])[0]
+
+                        str_args = argument_list_to_str(arguments)
+                        raise AttributeError(f'Invalid argument {key}. Did you mean "{closest}={val}"? Available arguments {str_args}')
+
+                    # get the correct params and set the non prefixed key (snake mode)
+                    params = source_params
+                    split_name = name.split(safe_separator)
+                    key = split_name[-1]
+                    for sub in split_name[:-1]:
+                        params = getattr(params, sub)
+
+                    def cast(v, cast_fn, f):
+                        if is_optional_field(f) and v.lower() in {'none', 'null'}:
+                            return None
+                        return cast_fn(v)
+
+                    def cast_list(v, cast_type_fn, cast_list_fn, f):
+                        if is_optional_field(f) and v.lower() in {'none', 'null'}:
+                            return None
+                        return cast_list_fn(v, cast_type_fn)
+
+                    # Single
+                    if field.type == Optional[str] or field.type == str:
+                        setattr(params, key, cast(val, str, field))
+                    elif field.type == Optional[int] or field.type == int:
+                        setattr(params, key, cast(val, int, field))
+                    elif field.type == Optional[float] or field.type == float:
+                        setattr(params, key, cast(val, float, field))
+                    elif field.type == Optional[bool] or field.type == bool:
+                        setattr(params, key, cast(val, str2bool, field))
+                    elif field.type == Optional[Resource] or field.type == Resource:
+                        setattr(params, key, cast(val, Resource, field))
+
+                    # Lists
+                    elif field.type == Optional[List[str]] or field.type == List[str]:
+                        setattr(params, key, cast_list(val, str, parse_list_arg, field))
+                    elif field.type == Optional[List[int]] or field.type == List[int]:
+                        setattr(params, key, cast_list(val, int, parse_list_arg, field))
+                    elif field.type == Optional[List[float]] or field.type == List[float]:
+                        setattr(params, key, cast_list(val, float, parse_list_arg, field))
+
+                    # Enum
+                    elif is_int_enum(field.type):
+                        setattr(params, key, str2int_enum(val, field.type))
+                    elif is_str_enum(field.type):
+                        setattr(params, key, str2str_enum(val, field.type))
+
+                    # Enum Lists
+                    elif is_enum_list(field.type, enum.Enum):
+                        t = extract_list_enum_type(field.type)
+                        l = parse_list_arg(val, str)
+                        if is_int_enum(field.type):
+                            setattr(params, key, list([str2int_enum(v, t) for v in l]))
+                        else:
+                            setattr(params, key, list([str2str_enum(v, t) for v in l]))
+
+                    # Unknown
+                    else:
+                        raise TypeError("Unknown type of field {}".format(field.type))
+
+                    if field in required_fields:
+                        required_fields.remove(field)
+
+                except Exception as e:
+                    logger.error(f"During the parsing of field {key}={val} an error occurred.")
+                    raise e
 
     return DataClassAction
 

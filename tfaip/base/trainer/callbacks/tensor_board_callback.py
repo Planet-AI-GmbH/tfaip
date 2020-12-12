@@ -15,7 +15,11 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+from abc import abstractmethod, ABC
+from typing import TYPE_CHECKING
+
 from tensorflow.keras.callbacks import TensorBoard
+from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 import tensorflow.keras.backend as K
 import glob
 import logging
@@ -23,11 +27,18 @@ import os
 
 from tensorflow.python.ops import summary_ops_v2
 
+if TYPE_CHECKING:
+    from tfaip.base.trainer.callbacks.extract_logs import ExtractLogsCallback
+
 logger = logging.getLogger(__name__)
 
 
 class TensorBoardCallback(TensorBoard):
-    def __init__(self, log_dir, steps_per_epoch, reset=False, profile=0, *args, **kwargs):
+    def __init__(self, log_dir, steps_per_epoch,
+                 extracted_logs_cb: 'ExtractLogsCallback',
+                 data_handler: TensorBoardDataHandler,
+                 reset=False, profile=0,
+                 *args, **kwargs):
         if reset:
             logger.info("Removing old event files from '{}'".format(log_dir))
             for f in glob.glob(os.path.join(log_dir, '*', 'events.out.tfevents*')):
@@ -36,6 +47,8 @@ class TensorBoardCallback(TensorBoard):
 
         super(TensorBoardCallback, self).__init__(log_dir=log_dir, profile_batch=profile, *args, **kwargs)
         self.steps_per_epoch = steps_per_epoch
+        self.extracted_logs_cb = extracted_logs_cb
+        self.data_handler = data_handler
 
         self._lav_dir = os.path.join(log_dir, 'lav')
 
@@ -61,6 +74,9 @@ class TensorBoardCallback(TensorBoard):
         if not logs:
             return
 
+        if self.extracted_logs_cb:
+            logs.update(self.extracted_logs_cb.extracted_logs)
+
         train_logs = {k: v for k, v in logs.items() if not k.startswith('val_') and not k.startswith('lav_')}
         val_logs = {k: v for k, v in logs.items() if k.startswith('val_')}
         lav_logs = {k: v for k, v in logs.items() if k.startswith('lav_')}
@@ -69,12 +85,12 @@ class TensorBoardCallback(TensorBoard):
             if train_logs:
                 with self._train_writer.as_default():
                     for name, value in train_logs.items():
-                        summary_ops_v2.scalar('epoch_' + name, value, step=epoch)
+                        self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)
             if val_logs:
                 with self._val_writer.as_default():
                     for name, value in val_logs.items():
                         name = name[4:]  # Remove 'val_' prefix.
-                        summary_ops_v2.scalar('epoch_' + name, value, step=epoch)
+                        self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)
 
             # lav logs, include lav list idx
             if lav_logs:
@@ -92,4 +108,4 @@ class TensorBoardCallback(TensorBoard):
                 for idx, logs in lavs.items():
                     with self._lav_writer(idx).as_default():
                         for name, value in logs.items():
-                            summary_ops_v2.scalar('epoch_' + name, value, step=epoch)
+                            self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)

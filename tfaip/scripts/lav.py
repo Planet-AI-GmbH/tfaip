@@ -57,7 +57,7 @@ def parse_args(args=None):
     lav_params = scenario.lav_cls().get_params_cls()()
     lav_params.model_path_ = args.export_dir
 
-    parser = TFAIPArgumentParser()
+    parser = TFAIPArgumentParser(ignore_required=True)
     add_args_group(parser, group='data_params', default=scenario_params.data_params, params_cls=scenario.data_cls().get_params_cls())
     add_args_group(parser, group='lav_params', default=lav_params, params_cls=scenario.lav_cls().get_params_cls())
 
