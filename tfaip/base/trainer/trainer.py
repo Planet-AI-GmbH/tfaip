@@ -115,16 +115,22 @@ class Trainer(ABC):
         self.stop_training = False
 
         if self._params.samples_per_epoch < 0:
-            logger.info("Got negative samples per epoch. Setting samples per epoch to dataset size. Note that this "
+            logger.info(f"Setting samples per epoch relative to dataset size with a factor of "
+                        f"{self._params.scale_epoch_size}. Note that this "
                         "requires the creation of the data generator once before training.")
             self._params.samples_per_epoch = len(self._data.get_train_data().create_data_generator())
+
+            if self._params.scale_epoch_size != 1:
+                self._params.samples_per_epoch = int(self._params.samples_per_epoch * self._params.scale_epoch_size)
+
             if self._params.samples_per_epoch <= 0:
                 raise ValueError("Could not compute the number of samples per epoch based on the size of the data "
                                  "generator. Please implement __len__ correctly.")
             logger.info(f"Set samples per epoch to {self._params.samples_per_epoch}")
-
-        if self._params.scale_epoch_size != 1:
-            self._params.samples_per_epoch = int(self._params.samples_per_epoch * self._params.scale_epoch_size)
+        else:
+            if self._params.scale_epoch_size != 1:
+                logger.warning("Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch."
+                               "Set samples_per_epoch to the default (=-1) to use relative computation.")
 
         self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train.batch_size
         if self._steps_per_epoch <= 0:
