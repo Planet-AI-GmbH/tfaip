@@ -136,10 +136,6 @@ class DataPipeline(JoinableHolder, ABC):
         self._auto_batch = True
         self._input_processors: SamplePipelineParams = input_processors or self.data_params.pre_processors_
         self._output_processors: SamplePipelineParams = output_processors or self.data_params.post_processors_
-        # output processors are used always
-        if self._output_processors:
-            for op in self._output_processors.sample_processors:
-                op.modes = GENERAL_PROCESSOR
 
     def to_mode(self, mode: PipelineMode) -> 'DataPipeline':
         return self.__class__(mode, self.data, self.generator_params, self._input_processors, self._output_processors)

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, List
 import logging
 
 from tensorflow.python.keras.utils import tf_utils
+from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 
 if TYPE_CHECKING:
     from tfaip.base import ScenarioBase
@@ -45,6 +46,12 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
                            "Probably you loaded the keras model with keras.models.load instead of reinstantiating "
                            "the full graph (e.g. using tfaip-resume-training). This will not result in an error, but "
                            "no outputs will be generated.")
+
+        data = self.scenario.data
+        pp = data.params().post_processors_
+        pp = pp.sample_processors if pp else []
+        self._post_proc_pred = data.data_processor_factory().create_sequence(pp, data.params(), PipelineMode.Prediction)
+        self._post_proc_targets = data.data_processor_factory().create_sequence(pp, data.params(), PipelineMode.Targets)
 
     def get_config(self):
         # Implement this to get rid of warning.
@@ -113,18 +120,23 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
                 if still_allowed == self.limit:
                     logger.info(f"Printing Evaluation Results of {'all' if self.limit == -1 else self.limit} Instances")
                 for batch in range(batch_size):
+                    inputs = {k: v[batch] for k, v in in_np.items()}
+                    outputs = {k: v[batch] for k, v in out_np.items()}
+                    targets = {k: v[batch] for k, v in target_np.items()}
+
+                    _, outputs, _ = self._post_proc_pred.apply_on_sample(Sample(inputs.copy(), outputs))
+                    inputs, targets, _ = self._post_proc_targets.apply_on_sample(Sample(inputs.copy(), targets))
+
                     self.scenario.model.print_evaluate(
-                        {k: v[batch] for k, v in in_np.items()},
-                        {k: v[batch] for k, v in out_np.items()},
-                        {k: v[batch] for k, v in target_np.items()},
+                        inputs, outputs, targets,
                         self.scenario.data,
                         print_fn=logger.info)
                     still_allowed -= 1
                     if still_allowed == 0:
                         break
         except AttributeError:
-            # .numpy() can not be called yet, e.g. during graph construction
-            pass
+            # TODO: if .numpy() can not be called yet, e.g. during graph construction
+            raise
         return tf.no_op()
 
 

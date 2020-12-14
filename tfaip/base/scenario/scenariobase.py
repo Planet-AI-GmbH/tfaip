@@ -486,7 +486,7 @@ class ScenarioBase(ABC):
         self._keras_train_model.compile(optimizer=optimizer,
                                         loss={k: wrap_loss for k, _ in _losses.items()},
                                         loss_weights=self.model.loss_weights(),
-                                        metrics={k: OutputHolderMetricWrapper(v.shape, self._params.tensorboard_logger_history_size, name=k) for k, v in _tensorboard_outputs.items()},
+                                        metrics={k: OutputHolderMetricWrapper(v.shape, v.dtype, self._params.tensorboard_logger_history_size, name=k) for k, v in _tensorboard_outputs.items()},
                                         weighted_metrics={**{k: MeanMetricWrapper(lambda t, p: p, name=k) for k, _ in _extended_metrics.items()},
                                                           **{k: v.metric for k, v in _simple_metrics.items()}},
                                         run_eagerly=run_eagerly,

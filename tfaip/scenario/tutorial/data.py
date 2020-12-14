@@ -51,7 +51,7 @@ def to_samples(samples):
 class Data(DataBase):
     @classmethod
     def data_processor_factory(cls) -> DataProcessorFactory:
-        pass
+        return DataProcessorFactory([])
 
     @classmethod
     def data_pipeline_cls(cls) -> Type[DataPipeline]:

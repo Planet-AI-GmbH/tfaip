@@ -17,6 +17,7 @@
 # ==============================================================================
 import tensorflow.keras as keras
 import tensorflow as tf
+import numpy as np
 
 
 class OutputHolderMetricWrapper(keras.metrics.Metric):
@@ -25,17 +26,14 @@ class OutputHolderMetricWrapper(keras.metrics.Metric):
 
     Used to write this data to the logs, which can then be written to the tensorboard
     """
-    def __init__(self, input_shape, n_storage=2, **kwargs):
+    def __init__(self, input_shape, dtype, n_storage=2, **kwargs):
         super(OutputHolderMetricWrapper, self).__init__(**kwargs)
-        self.store_w = self.add_weight(f'store', [n_storage] + input_shape[1:])
+        initial_value = np.zeros([0 if s is None else s for s in input_shape])
+        self.store_w = tf.Variable(initial_value=initial_value, shape=input_shape, trainable=False, validate_shape=False, name=f'store', dtype=dtype)
         self.n_storage = n_storage
 
     def update_state(self, y_true, y_pred, **kwargs):
-        batch_size = tf.shape(y_pred)[0]
-        length = tf.minimum(batch_size, self.n_storage)
-        slice = y_pred[:length]
-        target_slice = self.store_w[:length]
-        return target_slice.assign(slice)
+        return self.store_w.assign(y_pred)
 
     def result(self):
         return tf.stack(self.store_w)
