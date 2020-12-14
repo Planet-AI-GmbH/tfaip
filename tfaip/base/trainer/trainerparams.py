@@ -68,7 +68,13 @@ class TrainerParams:
         help="The epoch to start with. Usually 0, but can be overwritten for resume training."
     ))
     samples_per_epoch: int = field(default=-1, metadata=dc_meta(
-        help="The number of samples (not batches!) to process per epoch. By default the size fo the training dataset"
+        help="The number of samples (not batches!) to process per epoch. "
+             "By default (-1) the size fo the training dataset."
+    ))
+    scale_epoch_size: float = field(default=1, metadata=dc_meta(
+        help="Multiply the number of samples per epoch by this factor. This is useful when using the dataset size as "
+             "samples per epoch (--samples_per_epoch=-1, the default), but if you desire to set it e.g. to the half "
+             "dataset size (--scale_epoch_size=0.5)"
     ))
     train_accum_steps: int = field(default=1, metadata=dc_meta(
         help="Artificially increase the batch size by accumulating the gradients of n_steps(=batches) before applying "

@@ -123,6 +123,9 @@ class Trainer(ABC):
                                  "generator. Please implement __len__ correctly.")
             logger.info(f"Set samples per epoch to {self._params.samples_per_epoch}")
 
+        if self._params.scale_epoch_size != 1:
+            self._params.samples_per_epoch = int(self._params.samples_per_epoch * self._params.scale_epoch_size)
+
         self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train.batch_size
         if self._steps_per_epoch <= 0:
             raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "

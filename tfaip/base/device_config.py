@@ -34,10 +34,17 @@ class DistributionStrategy(StrEnum):
     Mirror = 'mirror'
 
 
+def default_gpus():
+    devs = os.environ.get('CUDA_VISIBLE_DEVICES', None)
+    if devs is None or len(devs) == 0:
+        return []
+    return list(map(int, devs.split(',')))
+
+
 @dataclass_json
 @dataclass
 class DeviceConfigParams:
-    gpus: List[int] = field(default_factory=list, metadata=dc_meta(
+    gpus: List[int] = field(default_factory=default_gpus, metadata=dc_meta(
         help="List of the GPUs to use."
     ))
     gpu_auto_tune: bool = field(default=False, metadata=dc_meta(
