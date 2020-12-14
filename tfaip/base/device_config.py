@@ -38,7 +38,7 @@ def default_gpus():
     devs = os.environ.get('CUDA_VISIBLE_DEVICES', None)
     if devs is None or len(devs) == 0:
         return []
-    return list(map(int, devs.split(',')))
+    return list(range(len(devs.split(','))))  # tensorflow only 'sees' the visible devices, therefore just count them
 
 
 @dataclass_json
