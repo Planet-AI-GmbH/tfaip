@@ -23,8 +23,8 @@ import sys
 
 FORMAT = '{levelname:<8s} {asctime} {name:>30.30s}: {message}'
 formatter = logging.Formatter(FORMAT, style='{')
-logger = logging.getLogger(__name__)
 TFAIP_LOG_LEVEL = getattr(logging, os.environ.get('TFAIP_LOG_LEVEL', 'INFO').upper())
+this_logger = logging.getLogger(__name__)
 logging.basicConfig(level=TFAIP_LOG_LEVEL)
 logging.getLogger().handlers[0].setFormatter(formatter)
 
@@ -37,7 +37,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    this_logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
 sys.excepthook = handle_exception
@@ -50,7 +50,7 @@ def setup_log(log_dir, append, log_name='train.log'):
     file_handler.setFormatter(formatter)
     file_handler.setLevel(level=TFAIP_LOG_LEVEL)
     logging.getLogger().addHandler(file_handler)
-    logger.info(f"Logging training progress to '{filename}'")
+    this_logger.info(f"Logging training progress to '{filename}'")
 
 
 def logger(name):
