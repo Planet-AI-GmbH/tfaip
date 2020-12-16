@@ -16,7 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
@@ -26,7 +26,7 @@ from tfaip.util.argument_parser import dc_meta
 @dataclass_json
 @dataclass
 class WarmstartParams:
-    model: str = field(default=None, metadata=dc_meta(
+    model: Optional[str] = field(default=None, metadata=dc_meta(
         help="Path to the saved model or checkpoint to load the weights from."
     ))
 
@@ -44,10 +44,10 @@ class WarmstartParams:
         help="A list of renaming rules to perform on the target weights. Format: [FROM->TO,FROM->TO,...]"
     ))
 
-    exclude: str = field(default=None, metadata=dc_meta(
+    exclude: Optional[str] = field(default=None, metadata=dc_meta(
         help="A regex applied on the loaded weights to ignore from loading."
     ))
-    include: str = field(default=None, metadata=dc_meta(
+    include: Optional[str] = field(default=None, metadata=dc_meta(
         help="A regex applied on the loaded weights to include from loading."
     ))
 

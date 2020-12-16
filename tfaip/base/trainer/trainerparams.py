@@ -112,7 +112,7 @@ class TrainerParams:
     export_final: bool = field(default=True, metadata=dc_meta(
         help="Export the final model after training to checkpoint_dir/export."
     ))
-    no_train_scope: str = field(default=None, metadata=dc_meta(
+    no_train_scope: Optional[str] = field(default=None, metadata=dc_meta(
         help="Regex to match with layer names to exclude from training, i.e. the weights of these layers won't receive "
              "updates"
     ))

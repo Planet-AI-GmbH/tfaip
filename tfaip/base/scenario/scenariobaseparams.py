@@ -16,7 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from dataclasses_json import dataclass_json, config, LetterCase
 
@@ -73,9 +73,9 @@ class ScenarioBaseParams:
     trainer_params_filename_: str = 'trainer_params.json'
     scenario_params_filename_: str = 'scenario_params.json'
 
-    scenario_base_path_: str = None
-    scenario_module_: str = None
-    id_: str = None
+    scenario_base_path_: Optional[str] = None
+    scenario_module_: Optional[str] = None
+    id_: Optional[str] = None
 
     tfaip_commit_hash_: str = field(default_factory=get_commit_hash)
     tfaip_version_: str = __version__
