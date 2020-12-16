@@ -51,3 +51,7 @@ def setup_log(log_dir, append, log_name='train.log'):
     file_handler.setLevel(level=TFAIP_LOG_LEVEL)
     logging.getLogger().addHandler(file_handler)
     logger.info(f"Logging training progress to '{filename}'")
+
+
+def logger(name):
+    return logging.getLogger(name)

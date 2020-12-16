@@ -60,6 +60,7 @@ class MetricsAccumulator:
         running_sum: The running weighted sum of all values
         running_weight: The sum of all weights
     """
+
     def __init__(self):
         self.running_sum: Dict[str, float] = {}
         self.running_weight: Dict[str, float] = {}
@@ -75,8 +76,10 @@ class MetricsAccumulator:
             self.running_sum = {k: 0 for k, v in new_values.items()}
             self.running_weight = {k: 0 for k, v in new_values.items()}
 
-        self.running_sum = {k: (self.running_sum[k] + weighted(v, sample_weights.get(k, None))) for k, v in new_values.items()}
-        self.running_weight = {k: (v + (1 if k not in sample_weights else sample_weights[k])) for k, v in self.running_weight.items()}
+        self.running_sum = {k: (self.running_sum[k] + weighted(v, sample_weights.get(k, None))) for k, v in
+                            new_values.items()}
+        self.running_weight = {k: (v + (1 if k not in sample_weights else sample_weights[k])) for k, v in
+                               self.running_weight.items()}
 
     def final(self):
         return {k: v / self.running_weight[k] for k, v in self.running_sum.items()}
@@ -94,6 +97,7 @@ class LAV(ABC):
     The first possibility to override LAV is to inherit and use _on_batch_end, _on_sample_end, _on_lav_end with custom
     parameters. Thus is used for instance to support rendering of attention matrices in atr.transformer.
     """
+
     @classmethod
     def get_params_cls(cls) -> Type[LAVParams]:
         return LAVParams
@@ -151,7 +155,8 @@ class LAV(ABC):
         real_inputs = _keras_model.input
         real_targets = self._data.create_target_as_input_layers()
         eval_inputs = {**real_inputs, **real_targets}
-        sample_weights = {k + '_sample_weight': v for k, v in self._model.sample_weights(real_inputs, real_targets).items()}
+        sample_weights = {k + '_sample_weight': v for k, v in
+                          self._model.sample_weights(real_inputs, real_targets).items()}
         metric_outputs = self._model.extended_metric(eval_inputs, _keras_model.output)
         simple_metrics = self._model.metric()
         eval_model = keras.Model(eval_inputs,
@@ -194,14 +199,16 @@ class LAV(ABC):
                     un_batched_metric_outputs = sample.meta['lav_metrics']
                     un_batched_sample_weights = {k[:-14]: v for k, v in sample.inputs.items() if k in sample_weights}
                     if not self._params.silent:
-                        self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets, self._data)
+                        self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets,
+                                                   self._data)
 
                     for k, metric in simple_metrics.items():
                         # metrics expect a batch dimension, thus wrap into a list
                         metric.metric.update_state(
                             np.expand_dims(un_batched_targets[metric.target], axis=0),
                             np.expand_dims(un_batched_outputs[metric.output], axis=0),
-                            np.expand_dims(un_batched_sample_weights[k], axis=0) if k in un_batched_sample_weights else None)
+                            np.expand_dims(un_batched_sample_weights[k],
+                                           axis=0) if k in un_batched_sample_weights else None)
 
                     metrics_accum.accumulate_dict_sum(un_batched_metric_outputs, un_batched_sample_weights)
 
@@ -211,12 +218,13 @@ class LAV(ABC):
 
                     evaluator.update_state(OutputTargetsSample(un_batched_outputs, un_batched_targets, sample.meta))
 
-            all_metric_results = {
-                **metrics_accum.final(),
-                **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
-                   not isinstance(v.metric.result().numpy(), (bytes, bytearray))},
-                **evaluator.result(),
-            }
+            # print the output
+            keys = self._model.tensorboard_handler.all_tensorboard_keys
+            print(keys)
+            print(list(simple_metrics.keys()))
+            all_metric_results = {**metrics_accum.final(),
+                                  **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
+                                     k not in keys}}
             self._on_lav_end(all_metric_results)
             for cb in callbacks:
                 cb.on_lav_end(all_metric_results)

@@ -33,7 +33,7 @@ from tfaip.base.data.pipeline.datapipeline import DataPipeline, RawDataPipeline,
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
-from tfaip.util.time import MeasureTime
+from tfaip.util.profiling import MeasureTime
 
 
 if TYPE_CHECKING:
@@ -98,13 +98,14 @@ class PredictorBase(ABC):
         if isinstance(model, str):
             model = keras.models.load_model(model, compile=False)
 
-        model.run_eagerly = self._params.run_eagerly
         # wrap to output inputs as outputs
         if convert_to_input_output:
             inputs = self._data.create_input_layers()
             outputs = model(inputs)
             model = keras.models.Model(inputs=inputs,
                                        outputs=(inputs, outputs))
+
+        model.run_eagerly = self._params.run_eagerly
         return model
 
     def predict(self, params: DataGeneratorParams) -> Iterable[Sample]:
@@ -113,7 +114,7 @@ class PredictorBase(ABC):
     @abstractmethod
     def _unwrap_batch(self, inputs, r) -> Iterable:
         raise NotImplementedError
-    
+
     def predict_raw(self, inputs: Iterable[Any], *, size=None, batch_size=1) ->Iterable[Sample]:
         if size is None:
             try:

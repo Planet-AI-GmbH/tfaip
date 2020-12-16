@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+import tensorflow as tf
 import tensorflow.keras.callbacks as cb
+from tensorflow.python.ops import summary_ops_v2
 
 
 class FixMetricLabelsCallback(cb.Callback):

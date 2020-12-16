@@ -43,6 +43,10 @@ class MultiMetric(metrics.Metric, ABC):
         # Unfortunately we must return something
         return 0
 
+    def reset_states(self):
+        for c in self.children:
+            c.reset_states()
+
 
 class MulitMetricWrapper(metrics.Metric):
     def __init__(self, metric: metrics.Metric, **kwargs):

@@ -136,7 +136,7 @@ class EarlyStoppingCallback(Callback):
                 else:
                     logger.debug(f"Epoch {epoch + 1} ignored in early stopping as frequency={self._params.frequency}.")
 
-            logger.info(f"No better value of {self._params.monitor_} found. Worse = {new_value}, Best = {self._params.current_}")
+            logger.info(f"No better value of {self._params.monitor_} found. Worst = {new_value}, Best = {self._params.current_}")
 
         if self._params.mode_ == 'min':
             if self._params.current_ <= self._params.lower_threshold:

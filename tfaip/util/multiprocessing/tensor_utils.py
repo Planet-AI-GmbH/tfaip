@@ -15,21 +15,19 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import time
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import tensorflow as tf
+
+from tfaip.util.shape_utils import combined_static_and_dynamic_shape
 
 
-class MeasureTime:
-    def __init__(self):
-        self.start = 0
-        self.end = 0
-        self.duration = -1
-
-    def __enter__(self):
-        self.start = time.time()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end = time.time()
-        self.duration = self.end - self.start
-
-
+def slice_from_last_dim(channel, tensor, shape_as_list=None, reduce_dim=False):
+    if shape_as_list is None:
+        shape_as_list = combined_static_and_dynamic_shape(tensor)
+    flatten = tf.reshape(tensor, [-1, shape_as_list[-1]])
+    sliced = tf.slice(flatten, [0, channel], [-1, 1])
+    if reduce_dim:
+        return tf.reshape(sliced, shape=shape_as_list[:-1])
+    else:
+        return tf.reshape(sliced, shape=[*shape_as_list[:-1], 1])

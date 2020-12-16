@@ -22,7 +22,7 @@ import tensorflow as tf
 
 class TensorBoardDataHandler:
     def __init__(self):
-        self.all_tensorboard_keys = []
+        self.all_tensorboard_keys = self._tensorboard_only_metrics()
 
     def setup(self, inputs, outputs) -> Dict[str, tf.Tensor]:
         outputs = self._outputs_for_tensorboard(inputs, outputs)

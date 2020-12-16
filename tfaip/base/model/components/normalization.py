@@ -20,6 +20,13 @@ import tensorflow as tf
 
 
 class NormalizeImage(keras.layers.Layer):
+    """
+    Linearly scales `image` to have zero mean and unit norm as described in PerImageStandardization.
+    For the normalization it takes into account the 'real' shape of the tensor when it whas padded for batch-processing.
+    In contrast to PerImageStandardization the input of the call-method is not only a tensor, it is a tuple
+    (image , shape) with image of shape (height,width) and shape the corresponding shape.
+    the shape of the output tensor equals the shape of the image tensor.
+    """
     def __init__(self, name='normalize_image'):
         super(NormalizeImage, self).__init__(name=name)
 

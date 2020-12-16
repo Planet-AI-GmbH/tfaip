@@ -31,7 +31,8 @@ from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.random import set_global_random_seed
 
 
-def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True):
+def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True,
+                                 delta=None):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
     # The resulting metrics/loss must be identical
@@ -73,26 +74,29 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
         for k, v in logs_after_warmstart.items():
             if k.startswith('val'):
                 # only test val variables, because training loss is once before and once after weight update
-                test.assertAlmostEqual(v, initial_logs[k])
+                test.assertAlmostEqual(v, initial_logs[k], delta=delta)
 
 
 def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True):
     scenario_params.debug_graph_construction = debug
     scenario_params.debug_graph_n_examples = 1
     trainer_params = TrainerParams(
-        epochs=1,
+        epochs=2,
         samples_per_epoch=scenario_params.data_params.train.batch_size,
         scenario_params=scenario_params,
         write_checkpoints=False,
         force_eager=debug,
         random_seed=1324,
         lav_every_n=1,
+        skip_model_load_test=debug,
+        val_every_n=1,
     )
     trainer = scenario.create_trainer(trainer_params)
     trainer.train()
 
 
-def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=True):
+def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=True,
+                  delta=None):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = TrainerParams(
             checkpoint_dir=tmp_dir,
@@ -106,6 +110,8 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
             write_checkpoints=False,
             random_seed=324,
         )
+        batch_and_limit = 5
+        trainer_params.scenario_params.debug_graph_construction = debug
         trainer = scenario.create_trainer(trainer_params)
         trainer.train()
 
@@ -116,18 +122,18 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
 
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.max_iter = 1
-
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path_)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
-        lav_params.max_iter = 5
+        lav_params.max_iter = batch_and_limit
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path_)
         scenario_params.data_params.val.batch_size = 1
+        scenario_params.data_params.val.limit = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
         set_global_random_seed(trainer_params.random_seed)
@@ -135,15 +141,16 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path_)
-        scenario_params.data_params.val.batch_size = 5
+        scenario_params.data_params.val.limit = batch_and_limit
+        scenario_params.data_params.val.batch_size = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)
         bs5_results = next(lav.run())
         time.sleep(0.5)
         for k in bs1_results.keys():
-            test.assertAlmostEqual(bs1_results[k], bs5_results[k], msg=f"on key {k}")
+            test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
-def resume_training(test: unittest.TestCase, scenario, scenario_params):
+def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=None):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         store_logs_callback = StoreLogsCallback()
@@ -181,4 +188,4 @@ def resume_training(test: unittest.TestCase, scenario, scenario_params):
         for k, v in logs_after_resume.items():
             if k.startswith('val'):
                 # only test val variables, because training loss is once before and once after weight update
-                test.assertAlmostEqual(v, initial_logs[k])
+                test.assertAlmostEqual(v, initial_logs[k], delta=delta)
