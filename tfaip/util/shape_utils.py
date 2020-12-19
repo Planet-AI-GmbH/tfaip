@@ -36,6 +36,8 @@ from typing import List
 
 import tensorflow as tf
 
+from tfaip.util.typing import AnyTensor
+
 logger = logging.getLogger(__name__)
 
 
@@ -151,7 +153,7 @@ def static_or_dynamic_map_fn(fn, elems, dtype=None,
     raise ValueError('`fn` should return a Tensor or a list of Tensors.')
 
 
-def combined_static_and_dynamic_shape(tensor: tf.Tensor) -> List[tf.Tensor]:
+def combined_static_and_dynamic_shape(tensor: AnyTensor) -> List[AnyTensor]:
     """Returns a list containing static and dynamic values for the dimensions.
 
     Returns a list of static and dynamic values for shape dimensions. This is
@@ -349,7 +351,7 @@ def pad_or_clip_nd(tensor, output_shape):
         axis=1)
     padded_tensor = tf.pad(clipped_tensor, paddings=paddings)
     output_static_shape = [
-        dim if not isinstance(dim, tf.Tensor) else None for dim in output_shape
+        dim if not isinstance(dim, AnyTensor) else None for dim in output_shape
     ]
     padded_tensor.set_shape(output_static_shape)
     return padded_tensor

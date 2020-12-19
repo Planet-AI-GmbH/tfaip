@@ -21,6 +21,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import array_ops
 from tfaip.util.shape_utils import combined_static_and_dynamic_shape as to_shape
+from tfaip.util.typing import AnyTensor
 
 
 def _resize(tensor, diffshape, targetshape, origshape):
@@ -32,7 +33,7 @@ def _resize(tensor, diffshape, targetshape, origshape):
     )
 
 
-def crop_to_dimension(features: tf.Tensor, shape: tf.Tensor) -> tf.Tensor:
+def crop_to_dimension(features: AnyTensor, shape: AnyTensor) -> AnyTensor:
     """
     crops features to the given shapes, whereas first and last dimension were not touched (because batch and #features)
     @param features: feature of format NWC NHWC NDHWC
@@ -53,7 +54,7 @@ def crop_to_dimension(features: tf.Tensor, shape: tf.Tensor) -> tf.Tensor:
                    lambda: features)
 
 
-def crop_to_same_dimension(layer1: tf.Tensor, layer2: tf.Tensor) -> (tf.Tensor, tf.Tensor):
+def crop_to_same_dimension(layer1: AnyTensor, layer2: AnyTensor) -> (AnyTensor, AnyTensor):
     """
     Crops both layers to same dimension
     When one tensor is 1 dimension lower than the other and the type is integer (other is of type float),
@@ -95,8 +96,8 @@ def crop_to_same_dimension(layer1: tf.Tensor, layer2: tf.Tensor) -> (tf.Tensor, 
     return layer1, layer2
 
 
-def crop_valid_after_upsampling(kernel: List[int], stride: List[int], layer_orig: tf.Tensor, layer_up: tf.Tensor,
-                                layer_down: tf.Tensor) -> (tf.Tensor, tf.Tensor):
+def crop_valid_after_upsampling(kernel: List[int], stride: List[int], layer_orig: AnyTensor, layer_up: AnyTensor,
+                                layer_down: AnyTensor) -> (AnyTensor, AnyTensor):
     """
     crops layers layer_orig and layer_up in spartial dimension to only contain valid pixels
     @param kernel: kernes-size of upsampling-layer
@@ -122,7 +123,7 @@ def crop_valid_after_upsampling(kernel: List[int], stride: List[int], layer_orig
     return layer_orig, layer_up
 
 
-def crop(tensor: tf.Tensor, offset: List[tf.Tensor], targetshape: List[tf.Tensor]) -> tf.Tensor:
+def crop(tensor: AnyTensor, offset: List[AnyTensor], targetshape: List[AnyTensor]) -> AnyTensor:
     """
     crops the tensor with the given dimension.
     Note that the first and the last dimension says fixed,

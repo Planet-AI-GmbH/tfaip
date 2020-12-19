@@ -29,8 +29,7 @@ from tfaip.base.model.modelbase import MetricDefinition
 from tfaip.base.model.util.graph_enum import create_graph_enum
 from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 from tfaip.util.argument_parser import dc_meta
-from tfaip.util.typing import AnyNumpy
-
+from tfaip.util.typing import AnyNumpy, AnyTensor
 
 Graphs = create_graph_enum(__name__)
 
@@ -57,7 +56,7 @@ class TutorialModel(ModelBase):
     def _best_logging_settings(self):
         return "max", "acc"
 
-    def _loss(self, inputs, outputs) -> Dict[str, tf.Tensor]:
+    def _loss(self, inputs, outputs) -> Dict[str, AnyTensor]:
         return {'loss': tf.keras.layers.Lambda(
             lambda x: tf.keras.metrics.sparse_categorical_crossentropy(*x, from_logits=True), name='loss')(
             (inputs['gt'], outputs['logits']))}
@@ -83,7 +82,7 @@ class TutorialModel(ModelBase):
 
     def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
         class TutorialTBHandler(TensorBoardDataHandler):
-            def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, tf.Tensor]:
+            def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, AnyTensor]:
                 return {k: v for k, v in outputs.items() if k in ['conv_out']}
 
             def handle(self, name, name_for_tb, value, step):

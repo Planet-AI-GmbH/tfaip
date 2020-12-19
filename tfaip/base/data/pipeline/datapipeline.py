@@ -20,6 +20,7 @@ import gc
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import partial
+from random import shuffle
 from typing import TYPE_CHECKING, List, Iterable, Optional, Callable, Type
 import logging
 
@@ -107,6 +108,8 @@ class RawDataGenerator(DataGenerator):
         return len(self.raw_data)
 
     def generate(self) -> Iterable[Sample]:
+        if self.mode == PipelineMode.Training:
+            shuffle(self.raw_data)
         return self.raw_data
 
 

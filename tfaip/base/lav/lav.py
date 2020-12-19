@@ -220,8 +220,6 @@ class LAV(ABC):
 
             # print the output
             keys = self._model.tensorboard_handler.all_tensorboard_keys
-            print(keys)
-            print(list(simple_metrics.keys()))
             all_metric_results = {**metrics_accum.final(),
                                   **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
                                      k not in keys}}

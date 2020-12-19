@@ -19,7 +19,6 @@ import tensorflow as tf
 from typing import TYPE_CHECKING, List
 import logging
 
-from tensorflow.python.keras.utils import tf_utils
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 
 if TYPE_CHECKING:
@@ -88,7 +87,11 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         def reset_op():
             return tf.py_function(self.reset_training, [], Tout=[], name='print_reset')
 
-        op = tf_utils.smart_cond(training, reset_op, print_op)
+        if tf.version.VERSION >= "2.4.0" or isinstance(training, bool):
+            op = reset_op if training else print_op
+        else:
+            op = tf.cond(training, reset_op, print_op)
+
         with tf.control_dependencies([op]):
             return v
 

@@ -132,7 +132,6 @@ class SelfAttentionLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, num_heads, rate=0.1, return_attn_coef=False, name='self_attention',
                  layer_norm=True, residual=True,
                  attention_type=AttentionType.DotProduct, attention_params=None,
-                 post_dense=True,
                  **kwargs):
         super(SelfAttentionLayer, self).__init__(name=name, **kwargs)
 
@@ -142,7 +141,7 @@ class SelfAttentionLayer(tf.keras.layers.Layer):
         self.return_attn_coef = return_attn_coef
         self.use_residual = residual
 
-        self.mha = MultiHeadAttention(d_model, num_heads, attention_type=attention_type, attention_params=attention_params, post_dense=post_dense)
+        self.mha = MultiHeadAttention(d_model, num_heads, attention_type=attention_type, attention_params=attention_params)
         self.layernorm = tf.keras.layers.LayerNormalization(epsilon=1e-6, name='layer_norm') if layer_norm else None
         self.dropout = tf.keras.layers.Dropout(rate, name='dropout')
 

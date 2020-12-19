@@ -45,6 +45,8 @@ from tfaip.base.scenario.util.print_evaluate_layer import PrintEvaluateLayer
 
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
+from tfaip.util.typing import AnyTensor
+
 if TYPE_CHECKING:
     from tfaip.base.trainer import TrainerParams
     from tfaip.base.model import ModelBase
@@ -432,12 +434,16 @@ class ScenarioBase(ABC):
         logger.info("Building prediction graph")
         pred_outputs = self.model.build(real_inputs)
         # rename outputs to dict keys (for export)
-        pred_outputs = {k: v if v.op.name == k else tf.identity(v, name=k) for k, v in pred_outputs.items()}
-        for k, v in pred_outputs.items():
-            if v.op.name != k:
-                raise NameError(
-                    f"Name of output operation {v.op.name} could not be set to {k} in the prediction graph. "
-                    f"This usually happens if the same name is used twice in a graph.")
+        # TODO: Check if renaming is still required, this is not possible in tf 2.4
+        if tf.version.VERSION >= "2.4.0":
+            pass
+        else:
+            pred_outputs = {k: v if v.op.name == k else tf.identity(v, name=k) for k, v in pred_outputs.items()}
+            for k, v in pred_outputs.items():
+                if v.op.name != k:
+                    raise NameError(
+                        f"Name of output operation {v.op.name} could not be set to {k} in the prediction graph. "
+                        f"This usually happens if the same name is used twice in a graph.")
 
         # inject the evaluate layer to the first output.
         # Note, if the first output is not used in the graph, nothing will be printed
@@ -509,7 +515,7 @@ class ScenarioBase(ABC):
             return None
 
         # wrapper for model fit (allows for other arguments)
-        def regroup(inputs: Dict[str, tf.Tensor], targets: Dict[str, tf.Tensor]):
+        def regroup(inputs: Dict[str, AnyTensor], targets: Dict[str, AnyTensor]):
             batch_size = tf.shape(next(iter(inputs.values() if len(inputs) > 0 else targets.values())))[0]
             # see setup_training
             # regroup data for training into all as input, and only loss and metrics as output

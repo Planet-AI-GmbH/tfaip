@@ -26,7 +26,7 @@ from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.model.metric.multi import MultiMetricDefinition
 from tfaip.base.model.metric.simple import MetricDefinition
 from tfaip.base.model.modelbaseparams import ModelBaseParams
-from tfaip.util.typing import AnyNumpy
+from tfaip.util.typing import AnyNumpy, AnyTensor
 
 if TYPE_CHECKING:
     from tfaip.base.model import GraphBase
@@ -98,7 +98,7 @@ class ModelBase(ABC):
         return "min", "loss"
 
     @typechecked
-    def build(self, inputs_targets: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+    def build(self, inputs_targets: Dict[str, AnyTensor]) -> Dict[str, AnyTensor]:
         """
         Override _build for custom implementation. Do this with caution
         :param inputs_targets: Dictionary of both the inputs and the targets
@@ -113,7 +113,7 @@ class ModelBase(ABC):
         raise NotImplementedError
 
     @typechecked()
-    def additional_outputs(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+    def additional_outputs(self, inputs: Dict[str, AnyTensor], outputs: Dict[str, AnyTensor]) -> Dict[str, AnyTensor]:
         return self._additional_outputs(inputs, outputs)
 
     def _additional_outputs(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
@@ -121,9 +121,9 @@ class ModelBase(ABC):
 
     @typechecked
     def extended_metric(self,
-                        inputs_targets: Dict[str, tf.Tensor],
-                        outputs: Dict[str, tf.Tensor]
-                        ) -> Dict[str, tf.Tensor]:
+                        inputs_targets: Dict[str, AnyTensor],
+                        outputs: Dict[str, AnyTensor]
+                        ) -> Dict[str, AnyTensor]:
         """
         use lambda layers, you can not use self.<variables> directly, it will result in pickle-error
         Override _extended_metric for custom implementation.
@@ -162,7 +162,7 @@ class ModelBase(ABC):
         return {}
 
     @typechecked
-    def sample_weights(self, inputs: Dict[str, tf.Tensor], targets: Dict[str, tf.Tensor]) -> Dict[str, Any]:
+    def sample_weights(self, inputs: Dict[str, AnyTensor], targets: Dict[str, AnyTensor]) -> Dict[str, Any]:
         """
         note: targets - holds input and output dict? eager execution is not working here, since it is
                 'map'ped on the tf.dataset
@@ -180,7 +180,7 @@ class ModelBase(ABC):
         return {}
 
     @typechecked
-    def loss(self, inputs_targets: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+    def loss(self, inputs_targets: Dict[str, AnyTensor], outputs: Dict[str, AnyTensor]) -> Dict[str, AnyTensor]:
         """
         A dictionary of all losses of the model that will be averaged if there are multiple.
         Only override _loss for the custom implementation
@@ -256,9 +256,9 @@ class ModelBase(ABC):
 
     @typechecked()
     def export_graphs(self,
-                      inputs: Dict[str, tf.Tensor],
-                      outputs: Dict[str, tf.Tensor],
-                      targets: Dict[str, tf.Tensor],
+                      inputs: Dict[str, AnyTensor],
+                      outputs: Dict[str, AnyTensor],
+                      targets: Dict[str, AnyTensor],
                       ) -> Dict[str, ExportGraph]:
         eg = {g.label: g for g in self._export_graphs(inputs, outputs, targets)}
         if 'default' not in eg:

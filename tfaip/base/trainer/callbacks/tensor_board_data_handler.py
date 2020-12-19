@@ -19,17 +19,19 @@ from typing import List, Dict
 from tensorflow.python.ops import summary_ops_v2
 import tensorflow as tf
 
+from tfaip.util.typing import AnyTensor
+
 
 class TensorBoardDataHandler:
     def __init__(self):
         self.all_tensorboard_keys = self._tensorboard_only_metrics()
 
-    def setup(self, inputs, outputs) -> Dict[str, tf.Tensor]:
+    def setup(self, inputs, outputs) -> Dict[str, AnyTensor]:
         outputs = self._outputs_for_tensorboard(inputs, outputs)
         self.all_tensorboard_keys = list(outputs.keys()) + self._tensorboard_only_metrics()
         return outputs
 
-    def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, tf.Tensor]:
+    def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, AnyTensor]:
         # these outputs will be added to the logs by keras by treating them as metrics
         # They will be removed from the complete logs and then only presented to the tensorboard data handler
         return {}

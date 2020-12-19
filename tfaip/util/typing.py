@@ -17,5 +17,12 @@
 # ==============================================================================
 from typing import Union
 import numpy as np
+import tensorflow as tf
 
 AnyNumpy = Union[np.ndarray, np.int, np.int8, np.int16, np.int32, np.int64, np.float, np.float16, np.float32, np.float64, np.bool]
+
+if tf.version.VERSION >= '2.4.0':
+    from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+    AnyTensor = Union[tf.Tensor, KerasTensor]
+else:
+    AnyTensor = tf.Tensor

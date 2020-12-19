@@ -40,7 +40,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     def __init__(self, d_model, num_heads,
                  attention_type=AttentionType.DotProduct, attention_params: dict = None,
                  name="mha",
-                 post_dense=True,
                  **kwargs):
         super(MultiHeadAttention, self).__init__(name=name, **kwargs)
         attention_params = attention_params if attention_params else {}
@@ -55,7 +54,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         self.wk = tf.keras.layers.Dense(d_model, name='wk', kernel_initializer=attention_params.get('wk_initializer', 'glorot_uniform'))
         self.wv = tf.keras.layers.Dense(d_model, name='wv', kernel_initializer=attention_params.get('wv_initializer', 'glorot_uniform'))
 
-        self.dense = tf.keras.layers.Dense(d_model, name='dense') if post_dense else None
+        self.dense = tf.keras.layers.Dense(d_model, name='dense')
 
         self.attention_type = attention_type
         self.attention_layer = attention_type.create_layer(**attention_params)
@@ -92,10 +91,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         concat_attention = tf.reshape(scaled_attention,
                                       (batch_size, -1, self.d_model))  # (batch_size, seq_len_q, d_model)
 
-        if self.dense:
-            output = self.dense(concat_attention)  # (batch_size, seq_len_q, d_model)
-        else:
-            output = concat_attention
+        output = self.dense(concat_attention)  # (batch_size, seq_len_q, d_model)
 
         return output, attention_weights
 
