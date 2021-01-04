@@ -59,6 +59,16 @@ class LearningRateSchedule(LearningRateScheduleBase, ABC):
         raise NotImplementedError
 
 
+class Constant(LearningRateSchedule):
+    def __init__(self,
+                 params: 'LearningRateParams',
+                 ):
+        super(Constant, self).__init__(params, 'constant')
+
+    def lr(self, epoch):
+        return self.params.lr
+
+
 class ExpDecay(LearningRateSchedule):
     def __init__(self,
                  params: 'LearningRateParams',

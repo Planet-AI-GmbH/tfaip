@@ -27,7 +27,7 @@ work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scenar
 class TestPredictScript(unittest.TestCase):
     def test_predict_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial',
+            check_call(['tfaip-train', 'tutorial.full',
                         '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
                         '--data_params', 'train.batch_size=2',
                         ])

@@ -24,14 +24,14 @@ from subprocess import check_call
 
 class TestTrainingScript(unittest.TestCase):
     def test_train_tutorial(self):
-        check_call(['tfaip-train', 'tutorial',
+        check_call(['tfaip-train', 'tutorial.full',
                     '--trainer_params', 'samples_per_epoch=10', 'epochs=2',
                     '--data_params', 'train.batch_size=2',
                     ])
 
     def test_resume_train_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial',
+            check_call(['tfaip-train', 'tutorial.full',
                         '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
                         '--data_params', 'train.batch_size=2',
                         ])
@@ -44,7 +44,7 @@ class TestTrainingScript(unittest.TestCase):
 
     def test_train_from_params_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial',
+            check_call(['tfaip-train', 'tutorial.full',
                         '--trainer_params', 'samples_per_epoch=1', 'epochs=1', f'checkpoint_dir={d}',
                         '--data_params', 'train.batch_size=1',
                         ])

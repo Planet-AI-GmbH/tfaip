@@ -25,8 +25,8 @@ from tfaip.base.data.pipeline.definitions import OutputTargetsSample
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.scenario import ScenarioBase, ScenarioBaseParams
 from tfaip.base.model import ModelBase
-from tfaip.scenario.tutorial.data import Data
-from tfaip.scenario.tutorial.model import TutorialModel
+from tfaip.scenario.tutorial.full.data import Data
+from tfaip.scenario.tutorial.full.model import TutorialModel
 from tfaip.util.typing import AnyNumpy
 
 

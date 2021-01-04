@@ -21,8 +21,8 @@ from tensorflow.python.keras.backend import clear_session
 
 from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
 from tfaip.base.data.databaseparams import DataGeneratorParams
-from tfaip.scenario.tutorial.data import DataParams, Data
-from tfaip.scenario.tutorial.scenario import TutorialScenario
+from tfaip.scenario.tutorial.full.data import DataParams, Data
+from tfaip.scenario.tutorial.full.scenario import TutorialScenario
 
 
 def get_default_data_params():

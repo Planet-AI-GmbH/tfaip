@@ -18,19 +18,25 @@
 from typing import TYPE_CHECKING
 
 from tensorflow import keras
+import tensorflow.keras.backend as K
 
+from tfaip.base.model import GraphBase
 from tfaip.base.model.components.conv import Conv2D
 from tfaip.base.model.components.ff_layer import FF
 from tfaip.base.model.components.pool import MaxPool2D
-from tfaip.scenario.tutorial.graphs.tutorialgraph import TutorialGraph
 
 if TYPE_CHECKING:
-    from tfaip.scenario.tutorial.model import ModelParams
+    from tfaip.scenario.tutorial.full.model import ModelParams
 
 
-class ConvLayers(TutorialGraph):
+class ConvLayersGraph(GraphBase):
+    @classmethod
+    def params_cls(cls):
+        from tfaip.scenario.tutorial.full.model import ModelParams
+        return ModelParams
+
     def __init__(self, params: 'ModelParams', name='conv', **kwargs):
-        super(ConvLayers, self).__init__(params, name=name, **kwargs)
+        super(ConvLayersGraph, self).__init__(params, name=name, **kwargs)
         self._params = params
 
         self.conv1 = Conv2D(kernel_size=(2, 2), filters=16, strides=(1, 1), padding='same', name='conv1')
@@ -41,9 +47,11 @@ class ConvLayers(TutorialGraph):
         self.ff = FF(out_dimension=128, name='f_ff', activation='relu')
         self.logits = FF(out_dimension=self._params.n_classes, activation=None, name='classify')
 
-    def _call(self, images, **kwargs):
-        conv_out = self.pool2(self.conv2(self.pool1(self.conv1(images, **kwargs), **kwargs), **kwargs), **kwargs)
-        return {
-            'logits': self.logits(self.ff(self.flatten(conv_out), **kwargs), **kwargs),
-            'conv_out': conv_out,
-        }
+    def call(self, inputs, **kwargs):
+        rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
+        conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))
+        logits = self.logits(self.ff(self.flatten(conv_out)))
+        pred = K.softmax(logits, axis=-1)
+        cls = K.argmax(pred, axis=-1)
+        out = {'pred': pred, 'logits': logits, 'class': cls}
+        return out

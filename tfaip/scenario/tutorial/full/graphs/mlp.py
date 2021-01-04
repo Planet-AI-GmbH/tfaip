@@ -20,10 +20,10 @@ from typing import TYPE_CHECKING
 from tensorflow import keras
 
 from tfaip.base.model.components.ff_layer import FF
-from tfaip.scenario.tutorial.graphs.tutorialgraph import TutorialGraph
+from tfaip.scenario.tutorial.full.graphs.tutorialgraph import TutorialGraph
 
 if TYPE_CHECKING:
-    from tfaip.scenario.tutorial.model import ModelParams
+    from tfaip.scenario.tutorial.full.model import ModelParams
 
 
 class MLPLayers(TutorialGraph):

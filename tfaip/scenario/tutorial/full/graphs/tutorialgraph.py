@@ -25,7 +25,7 @@ import tensorflow.keras as keras
 class TutorialGraph(GraphBase, ABC):
     @classmethod
     def params_cls(cls):
-        from tfaip.scenario.tutorial.model import ModelParams
+        from tfaip.scenario.tutorial.full.model import ModelParams
         return ModelParams
 
     def __init__(self, params, **kwargs):

@@ -404,7 +404,7 @@ class ScenarioBase(ABC):
             keras_debug_model = KerasDebugModel(self.model)
             with self.data.get_train_data() as train_data:
                 out = keras_debug_model.predict(
-                    self._wrap_data(train_data.input_dataset(), steps_per_epoch=1).take(self._params.debug_graph_n_examples))
+                    self._wrap_data(train_data.input_dataset(), steps_per_epoch=1, is_debug_data=True).take(self._params.debug_graph_n_examples))
             logger.info("Mean values of debug model output: {}".format({k: v.mean() for k, v in out.items()}))
 
         # This regroups all inputs/targets as input to allow to access the complete data during training
@@ -489,6 +489,11 @@ class ScenarioBase(ABC):
             return p
 
         logger.info("Compiling training model including optimization")
+        loss_weights = self.model.loss_weights()
+        if loss_weights is not None:
+            for k in loss_weights.keys():
+                if k not in _losses:
+                    raise KeyError(f"Loss weight {k} specified but not used in losses (available {list(_losses.keys())}).")
         self._keras_train_model.compile(optimizer=optimizer,
                                         loss={k: wrap_loss for k, _ in _losses.items()},
                                         loss_weights=self.model.loss_weights(),
@@ -510,7 +515,7 @@ class ScenarioBase(ABC):
                 keras.models.load_model(tmp)
             logger.info("Model can be successfully loaded")
 
-    def _wrap_data(self, dataset, steps_per_epoch):
+    def _wrap_data(self, dataset, steps_per_epoch, is_debug_data=False):
         if dataset is None:
             return None
 
@@ -533,7 +538,14 @@ class ScenarioBase(ABC):
                                   self._keras_model_data.loss_names + self._keras_model_data.extended_metric_names + self._keras_model_data.tensorboard_output_names},
                                **{k: targets[v.target] for k, v in self.model.metric().items() if v.target in targets}
                                }
-            wrapped_weights = self.model.sample_weights(inputs, targets)
+            if is_debug_data:
+                wrapped_weights = None
+            else:
+                wrapped_weights = self.model.sample_weights(inputs, targets)
+                for k in wrapped_weights.keys():
+                    if k not in wrapped_targets.keys():
+                        raise KeyError(f"Sample weight {k} given but not found in targets (metric). "
+                                       f"Available: {list(wrapped_targets.keys())}")
             return wrapped_inputs, wrapped_targets, wrapped_weights
 
         return dataset.map(regroup)
