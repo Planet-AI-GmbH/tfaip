@@ -45,7 +45,10 @@ class FF(keras.layers.Layer):
         self._dropout_layer = None
 
         if isinstance(activation, str):
-            self._activation = getattr(keras.activations, activation)
+            try:
+                self._activation = getattr(keras.activations, activation)
+            except AttributeError:
+                self._activation = getattr(tf.nn, activation)
 
     def get_config(self):
         cfg = super(FF, self).get_config().copy()

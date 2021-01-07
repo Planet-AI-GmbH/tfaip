@@ -113,33 +113,12 @@ class Trainer(ABC):
         self._data = scenario.data
         self._model = scenario.model
         self.stop_training = False
-
-        if self._params.samples_per_epoch < 0:
-            logger.info(f"Setting samples per epoch relative to dataset size with a factor of "
-                        f"{self._params.scale_epoch_size}. Note that this "
-                        "requires the creation of the data generator once before training.")
-            self._params.samples_per_epoch = len(self._data.get_train_data().create_data_generator())
-
-            if self._params.scale_epoch_size != 1:
-                self._params.samples_per_epoch = int(self._params.samples_per_epoch * self._params.scale_epoch_size)
-
-            if self._params.samples_per_epoch <= 0:
-                raise ValueError("Could not compute the number of samples per epoch based on the size of the data "
-                                 "generator. Please implement __len__ correctly.")
-            logger.info(f"Set samples per epoch to {self._params.samples_per_epoch}")
-        else:
-            if self._params.scale_epoch_size != 1:
-                logger.warning("Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch."
-                               "Set samples_per_epoch to the default (=-1) to use relative computation.")
-
-        self._steps_per_epoch = self._params.samples_per_epoch // self._data.params().train.batch_size
-        if self._steps_per_epoch <= 0:
-            raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "
-                             f"{self._params.samples_per_epoch} < {self._data.params().train.batch_size}")
+        self._steps_per_epoch: int = None   # Not initialized yet
+        self._callbacks = []
 
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(self._params.tf_cpp_min_log_level)
 
-        self._callbacks = []
+
 
     @property
     def scenario(self):
@@ -154,9 +133,7 @@ class Trainer(ABC):
               callbacks=None,
               warmstart_fn: Callable[[WarmstartParams], Warmstarter] = Warmstarter,
               ):
-        external_callbacks = callbacks
-        callbacks = []
-        tensorboard_data_handler = self._model.tensorboard_handler
+        self.setup_steps_per_epoch()
 
         self._params.learning_rate_params.epochs_ = self._params.epochs
         self._params.learning_rate_params.steps_per_epoch_ = self._steps_per_epoch
@@ -176,52 +153,7 @@ class Trainer(ABC):
             custom_objects = self._model.__class__.get_all_custom_objects()
             warmstart_fn(self.params.warmstart_params).warmstart(self._scenario.keras_train_model, custom_objects)
 
-        callbacks.append(FixMetricLabelsCallback())
-        extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
-        callbacks.append(extract_logs_cb)
-        callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
-        callbacks.append(TensorflowFix())
-        callbacks.append(BenchmarkCallback())
-
-        if self._params.lav_every_n >= 1:
-            # LAV callback must be assigned before export best to allow to export based on best LAV
-            callbacks.append(LAVCallback(self._params, self._scenario))
-
-        if self._params.checkpoint_dir:
-            save_freq = self._params.checkpoint_save_freq_
-            if self._params.write_checkpoints:
-                # we need only weights to restore the training, the graph will be reconstructed
-                variables_path = os.path.join(self._params.checkpoint_dir, self._params.checkpoint_sub_dir_, 'variables', 'variables')
-                if isinstance(save_freq, str) and save_freq.isdigit():
-                    save_freq = int(save_freq)
-                if isinstance(save_freq, int):
-                    save_freq = save_freq * self._steps_per_epoch
-                if save_freq == 0:
-                    save_freq = None
-        else:
-            save_freq = None
-
-        callbacks.append(TrainParamsLoggerCallback(self._params, save_freq))
-
-        if self._params.calc_ema:
-            # EMA must be before export best to export ema
-            # noinspection PyTypeChecker
-            callbacks.append(EMACallback(optimizer))
-
-        callbacks.append(EarlyStoppingCallback(self._scenario, self._params))
-
-        if self._params.checkpoint_dir:
-            # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
-            callbacks.append(TensorBoardCallback(log_dir=self._params.checkpoint_dir,
-                                                 steps_per_epoch=self._steps_per_epoch,
-                                                 extracted_logs_cb=extract_logs_cb,
-                                                 data_handler=tensorboard_data_handler,
-                                                 reset=self._params.current_epoch == 0,
-                                                 profile="10,20" if self._params.profile else 0))
-
-        callbacks.append(LoggerCallback())
-        if external_callbacks:
-            callbacks.extend(external_callbacks)
+        callbacks = self.setup_callbacks(callbacks)
 
         if self._params.epochs <= self._params.current_epoch:
             logger.warning(
@@ -243,6 +175,95 @@ class Trainer(ABC):
         if self._params.checkpoint_dir and self._params.export_final:
             logger.info("Final export of the model.")
             self._scenario.export(os.path.join(self._params.checkpoint_dir, 'export'))
+
+
+    def create_train_params_logger_callback(self):
+        if self._params.checkpoint_dir:
+            save_freq = self._params.checkpoint_save_freq_
+            if self._params.write_checkpoints:
+                # we need only weights to restore the training, the graph will be reconstructed
+                variables_path = os.path.join(self._params.checkpoint_dir, self._params.checkpoint_sub_dir_,
+                                              'variables', 'variables')
+                if isinstance(save_freq, str) and save_freq.isdigit():
+                    save_freq = int(save_freq)
+                if isinstance(save_freq, int):
+                    save_freq = save_freq * self._steps_per_epoch
+                if save_freq == 0:
+                    save_freq = None
+        else:
+            save_freq = None
+
+        return TrainParamsLoggerCallback(self._params, save_freq)
+
+
+    def setup_callbacks(self,
+                        callbacks=None,
+                        ):
+        external_callbacks = callbacks
+        callbacks = []
+        tensorboard_data_handler = self._model.tensorboard_handler
+
+        callbacks.append(FixMetricLabelsCallback())
+        extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
+        callbacks.append(extract_logs_cb)
+        callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
+        callbacks.append(TensorflowFix())
+        callbacks.append(BenchmarkCallback())
+
+        if self._params.lav_every_n >= 1:
+            # LAV callback must be assigned before export best to allow to export based on best LAV
+            callbacks.append(LAVCallback(self._params, self._scenario))
+
+        callbacks.append(self.create_train_params_logger_callback())
+
+        if self._params.calc_ema:
+            # EMA must be before export best to export ema
+            # noinspection PyTypeChecker
+            callbacks.append(EMACallback(optimizer))
+
+        callbacks.append(EarlyStoppingCallback(self._scenario, self._params))
+
+        if self._params.checkpoint_dir:
+            # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
+            callbacks.append(TensorBoardCallback(log_dir=self._params.checkpoint_dir,
+                                                 steps_per_epoch=self._steps_per_epoch,
+                                                 extracted_logs_cb=extract_logs_cb,
+                                                 data_handler=tensorboard_data_handler,
+                                                 reset=self._params.current_epoch == 0,
+                                                 profile="10,20" if self._params.profile else 0))
+
+        callbacks.append(LoggerCallback())
+        if external_callbacks:
+            callbacks.extend(external_callbacks)
+
+        return callbacks
+
+
+    def setup_steps_per_epoch(self):
+        if self._params.samples_per_epoch < 0:
+            logger.info(f"Setting samples per epoch relative to dataset size with a factor of "
+                        f"{self._params.scale_epoch_size}. Note that this "
+                        "requires the creation of the data generator once before training.")
+            samples_per_epoch = len(self._data.get_train_data().create_data_generator())
+
+            if self._params.scale_epoch_size != 1:
+                samples_per_epoch = int(samples_per_epoch * self._params.scale_epoch_size)
+
+            if samples_per_epoch <= 0:
+                raise ValueError("Could not compute the number of samples per epoch based on the size of the data "
+                                 "generator. Please implement __len__ correctly.")
+            logger.info(f"Set samples per epoch to {samples_per_epoch}")
+        else:
+            samples_per_epoch = self._params.samples_per_epoch
+            if self._params.scale_epoch_size != 1:
+                logger.warning("Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch."
+                               "Set samples_per_epoch to the default (=-1) to use relative computation.")
+
+        self._steps_per_epoch = samples_per_epoch // self._data.params().train.batch_size
+        if self._steps_per_epoch <= 0:
+            raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "
+                             f"{samples_per_epoch} < {self._data.params().train.batch_size}")
+
 
     def fit(self):
         self._scenario.fit(epochs=self._params.epochs,

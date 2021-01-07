@@ -84,7 +84,9 @@ def parse_list_arg(val, formatter):
     if ',' not in val:
         # only one argument, may also have no brackets at all
         if val[0] == '[' and val[-1] == ']':
-            return [formatter(val[1:-1])]
+            val = val[1:-1]
+        if len(val) == 0:
+            return []
         return [formatter(val)]
 
     if val[0] != '[':

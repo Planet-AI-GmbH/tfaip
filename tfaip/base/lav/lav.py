@@ -162,6 +162,8 @@ class LAV(ABC):
         eval_model = keras.Model(eval_inputs,
                                  [{**real_inputs, **real_targets, **sample_weights},
                                   {**metric_outputs, **_keras_model.output}])
+        if run_eagerly:
+            eval_model._run_eagerly = True
         predictor._keras_model = eval_model  # I know what I am doing: already wrapped inputs and targets
 
         def predict_pipeline(pipeline):
@@ -222,7 +224,8 @@ class LAV(ABC):
             keys = self._model.tensorboard_handler.all_tensorboard_keys
             all_metric_results = {**metrics_accum.final(),
                                   **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
-                                     k not in keys}}
+                                     k not in keys},
+                                  **evaluator.result()}
             self._on_lav_end(all_metric_results)
             for cb in callbacks:
                 cb.on_lav_end(all_metric_results)
