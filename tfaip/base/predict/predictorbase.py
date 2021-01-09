@@ -17,21 +17,20 @@
 # ==============================================================================
 import logging
 from abc import ABC, abstractmethod
-from contextlib import ExitStack
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Type, Dict, Iterable, Union, Optional, List, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Type, Iterable, Union, Optional, Any
 
 import prettytable
-from dataclasses_json import dataclass_json
 from tensorflow import keras
 import tensorflow as tf
 from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.keras.utils import tf_utils
 
 from tfaip.base.data.databaseparams import DataGeneratorParams
-from tfaip.base.data.pipeline.datapipeline import DataPipeline, RawDataPipeline, DataGenerator
+from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
-from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
+from tfaip.base.device_config import DeviceConfig, distribute_strategy
+from tfaip.base.predict.params import PredictorParams
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 from tfaip.util.profiling import MeasureTime
 
@@ -40,16 +39,6 @@ if TYPE_CHECKING:
     from tfaip.base.data.data import DataBase
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass_json
-@dataclass
-class PredictorParams:
-    device_params: DeviceConfigParams = field(default_factory=lambda: DeviceConfigParams())
-
-    silent: bool = False
-    progress_bar: bool = True
-    run_eagerly: bool = False
 
 
 @dataclass

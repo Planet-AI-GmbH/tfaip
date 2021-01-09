@@ -116,6 +116,8 @@ class RunningDataPipeline:
         pad_values = data.padding_values()
 
         def default(dtype):
+            if dtype == tf.bool:
+                return False
             return '' if dtype == tf.string else 0
 
         if self.mode == PipelineMode.Prediction:

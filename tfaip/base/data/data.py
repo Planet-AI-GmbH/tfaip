@@ -21,6 +21,7 @@ import tensorflow.keras as keras
 import tensorflow as tf
 import logging
 
+from tfaip.util.typing import AnyNumpy
 from typeguard import typechecked
 
 from tfaip.base.data.databaseparams import DataBaseParams, DataGeneratorParams
@@ -104,10 +105,10 @@ class DataBase(ABC):
         return self._params
 
     @typechecked
-    def padding_values(self) -> Dict[str, float]:
+    def padding_values(self) -> Dict[str, AnyNumpy]:
         return self._padding_values()
 
-    def _padding_values(self) -> Dict[str, float]:
+    def _padding_values(self) -> Dict[str, AnyNumpy]:
         return {}
 
     @typechecked

@@ -23,7 +23,7 @@ import logging
 import os
 
 if TYPE_CHECKING:
-    from tfaip.base.trainer.trainerparams import TrainerParams
+    from tfaip.base.trainer.params import TrainerParams
     from tfaip.base.scenario.scenariobase import ScenarioBase
 
 

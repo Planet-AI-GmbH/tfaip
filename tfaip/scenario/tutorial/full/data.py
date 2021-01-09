@@ -30,7 +30,7 @@ from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator, R
 from tfaip.base.data.listfile.listfiledata import ListFilePipelineParams
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 from tfaip.util.imaging.io import load_image_from_img_file
 
 logger = logging.getLogger(__name__)

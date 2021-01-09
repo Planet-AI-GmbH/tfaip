@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.trainer import Trainer
+from tfaip.base.imports import Trainer
 import logging
 
-from tfaip.util.argument_parser import TFAIPArgumentParser, add_args_group
+from tfaip.util.argumentparser import TFAIPArgumentParser, add_args_group
 from tfaip.util.logging import setup_log
 
 logger = logging.getLogger(__name__)

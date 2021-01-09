@@ -15,16 +15,22 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from inspect import isclass
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 from tfaip.util.enum import StrEnum
-# Import all schedules so that they are available in globals()
-from tfaip.base.trainer.scheduler.learningrate import *
 
-Schedules = StrEnum('Schedules',
-                    {k: k for k, v in globals().items() if isclass(v) and issubclass(v, LearningRateSchedule) and v != LearningRateSchedule})
+
+class Schedules(StrEnum):
+    Constant = 'Constant'
+    ExpDecay = 'ExpDecay'
+    FinalDecay = 'FinalDecay'
+    WarmupFinalDecay = 'WarmupFinalDecay'
+    WarmupConstantFinalDecay = 'WarmupConstantFinalDecay'
+
+    def cls(self):
+        import tfaip.base.trainer.scheduler.learningrate as lr
+        return getattr(lr, self.value)
 
 
 @dataclass_json
@@ -70,4 +76,4 @@ class LearningRateParams:
         if self.epochs_ < 0:
             raise ValueError("Epochs not specified.")
 
-        return globals()[self.type.value](self)
+        return self.type.cls()(self)

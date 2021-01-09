@@ -19,7 +19,7 @@ import importlib
 import inspect
 import pkgutil
 from typing import List, Type
-from tfaip.base.model import GraphBase
+from tfaip.base.model.graphbase import GraphBase
 
 
 def import_submodules(package, recursive=True):

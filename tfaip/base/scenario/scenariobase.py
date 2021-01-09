@@ -208,17 +208,17 @@ class ScenarioBase(ABC):
 
     @classmethod
     def trainer_cls(cls) -> Type['Trainer']:
-        from tfaip.base.trainer import Trainer
+        from tfaip.base.imports import Trainer
         return Trainer
 
     @classmethod
     def lav_cls(cls) -> Type['LAV']:
-        from tfaip.base.lav import LAV
+        from tfaip.base.imports import LAV
         return LAV
 
     @classmethod
     def predictor_cls(cls) -> Type['Predictor']:
-        from tfaip.base.predict import Predictor
+        from tfaip.base.imports import Predictor
         return Predictor
 
     @classmethod

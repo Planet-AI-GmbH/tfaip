@@ -48,12 +48,6 @@ class TFAIPArgumentParser(ArgumentParser):
         return r
 
 
-def dc_meta(*, help: str = None, arg_mode: str = 'flat', arg_mode_separator='.',
-            required=False):
-    assert arg_mode in ['flat', 'snake', 'ignore']
-    return locals()
-
-
 def str2bool(v: str) -> bool:
     return v.lower() == 'true' or (v.isdigit() and int(v) > 0)
 

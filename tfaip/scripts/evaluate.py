@@ -20,7 +20,7 @@ import tarfile
 import pickle
 
 from tfaip.scenario import get_scenario_by_name
-from tfaip.util.argument_parser import TFAIPArgumentParser, add_args_group
+from tfaip.util.argumentparser.parser import TFAIPArgumentParser, add_args_group
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 logger = logging.getLogger(__name__)

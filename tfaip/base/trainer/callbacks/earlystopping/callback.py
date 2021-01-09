@@ -17,10 +17,8 @@
 # ==============================================================================
 import logging
 import os
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from dataclasses_json import dataclass_json
 from tensorflow.keras.callbacks import Callback
 
 if TYPE_CHECKING:
@@ -29,27 +27,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass_json
-@dataclass
-class EarlyStoppingParams:
-    # Logging parameters -> set from ModelBase
-    mode_: str = None
-    current_: float = None  # If loaded from a checkpoint, this value is already set
-    monitor_: str = None
-    n_: int = -1
-
-    # User parameters
-    # TODO: help
-    best_model_output_dir: Optional[str] = None
-    best_model_name: str = 'best'
-    frequency: int = 1
-    n_to_go: int = -1
-
-    # Thresholds: either ignore in early stopping, or stop immediately
-    # e.g. 0 and 1 for accuracy
-    lower_threshold: float = -1e100
-    upper_threshold: float = 1e100
 
 
 class EarlyStoppingCallback(Callback):

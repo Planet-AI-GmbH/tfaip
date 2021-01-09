@@ -19,7 +19,7 @@ from abc import abstractmethod
 
 import tensorflow.keras as keras
 
-from tfaip.base.model import ModelBaseParams
+from tfaip.base.model.modelbaseparams import ModelBaseParams
 
 
 class GraphBase(keras.layers.Layer):

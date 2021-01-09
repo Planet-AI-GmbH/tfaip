@@ -17,18 +17,16 @@
 # ==============================================================================
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Dict, Any
+from typing import Dict
 import tensorflow as tf
 import tensorflow.keras as keras
-import tensorflow.keras.backend as K
 import numpy as np
 
-from tfaip.base.model import ModelBaseParams, ModelBase
-from tfaip.base.model.metric.multi import MultiMetricDefinition, MultiMetric
-from tfaip.base.model.modelbase import MetricDefinition
+from tfaip.base.imports import ModelBaseParams, ModelBase, MetricDefinition, MultiMetricDefinition
+from tfaip.base.model.metric.multi import MultiMetric
 from tfaip.base.model.util.graph_enum import create_graph_enum
 from tfaip.base.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 from tfaip.util.typing import AnyNumpy, AnyTensor
 
 Graphs = create_graph_enum(__name__)

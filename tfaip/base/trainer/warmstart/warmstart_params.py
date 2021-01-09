@@ -20,7 +20,7 @@ from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 
 
 @dataclass_json

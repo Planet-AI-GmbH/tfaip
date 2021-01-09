@@ -15,5 +15,3 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.model.modelbase import ModelBaseParams, ModelBase
-from tfaip.base.model.graphbase import GraphBase

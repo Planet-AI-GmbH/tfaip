@@ -22,8 +22,8 @@ import tarfile
 import pickle
 import time
 
-from tfaip.util.argument_parser import add_args_group, TFAIPArgumentParser
-from tfaip.base.scenario import ScenarioBase
+from tfaip.util.argumentparser.parser import add_args_group, TFAIPArgumentParser
+from tfaip.base.imports import ScenarioBase
 
 logger = logging.getLogger(__name__)
 

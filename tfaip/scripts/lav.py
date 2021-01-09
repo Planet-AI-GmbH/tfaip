@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.lav.callbacks.dump_results import DumpResultsCallback
-from tfaip.util.argument_parser import add_args_group, TFAIPArgumentParser
-
+import json
 import logging
+
+from tfaip.base.lav.callbacks.dump_results import DumpResultsCallback
+from tfaip.util.argumentparser.parser import add_args_group, TFAIPArgumentParser
 
 
 logger = logging.getLogger(__name__)
@@ -41,11 +42,12 @@ def main(args, scenario_meta, scenario_params):
     # create the lav and run it
     lav = scenario_meta.create_lav(lav_params, scenario_params)
     for i, r in enumerate(lav.run(run_eagerly=args.run_eagerly, callbacks=callbacks)):
+        print(json.dumps(r, indent=2))
         lav.benchmark_results.pretty_print()
 
 
 def parse_args(args=None):
-    from tfaip.base.scenario import ScenarioBase
+    from tfaip.base.imports import ScenarioBase
     parser = TFAIPArgumentParser()
     parser.add_argument('--export_dir', required=True)
     parser.add_argument('--run_eagerly', action='store_true', help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!")

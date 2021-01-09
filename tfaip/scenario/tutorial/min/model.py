@@ -21,10 +21,9 @@ from typing import Dict
 import tensorflow as tf
 import tensorflow.keras as keras
 
-from tfaip.base.model import ModelBaseParams, ModelBase
-from tfaip.base.model.modelbase import MetricDefinition
+from tfaip.base.imports import ModelBaseParams, ModelBase, MetricDefinition
 from tfaip.scenario.tutorial.min.graphs import ConvLayersGraph
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 from tfaip.util.typing import AnyNumpy, AnyTensor
 
 

@@ -17,7 +17,7 @@
 # ==============================================================================
 import tensorflow.keras as keras
 
-from tfaip.base.model import ModelBase
+from tfaip.base.model.modelbase import ModelBase
 
 
 class KerasDebugModel(keras.Model):

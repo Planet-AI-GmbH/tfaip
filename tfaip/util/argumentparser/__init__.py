@@ -15,21 +15,5 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from typing import Type, List, Union
-
-from tfaip.base.imports import GraphBase
-from tfaip.base.model.util.module import import_graphs
-from tfaip.util.enum import StrEnum
-
-
-def create_graph_enum(graphs: Union[str, List[Type[GraphBase]]]):
-    if isinstance(graphs, str):
-        graphs = import_graphs(graphs)
-    names = {g.__name__: g.__name__ for g in graphs}
-
-    class GraphEnum(StrEnum):
-        @property
-        def cls(self):
-            return [g for g in graphs if g.__name__ == self.value][0]
-
-    return GraphEnum('Graphs', names)
+from tfaip.util.argumentparser.meta import dc_meta
+from tfaip.util.argumentparser.parser import TFAIPArgumentParser, add_args_group

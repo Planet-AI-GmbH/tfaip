@@ -15,5 +15,3 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.predict.predictor import Predictor, PredictorParams
-from tfaip.base.predict.multimodelpredictor import MultiModelPredictor

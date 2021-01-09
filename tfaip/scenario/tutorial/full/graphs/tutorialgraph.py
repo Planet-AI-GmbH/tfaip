@@ -17,7 +17,7 @@
 # ==============================================================================
 from abc import ABC, abstractmethod
 
-from tfaip.base.model import GraphBase
+from tfaip.base.imports import GraphBase
 import tensorflow.keras.backend as K
 import tensorflow.keras as keras
 

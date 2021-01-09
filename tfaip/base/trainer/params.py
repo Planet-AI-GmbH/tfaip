@@ -20,12 +20,12 @@ from typing import Optional, Union
 
 from dataclasses_json import dataclass_json
 
-from tfaip.base.scenario import ScenarioBaseParams
+from tfaip.base.scenario.scenariobaseparams import ScenarioBaseParams
 from tfaip.base.device_config import DeviceConfigParams
-from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingParams
+from tfaip.base.trainer.callbacks.earlystopping.params import EarlyStoppingParams
 from tfaip.base.trainer.scheduler.learningrate_params import LearningRateParams
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
-from tfaip.util.argument_parser import dc_meta
+from tfaip.util.argumentparser import dc_meta
 
 
 @dataclass_json

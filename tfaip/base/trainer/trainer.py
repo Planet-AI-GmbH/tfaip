@@ -27,10 +27,10 @@ from tfaip.base.trainer.callbacks.extract_logs import ExtractLogsCallback
 from typeguard import typechecked
 
 from tfaip.base.device_config import DeviceConfig, distribute_strategy
-from tfaip.base.scenario import ScenarioBase
+from tfaip.base.scenario.scenariobase import ScenarioBase
 from tfaip.base.trainer.callbacks.benchmark_callback import BenchmarkCallback
 from tfaip.base.trainer.callbacks.ema_callback import EMACallback
-from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingCallback
+from tfaip.base.trainer.callbacks.earlystopping.callback import EarlyStoppingCallback
 from tfaip.base.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.base.trainer.callbacks.logger_callback import LoggerCallback
 from tfaip.base.trainer.callbacks.tensor_board_callback import TensorBoardCallback
@@ -38,7 +38,7 @@ from tfaip.base.trainer.callbacks.tensorflow_fix import TensorflowFix
 from tfaip.base.trainer.callbacks.train_params_logger import TrainParamsLoggerCallback
 from tfaip.base.trainer.callbacks.fix_metric_labels import FixMetricLabelsCallback
 from tfaip.base.trainer.optimizer.gradient_accumulation_optimizer import create_gradient_accumulation_optimizer
-from tfaip.base.trainer.trainerparams import TrainerParams
+from tfaip.base.trainer.params import TrainerParams
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.base.trainer.warmstart.warmstarter import Warmstarter
 from tfaip.base.trainer.optimizer.weights_moving_average import WeightsMovingAverage
@@ -153,7 +153,7 @@ class Trainer(ABC):
             custom_objects = self._model.__class__.get_all_custom_objects()
             warmstart_fn(self.params.warmstart_params).warmstart(self._scenario.keras_train_model, custom_objects)
 
-        callbacks = self.setup_callbacks(callbacks)
+        callbacks = self.setup_callbacks(optimizer, callbacks)
 
         if self._params.epochs <= self._params.current_epoch:
             logger.warning(
@@ -197,6 +197,7 @@ class Trainer(ABC):
 
 
     def setup_callbacks(self,
+                        optimizer,
                         callbacks=None,
                         ):
         external_callbacks = callbacks

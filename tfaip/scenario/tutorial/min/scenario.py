@@ -20,8 +20,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBase
-from tfaip.base.scenario import ScenarioBase, ScenarioBaseParams
-from tfaip.base.model import ModelBase
+from tfaip.base.imports import ScenarioBase, ScenarioBaseParams, ModelBase
 from tfaip.scenario.tutorial.min.data import Data
 from tfaip.scenario.tutorial.min.model import TutorialModel
 

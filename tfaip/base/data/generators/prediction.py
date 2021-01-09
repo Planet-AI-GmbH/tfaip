@@ -21,13 +21,11 @@ import logging
 
 from dataclasses_json import dataclass_json
 
-from tfaip.base.data.data import DataBase
-from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataGenerator
 from tfaip.base.data.pipeline.definitions import Sample, PipelineMode
-from tfaip.base.predict import PredictorParams
-from tfaip.base.scenario import ScenarioBase
-from tfaip.util.argument_parser import dc_meta
+from tfaip.base import PredictorParams, DataGeneratorParams
+from tfaip.base.imports import ScenarioBase, DataBase
+from tfaip.util.argumentparser import dc_meta
 from multiprocessing import Queue
 import threading
 

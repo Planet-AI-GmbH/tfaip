@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from tensorflow import keras
 import tensorflow.keras.backend as K
 
-from tfaip.base.model import GraphBase
+from tfaip.base.imports import GraphBase
 from tfaip.base.model.components.conv import Conv2D
 from tfaip.base.model.components.ff_layer import FF
 from tfaip.base.model.components.pool import MaxPool2D

@@ -17,11 +17,10 @@
 # ==============================================================================
 from typing import Callable, Iterable, TYPE_CHECKING
 
-import tensorflow as tf
-
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
 
 if TYPE_CHECKING:
+    import tensorflow as tf
     from tfaip.base.data.pipeline.datapipeline import DataPipeline
 
 
@@ -34,11 +33,12 @@ class TFDatasetGenerator:
     Customization: Customize this class (in DataPipeline) if you want to apply tf.data.Dataset.map calls to transform
                    the data before batching/prefetching/...
     """
+
     def __init__(self, data_pipeline: 'DataPipeline'):
         self.data_pipeline = data_pipeline
         self.mode = data_pipeline.mode
 
-    def _transform(self, dataset: tf.data.Dataset) -> tf.data.Dataset:
+    def _transform(self, dataset: 'tf.data.Dataset') -> 'tf.data.Dataset':
         # Override this, when you want to apply additional transformations on the dataset
         # Usually calling dataset.map(...)
         # Note: you should handle different cases for the different PipelineModels which will generate a different
@@ -53,7 +53,8 @@ class TFDatasetGenerator:
         # Override this, when the generator yields other shapes/types than the final data pipeline (input to the model)
         return self.data_pipeline.data.target_layer_specs()
 
-    def create(self, generator_fn: Callable[[], Iterable[Sample]]) -> tf.data.Dataset:
+    def create(self, generator_fn: Callable[[], Iterable[Sample]]) -> 'tf.data.Dataset':
+        import tensorflow as tf
         # This function maps the generator function into a tf.Dataset
         def wrap():
             samples = generator_fn()

@@ -17,69 +17,17 @@
 # ==============================================================================
 import itertools
 from abc import ABC
-from dataclasses import dataclass, field, fields
 from random import Random
-from typing import List, Iterable, Type, Optional
-
-from dataclasses_json import dataclass_json
+from typing import Iterable, Type
 
 from tfaip.base.data.data import DataBase
-from tfaip.base.data.databaseparams import DataBaseParams, DataGeneratorParams
+from tfaip.base.data.databaseparams import DataGeneratorParams
+from tfaip.base.data.listfile.listfiledataparams import ListFilePipelineParams, ListFileDataParams
 from tfaip.base.data.pipeline.datapipeline import DataGenerator, DataPipeline
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
 from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
-from tfaip.util.argument_parser import dc_meta
 from tfaip.base.data.listfile.data_list_helpers import ListMixDefinition, FileListProviderFn, FileListIterablor
 from tfaip.util.math.iter_helpers import ThreadSafeIterablor
-
-
-@dataclass_json
-@dataclass
-class ListsFilePipelineParams(DataGeneratorParams):
-    lists: Optional[List[str]] = field(default_factory=list, metadata=dc_meta(
-        help="Training list files."
-    ))
-    list_ratios: Optional[List[float]] = field(default=None, metadata=dc_meta(
-        help="Ratios of picking list files. Must be supported by the scenario"
-    ))
-
-    def validate(self):
-        super(ListsFilePipelineParams, self).validate()
-
-        if self.lists:
-            if not self.list_ratios:
-                self.list_ratios = [1.0] * len(self.lists)
-            else:
-                if len(self.list_ratios) != len(self.lists):
-                    raise ValueError(f"Length of list_ratios must be equals to number of lists. Got {self.list_ratios}!={self.lists}")
-
-    def split(self) -> List['ListFilePipelineParams']:
-        out = []
-        for l in self.lists:
-            t = ListFilePipelineParams()
-            for f in fields(self.__class__):
-                if f.name in {'lists', 'list_ratios'}:
-                    continue
-                setattr(t, f.name, getattr(self, f.name))
-            t.list = l
-            out.append(t)
-        return out
-
-
-@dataclass_json
-@dataclass
-class ListFilePipelineParams(DataGeneratorParams):
-    list: str = field(default=None, metadata=dc_meta(
-        help="The validation list for testing the model during training."
-    ))
-
-
-@dataclass_json
-@dataclass
-class ListFileDataParams(DataBaseParams):
-    train: ListsFilePipelineParams = field(default_factory=ListsFilePipelineParams, metadata=dc_meta(arg_mode='snake'))
-    val: ListFilePipelineParams = field(default_factory=ListFilePipelineParams, metadata=dc_meta(arg_mode='snake'))
-    lav: ListsFilePipelineParams = field(default_factory=ListsFilePipelineParams, metadata=dc_meta(arg_mode='snake'))
 
 
 class ListsFileDataGenerator(DataGenerator):

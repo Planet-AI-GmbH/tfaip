@@ -25,8 +25,8 @@ from typing import Type
 from tensorflow.python.keras.backend import clear_session
 
 from test.util.store_logs_callback import StoreLogsCallback
-from tfaip.base.scenario import ScenarioBaseParams, ScenarioBase
-from tfaip.base.trainer import TrainerParams, Trainer
+from tfaip.base import TrainerParams, ScenarioBaseParams
+from tfaip.base.imports import ScenarioBase, Trainer
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.random import set_global_random_seed
 

@@ -19,18 +19,17 @@ import json
 import logging
 import os
 from abc import ABC
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator, Optional
 
 import numpy as np
 import tensorflow.keras as keras
-from dataclasses_json import dataclass_json
 
+from tfaip.base import LAVParams
 from tfaip.base.data.pipeline.definitions import Sample, OutputTargetsSample
-from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
+from tfaip.base.device_config import DeviceConfig, distribute_strategy
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.lav.callbacks.lav_callback import LAVCallback
-from tfaip.base.predict import Predictor, PredictorParams
+from tfaip.base.predict.predictor import Predictor, PredictorParams
 from tfaip.base.predict.predictorbase import PredictorBenchmarkResults
 from tfaip.util.file.oshelper import ChDir
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
@@ -40,15 +39,6 @@ if TYPE_CHECKING:
     from tfaip.base.model import ModelBase
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass_json
-@dataclass
-class LAVParams:
-    max_iter: int = -1
-    model_path_: str = None
-    device_params: DeviceConfigParams = field(default_factory=lambda: DeviceConfigParams())
-    silent: bool = False
 
 
 class MetricsAccumulator:

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from typing import Union, TYPE_CHECKING, Iterable, Type
+from typing import Union, TYPE_CHECKING, Iterable
 
 from tensorflow import keras
 

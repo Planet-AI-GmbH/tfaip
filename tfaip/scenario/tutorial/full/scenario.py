@@ -23,8 +23,7 @@ from dataclasses_json import dataclass_json
 from tfaip.base.data.data import DataBase
 from tfaip.base.data.pipeline.definitions import OutputTargetsSample
 from tfaip.base.evaluator.evaluator import Evaluator
-from tfaip.base.scenario import ScenarioBase, ScenarioBaseParams
-from tfaip.base.model import ModelBase
+from tfaip.base.imports import ScenarioBase, ScenarioBaseParams, ModelBase
 from tfaip.scenario.tutorial.full.data import Data
 from tfaip.scenario.tutorial.full.model import TutorialModel
 from tfaip.util.typing import AnyNumpy
@@ -70,7 +69,5 @@ class TutorialScenario(ScenarioBase):
 
         return MNISTEvaluator
 
-
     def __init__(self, params: ScenarioParams):
         super().__init__(params)
-

@@ -22,8 +22,8 @@ from dataclasses_json import dataclass_json, config, LetterCase
 
 from tfaip.base.data.databaseparams import DataBaseParams
 from tfaip.base.evaluator.params import EvaluatorParams
-from tfaip.base.model import ModelBaseParams
-from tfaip.util.argument_parser import dc_meta
+from tfaip.base.model.modelbaseparams import ModelBaseParams
+from tfaip.util.argumentparser import dc_meta
 from tfaip.util.versioning import get_commit_hash
 from tfaip import __version__
 
