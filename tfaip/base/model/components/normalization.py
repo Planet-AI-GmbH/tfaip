@@ -33,17 +33,22 @@ class NormalizeImage(keras.layers.Layer):
         self._per_image_standardization = PerImageStandardization()
 
     def call(self, inputs, **kwargs):
-        image, img_length = inputs
-        img_length = keras.backend.squeeze(img_length, axis=-1)
+        if len(inputs) == 2:
+            image, img_width = inputs
+            img_height = image.get_shape().as_list()[0]
+            padded_height = image.get_shape().as_list()[0]
+        else:
+            image, img_width, img_height = inputs
+            img_height = keras.backend.squeeze(img_height, axis=-1)
+            padded_height = tf.shape(image)[0]
 
-        # dynamic shape values (calculated during runtime)
-        shape_dynamic = tf.shape(image)
-        # static shape values (defined up-front)
-        shape_static = image.get_shape().as_list()
+        img_width = keras.backend.squeeze(img_width, axis=-1)
+        padded_width = tf.shape(image)[1]
+
         # image normalization
-        image_crop = tf.image.crop_to_bounding_box(image, 0, 0, shape_static[0], img_length)
+        image_crop = tf.image.crop_to_bounding_box(image, 0, 0, img_height, img_width)
         image_norm = self._per_image_standardization(image_crop)
-        image_pad = tf.image.pad_to_bounding_box(image_norm, 0, 0, shape_static[0], shape_dynamic[1])
+        image_pad = tf.image.pad_to_bounding_box(image_norm, 0, 0, padded_height, padded_width)
         return image_pad
 
 

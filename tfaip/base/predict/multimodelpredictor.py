@@ -24,7 +24,7 @@ from tensorflow import keras
 
 from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline
-from tfaip.base.data.pipeline.definitions import Sample
+from tfaip.base.data.pipeline.definitions import Sample, PipelineMode
 from tfaip.base.predict.predictorbase import PredictorBase, PredictorParams
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
@@ -78,22 +78,28 @@ class MultiModelPredictor(PredictorBase):
         assert(len(models) == len(datas))
         models = [self._load_model(model, False) for model in models]
         inputs = self._data.create_input_layers()
+        outputs = [model(inputs) for model in models]
         for i, model in enumerate(models):
             model._name = f"{i}_{model.name}"  # Forced renaming
-        outputs = [model(inputs) for model in models]
-        self._keras_model = keras.models.Model(inputs=inputs, outputs=(inputs, outputs))
+        if self._params.include_targets:
+            targets = self._data.create_target_as_input_layers()
+            joined = {**inputs, **targets}
+            self._keras_model = keras.models.Model(inputs=joined, outputs=(inputs, targets, outputs))
+        else:
+            self._keras_model = keras.models.Model(inputs=inputs, outputs=(inputs, outputs))
         self._datas = datas
 
     @property
     def datas(self) -> List['DataBase']:
         return self._datas
 
-    def _unwrap_batch(self, inputs, outputs) -> Iterable:
+    def _unwrap_batch(self, inputs, targets, outputs) -> Iterable[Sample]:
         batch_size = next(iter(inputs.values())).shape[0]
         for i in range(batch_size):
             un_batched_outputs = [{k: v[i] for k, v in output.items()} for output in outputs]
             un_batched_inputs = {k: v[i] for k, v in inputs.items()}
-            sample = Sample(un_batched_inputs, un_batched_outputs)
+            un_batched_targets = {k: v[i] for k, v in targets.items()}
+            sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets)
 
             yield sample
 
@@ -103,13 +109,15 @@ class MultiModelPredictor(PredictorBase):
 
     def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[Sample]:
         voter = self.create_voter(self._data.params())
-        post_processors = [d.get_predict_data(pipeline.generator_params).create_output_pipeline() for d in self._datas]
+        pipeline_mode = PipelineMode.Evaluation if self.params.include_targets else PipelineMode.Prediction
+        post_processors = [d.get_pipeline(pipeline_mode, pipeline.generator_params).create_output_pipeline() for d in self._datas]
         with pipeline as rd:
             def split(sample: Sample):
-                return [Sample(sample.inputs, output, sample.meta) for output in sample.outputs]
+                return [Sample(inputs=sample.inputs, outputs=output, targets=sample.targets, meta=sample.meta) for output in sample.outputs]
 
             def join(samples: List[Sample]):
-                return Sample(samples[0].inputs, [s.targets for s in samples], [s.meta for s in samples])
+                return Sample(inputs=samples[0].inputs, targets=samples[0].targets,
+                              outputs=[s.outputs for s in samples], meta=[s.meta for s in samples])
 
             results = tqdm_wrapper(self.predict_database(rd.input_dataset()),
                                    progress_bar=self._params.progress_bar,

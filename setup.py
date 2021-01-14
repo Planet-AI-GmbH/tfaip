@@ -37,6 +37,7 @@ setup(
         'console_scripts': [
             'tfaip-train=tfaip.scripts.train:run',
             'tfaip-lav=tfaip.scripts.lav:run',
+            'tfaip-multi-lav=tfaip.scripts.lav_multi:run',
             'tfaip-evaluate=tfaip.scripts.evaluate:run',
             'tfaip-predict=tfaip.scripts.predict:run',
             'tfaip-experimenter=tfaip.scripts.experimenter:main',

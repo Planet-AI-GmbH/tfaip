@@ -45,7 +45,7 @@ class DataParams(DataBaseParams):
 
 
 def to_samples(samples):
-    return [Sample({'img': img}, {'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
+    return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
 class Data(DataBase):
@@ -62,15 +62,17 @@ class Data(DataBase):
                 elif self.mode == PipelineMode.Evaluation:
                     return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
                 elif self.mode == PipelineMode.Prediction:
-                    # Instead of loading images to a raw pipeline, you should create a custom preprocessing pipeline
-                    # That is used during training and prediction
-                    assert (type(self.generator_params) == ListFilePipelineParams)
-                    assert self.generator_params.list, "No images provided"
-                    return RawDataGenerator(
-                        [Sample({'img': img}, None) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
-                        self.mode, self.generator_params)
-                else:
-                    raise NotImplementedError
+                    if isinstance(self.generator_params, ListFilePipelineParams):
+                        # Instead of loading images to a raw pipeline, you should create a custom preprocessing pipeline
+                        # That is used during training and prediction
+                        assert self.generator_params.list, "No images provided"
+                        return RawDataGenerator(
+                            [Sample(inputs={'img': img}) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
+                            self.mode, self.generator_params)
+                    else:
+                        return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
+                elif self.mode == PipelineMode.Targets:
+                    return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
         return TutorialPipeline
 
     @classmethod

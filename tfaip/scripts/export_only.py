@@ -17,7 +17,7 @@
 # ==============================================================================
 import json
 from argparse import ArgumentParser
-from tfaip.base.trainer import Trainer
+from tfaip.base.imports import Trainer
 import logging
 import os
 

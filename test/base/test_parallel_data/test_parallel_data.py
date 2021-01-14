@@ -36,7 +36,7 @@ class TestParallelData(unittest.TestCase):
             def data_pipeline_cls(cls) -> Type[DataPipeline]:
                 class PPipeline(SimpleDataPipeline):
                     def generate_samples(self) -> Iterable[Sample]:
-                        return [Sample({'data': [i]}, {'targets': [i]}) for i in range(1000)]
+                        return [Sample(inputs={'data': [i]}, targets={'targets': [i]}) for i in range(1000)]
                 return PPipeline
 
             def _input_layer_specs(self):

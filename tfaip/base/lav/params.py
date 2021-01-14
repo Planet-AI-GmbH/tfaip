@@ -16,16 +16,17 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from dataclasses import dataclass, field
+from typing import Union, List
 
 from dataclasses_json import dataclass_json
 
 from tfaip.base.device_config import DeviceConfigParams
+from tfaip.util.argumentparser import dc_meta
 
 
 @dataclass_json
 @dataclass
 class LAVParams:
-    max_iter: int = -1
-    model_path_: str = None
+    model_path: Union[str, List[str]] = field(default=None, metadata=dc_meta(arg_mode='ignore'))
     device_params: DeviceConfigParams = field(default_factory=lambda: DeviceConfigParams())
     silent: bool = False

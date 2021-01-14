@@ -100,3 +100,15 @@ class Pool3D(keras.layers.Layer):
 
     def call(self, input, **kwargs):
         return self.layer(input, **kwargs)
+
+
+class AvgPool2D(keras.layers.AvgPool2D):
+    def __init__(self, **kwargs):
+        super(AvgPool2D, self).__init__(**kwargs)
+
+    def call(self, input, mask=None, **kwargs):
+        if mask is not None:
+            assert(len(input.get_shape()) == len(mask.get_shape()))
+            input -= (1 - mask) * 1e10
+
+        return super(AvgPool2D, self).call(input)

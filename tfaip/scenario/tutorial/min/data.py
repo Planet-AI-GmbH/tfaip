@@ -23,7 +23,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from dataclasses_json import dataclass_json
 
-from tfaip.base.data.data import DataBaseParams, DataBase
+from tfaip.base.imports import DataBaseParams, DataBase
 from tfaip.base.data.databaseparams import DataGeneratorParams
 from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator, RawDataGenerator, RawDataPipeline
 from tfaip.base.data.listfile.listfiledata import ListFilePipelineParams
@@ -44,7 +44,7 @@ class DataParams(DataBaseParams):
 
 
 def to_samples(samples):
-    return [Sample({'img': img}, {'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
+    return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
 class TutorialPipeline(DataPipeline):

@@ -15,17 +15,33 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+from abc import abstractmethod, ABC
+from typing import Optional, List
+
 import tensorflow.keras as keras
 
-
-def activation_by_str(a: str):
-    if a is None:
-        return
-    elif a == 'leaky_relu':
-        return leaky_relu()
-    else:
-        return getattr(keras.activations, a)
+from tfaip.base.imports import GraphBase, ModelBaseParams
 
 
-def leaky_relu(leak=0.1, name="leakyRelu"):
-    return keras.layers.LeakyReLU(alpha=leak, name=name)
+class BackboneModel(GraphBase, ABC):
+
+    def __init__(self, params: 'ModelBaseParams', **kwargs):
+        super().__init__(params, **kwargs)
+        self._model: Optional[keras.Model] = None
+
+    @classmethod
+    @abstractmethod
+    def params_cls(cls):
+        raise NotImplementedError
+
+    @property
+    def inputs(self):
+        return self._model.inputs
+
+    @property
+    def layers(self):
+        return self._model.layers
+
+    def get_layer(self, name=None, index=None):
+        return self._model.get_layer(name, index)
+

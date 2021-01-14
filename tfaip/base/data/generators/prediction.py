@@ -46,7 +46,7 @@ def generator(params: PredictionGeneratorParams, data: DataBase, scenario: Scena
     predictor = scenario.predictor_cls()(params.predictor_params, data)
     predictor.set_model(params.model + '/serve')
     for s in predictor.predict_pipeline(data.get_predict_data(params.generator)):
-        queue.put(Sample(s.targets, s.inputs, s.meta))
+        queue.put(Sample(targets=s.targets, inputs=s.inputs, outputs=s.outputs, meta=s.meta))
 
     queue.put(None)
     logger.info(f"Generator thread ended.")

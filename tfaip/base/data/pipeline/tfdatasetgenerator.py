@@ -85,4 +85,5 @@ class TFDatasetGenerator:
             output_shapes = (input_shapes, target_shapes)
 
         dataset = tf.data.Dataset.from_generator(wrap, output_types=output_types, output_shapes=output_shapes)
+        dataset = self._transform(dataset)
         return dataset

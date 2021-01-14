@@ -25,7 +25,7 @@ import numpy as np
 import tensorflow.keras as keras
 
 from tfaip.base import LAVParams
-from tfaip.base.data.pipeline.definitions import Sample, OutputTargetsSample
+from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.device_config import DeviceConfig, distribute_strategy
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.lav.callbacks.lav_callback import LAVCallback
@@ -36,7 +36,7 @@ from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
     from tfaip.base.data.data import DataBase
-    from tfaip.base.model import ModelBase
+    from tfaip.base.model.modelbase import ModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class LAV(ABC):
                  predictor_fn: Callable[[PredictorParams, 'DataBase'], Predictor],
                  evaluator_fn: Callable[[], Evaluator],
                  ):
-        assert params.model_path_
+        assert params.model_path
         self._params = params
         self._data_fn = data_fn
         self._predictor_fn = predictor_fn
@@ -117,7 +117,7 @@ class LAV(ABC):
             callbacks: List[LAVCallback] = None,
             ) -> Generator[Dict[str, float], None, None]:
         callbacks = callbacks if callbacks else []
-        with ChDir(os.path.join(self._params.model_path_)):
+        with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
             self._data = self._data_fn()
         self._model = self._model_fn()
@@ -137,7 +137,7 @@ class LAV(ABC):
 
         _keras_model: keras.Model = model
         if not model:
-            _keras_model = keras.models.load_model(os.path.join(self._params.model_path_, 'serve'),
+            _keras_model = keras.models.load_model(os.path.join(self._params.model_path, 'serve'),
                                                    compile=False, custom_objects=custom_objects)
 
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
@@ -164,16 +164,21 @@ class LAV(ABC):
                 input_dataset = rd.input_dataset().map(regroup)
 
                 def extract_metric(s: Sample):
-                    i, o, m = s
+                    i, o, m = s.inputs, s.outputs, s.meta
                     m = m or {}
                     # Add metrics as meta information
-                    return Sample(i,
-                                  {k: v for k, v in o.items() if k not in metric_outputs},
-                                  {**m, 'lav_metrics': {k: v for k, v in o.items() if k in metric_outputs}},
+                    return Sample(inputs=i,
+                                  outputs={k: v for k, v in o.items() if k not in metric_outputs},
+                                  meta={**m, 'lav_metrics': {k: v for k, v in o.items() if k in metric_outputs}},
                                   )
 
+                def ungroup(sample):
+                    inputs = {k: v for k, v in sample.inputs.items() if k in real_inputs or k in sample_weights}
+                    targets = {k: v for k, v in sample.inputs.items() if k in real_targets}
+                    return sample.new_inputs(inputs).new_targets(targets)
+
                 for r in tqdm_wrapper(
-                        rd.process_output(map(extract_metric, predictor.predict_database(input_dataset))),
+                        rd.process_output(map(ungroup, map(extract_metric, predictor.predict_database(input_dataset)))),
                         progress_bar=predictor_params.progress_bar,
                         desc="LAV",
                         total=len(rd),
@@ -185,11 +190,12 @@ class LAV(ABC):
         for val_data in self._data.get_lav_datasets():
             with evaluator:
                 for step, sample in enumerate(predict_pipeline(val_data)):
+                    # sample weights and inputs are both mapped into sample.inputs
                     un_batched_inputs = {k: v for k, v in sample.inputs.items() if k in real_inputs}
-                    un_batched_targets = {k: v for k, v in sample.inputs.items() if k in real_targets}
+                    un_batched_sample_weights = {k[:-14]: v for k, v in sample.inputs.items() if k in sample_weights}
+                    un_batched_targets = sample.targets
                     un_batched_outputs = sample.outputs
                     un_batched_metric_outputs = sample.meta['lav_metrics']
-                    un_batched_sample_weights = {k[:-14]: v for k, v in sample.inputs.items() if k in sample_weights}
                     if not self._params.silent:
                         self._model.print_evaluate(un_batched_inputs, un_batched_outputs, un_batched_targets,
                                                    self._data)
@@ -208,7 +214,7 @@ class LAV(ABC):
                     for cb in callbacks:
                         cb.on_sample_end(un_batched_inputs, un_batched_targets, un_batched_outputs)
 
-                    evaluator.update_state(OutputTargetsSample(un_batched_outputs, un_batched_targets, sample.meta))
+                    evaluator.update_state(Sample(outputs=un_batched_outputs, targets=un_batched_targets, meta=sample.meta))
 
             # print the output
             keys = self._model.tensorboard_handler.all_tensorboard_keys
@@ -231,3 +237,6 @@ class LAV(ABC):
 
     def _on_lav_end(self, result):
         pass
+
+    def extract_dump_data(self, inputs, targets, outputs):
+        return targets, outputs

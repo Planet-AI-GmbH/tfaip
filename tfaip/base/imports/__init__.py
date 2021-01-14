@@ -22,6 +22,7 @@ from tfaip.base.data.data import DataBase, DataPipeline, DataProcessorFactory
 from tfaip.base.data.listfile.listfiledata import ListFileData, ListsFileDataPipeline, ListsFileDataGenerator
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.lav.lav import LAV, LAVCallback
+from tfaip.base.lav.multilav import MultiLAV
 from tfaip.base.model.modelbase import ModelBase, MetricDefinition, MultiMetricDefinition
 from tfaip.base.model.graphbase import GraphBase
 from tfaip.base.predict.predictor import Predictor

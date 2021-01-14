@@ -30,7 +30,7 @@ class DumpResultsCallback(LAVCallback):
         logger.info(f"Results dumper to {self.filepath} created.")
 
     def on_sample_end(self, inputs, targets, outputs):
-        targets, prediction = self.model.target_prediction(targets, outputs, self.data)
+        targets, prediction = self.lav.extract_dump_data(inputs, targets, outputs)
         self.target_prediction_pairs.append((targets, prediction))
 
     def on_lav_end(self, result):

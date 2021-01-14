@@ -57,7 +57,7 @@ class RunningDataPipeline:
                     input_meta = input_meta[0]
 
                 meta.update(**json.loads(input_meta))
-            return Sample(sample.inputs, sample.outputs, meta)
+            return sample.new_meta(meta)
 
         samples = map(extract_meta, samples)
 

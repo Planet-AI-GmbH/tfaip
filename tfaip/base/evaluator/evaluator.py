@@ -17,7 +17,7 @@
 # ==============================================================================
 from typing import Dict
 
-from tfaip.base.data.pipeline.definitions import OutputTargetsSample
+from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.evaluator.params import EvaluatorParams
 from tfaip.util.typing import AnyNumpy
 
@@ -36,7 +36,7 @@ class Evaluator:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def update_state(self, sample: OutputTargetsSample):
+    def update_state(self, sample: Sample):
         pass
 
     def result(self) -> Dict[str, AnyNumpy]:

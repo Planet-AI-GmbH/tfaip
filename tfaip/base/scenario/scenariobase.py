@@ -37,6 +37,7 @@ from tensorflow_addons.optimizers import MovingAverage
 from tfaip.base.data.data import DataBase
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.evaluator.params import EvaluatorParams
+from tfaip.base.lav.multilav import MultiLAV
 from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.scenario.scenariobaseparams import ScenarioBaseParams, NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.base.scenario.util.keras_debug_model import KerasDebugModel
@@ -98,6 +99,7 @@ class ScenarioBase(ABC):
         scenario_params.scenario_module_ = cls.__module__
         scenario_params.model_params = cls.model_cls().get_params_cls()()
         scenario_params.data_params = cls.data_cls().get_default_params()
+        scenario_params.evaluator_params = cls.evaluator_cls().default_params()
         return scenario_params
 
     @classmethod
@@ -115,6 +117,7 @@ class ScenarioBase(ABC):
         params: ScenarioBaseParams = cls.get_params_cls().from_dict(d)
         params.model_params = cls.model_cls().get_params_cls().from_dict(d['model_params'])
         params.data_params = cls.data_cls().get_params_cls().from_dict(d['data_params'])
+        params.evaluator_params = cls.evaluator_cls().default_params().__class__.from_dict(d.get('evaluator_params', {}))
         return params
 
     @classmethod
@@ -217,6 +220,11 @@ class ScenarioBase(ABC):
         return LAV
 
     @classmethod
+    def multi_lav_cls(cls) -> Type['MultiLAV']:
+        from tfaip.base.imports import MultiLAV
+        return MultiLAV
+
+    @classmethod
     def predictor_cls(cls) -> Type['Predictor']:
         from tfaip.base.imports import Predictor
         return Predictor
@@ -242,6 +250,15 @@ class ScenarioBase(ABC):
                              predictor_fn=cls.predictor_cls(),
                              evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator_params),
                              )
+
+    @classmethod
+    def create_multi_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams'):
+        return MultiLAV(
+            lav_params,
+            scenario_params.data_params.val,
+            cls.create_multi_predictor,
+            cls.create_evaluator(scenario_params.evaluator_params),
+        )
 
     @classmethod
     def create_predictor(cls, model: str, params: 'PredictorParams') -> 'Predictor':

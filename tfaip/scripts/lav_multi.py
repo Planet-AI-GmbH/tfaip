@@ -30,7 +30,7 @@ def run():
     main(*parse_args())
 
 
-def main(args, scenario_meta, scenario_params):
+def main(args, scenario_cls, scenario_params):
     callbacks = []
     if args.dump:
         callbacks.append(DumpResultsCallback(args.dump))
@@ -40,28 +40,30 @@ def main(args, scenario_meta, scenario_params):
     logger.info("lav_params=" + lav_params.to_json(indent=2))
 
     # create the lav and run it
-    lav = scenario_meta.create_lav(lav_params, scenario_params)
+    lav = scenario_cls.create_multi_lav(lav_params, scenario_params)
     for i, r in enumerate(lav.run(run_eagerly=args.run_eagerly, callbacks=callbacks)):
         print(json.dumps(r, indent=2))
         lav.benchmark_results.pretty_print()
 
 
 def parse_args(args=None):
-    from tfaip.base.imports import ScenarioBase
+    from tfaip.base.scenario.scenariobase import ScenarioBase
+
     parser = TFAIPArgumentParser()
-    parser.add_argument('--export_dir', required=True)
+    parser.add_argument('--scenario', type=str, required=True)
+    parser.add_argument('--export_dirs', required=True, nargs='+')
     parser.add_argument('--run_eagerly', action='store_true', help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!")
     parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
 
     args, unknown_args = parser.parse_known_args(args)
-    scenario, scenario_params = ScenarioBase.from_path(args.export_dir)
-
+    scenario, scenario_params = ScenarioBase.from_path(args.export_dirs[0])
+    pipeline_params = scenario_params.data_params.val
     lav_params = scenario.lav_cls().get_params_cls()()
-    lav_params.model_path = args.export_dir
+    lav_params.model_path = args.export_dirs
 
-    parser = TFAIPArgumentParser(ignore_required=True)
-    add_args_group(parser, group='data_params', default=scenario_params.data_params, params_cls=scenario.data_cls().get_params_cls())
+    parser = TFAIPArgumentParser()
     add_args_group(parser, group='lav_params', default=lav_params, params_cls=scenario.lav_cls().get_params_cls())
+    add_args_group(parser, group='data', default=pipeline_params, params_cls=pipeline_params.__class__)
 
     return parser.parse_args(unknown_args, namespace=args), scenario, scenario_params
 

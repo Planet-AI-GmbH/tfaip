@@ -38,3 +38,15 @@ class TestLAVScript(unittest.TestCase):
                         '--run_eagerly',
                         '--dump', os.path.join(d, 'dump.pkl'),
                         ])
+
+    def test_multi_lav_tutorial(self):
+        with tempfile.TemporaryDirectory() as d:
+            check_call(['tfaip-train', 'tutorial.full',
+                        '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
+                        '--data_params', 'train.batch_size=2',
+                        ])
+            check_call(['tfaip-multi-lav',
+                        '--scenario', 'tutorial.full',
+                        '--export_dirs', os.path.join(d, 'best'), os.path.join(d, 'best'),
+                        '--data', 'limit=10',
+                        ])

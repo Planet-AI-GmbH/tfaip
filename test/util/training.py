@@ -121,26 +121,23 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         trainer_params_dict['epochs'] = 2
 
         lav_params = scenario.lav_cls().get_params_cls()()
-        lav_params.max_iter = 1
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
+        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
-        scenario_params = scenario.params_from_path(lav_params.model_path_)
+        scenario_params = scenario.params_from_path(lav_params.model_path)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
-        lav_params.max_iter = batch_and_limit
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
+        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        scenario_params = scenario.params_from_path(lav_params.model_path_)
+        scenario_params = scenario.params_from_path(lav_params.model_path)
         scenario_params.data_params.val.batch_size = 1
         scenario_params.data_params.val.limit = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
         set_global_random_seed(trainer_params.random_seed)
-        lav_params.max_iter = 1
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
+        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
-        scenario_params = scenario.params_from_path(lav_params.model_path_)
+        scenario_params = scenario.params_from_path(lav_params.model_path)
         scenario_params.data_params.val.limit = batch_and_limit
         scenario_params.data_params.val.batch_size = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)

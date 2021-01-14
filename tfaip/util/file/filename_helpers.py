@@ -15,17 +15,29 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import tensorflow.keras as keras
+import os
+import platform
+import pwd
 
 
-def activation_by_str(a: str):
-    if a is None:
-        return
-    elif a == 'leaky_relu':
-        return leaky_relu()
+def get_username():
+    return pwd.getpwuid(os.getuid())[0]
+
+
+def get_home_dir():
+    system = platform.system()
+    if system == "Linux":
+        return "/home/" + get_username()
+    elif system == "Darwin":
+        return "/Users/" + get_username()
     else:
-        return getattr(keras.activations, a)
+        raise NotImplementedError('get_home_dir not yet implemented for ' + system)
 
 
-def leaky_relu(leak=0.1, name="leakyRelu"):
-    return keras.layers.LeakyReLU(alpha=leak, name=name)
+if __name__ == '__main__':
+    # img_fn = "vol/my_path/img.jpg"
+    # old_prefix = "vol/"
+    # new_prefix = "truth/"
+    # tfg = PrefixReplacingExtAppendingXMLTruthFilenameGenerator(old_prefix, new_prefix)
+    # print img_fn + " -> " + tfg.generate_truth_filename(img_fn)
+    print(get_home_dir())

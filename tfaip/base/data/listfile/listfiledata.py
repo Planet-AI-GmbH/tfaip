@@ -54,7 +54,7 @@ class ListsFileDataGenerator(DataGenerator):
         if self.params.limit > 0:
             iterator = itertools.islice(iterator, self.params.limit)
 
-        return map(lambda fn: Sample(fn, fn), iterator)
+        return map(lambda fn: Sample(inputs=fn, targets=fn), iterator)
 
 
 class ListsFileDataPipeline(DataPipeline, ABC):

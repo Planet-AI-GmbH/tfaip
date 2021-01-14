@@ -15,17 +15,4 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import tensorflow.keras as keras
-
-
-def activation_by_str(a: str):
-    if a is None:
-        return
-    elif a == 'leaky_relu':
-        return leaky_relu()
-    else:
-        return getattr(keras.activations, a)
-
-
-def leaky_relu(leak=0.1, name="leakyRelu"):
-    return keras.layers.LeakyReLU(alpha=leak, name=name)
+from tfaip.base.model.backbones.backbonemodel import BackboneModel

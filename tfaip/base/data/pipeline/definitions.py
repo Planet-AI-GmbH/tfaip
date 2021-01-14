@@ -35,29 +35,38 @@ TARGETS_PROCESSOR = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMod
 GENERAL_PROCESSOR = {PipelineMode.Training, PipelineMode.Evaluation, PipelineMode.Prediction, PipelineMode.Targets}
 
 
-class OutputTargetsSample(NamedTuple):
-    outputs: Any
-    targets: Any
-    meta: Any = None
+class Sample:
+    def __init__(self, *, inputs: Any = None, outputs: Any = None, targets: Any = None, meta: Any = None):
+        self.inputs = inputs
+        self.outputs = outputs
+        self.targets = targets
+        self.meta = meta
 
+    def new_invalid(self):
+        return Sample(meta=self.meta)
 
-class Sample(NamedTuple):
-    first: Any      # Inputs (always)
-    second: Any     # Targets (preproc) or outputs (postproc)
-    meta: Any = None  # Meta information (optional). Can e. g. be used to identify a sample (e.g. an ID)
+    def copy(self):
+        return Sample(inputs=self.inputs, outputs=self.outputs, targets=self.targets, meta=self.meta)
 
-    # Alias
-    @property
-    def inputs(self) -> Any:
-        return self.first
+    def new_inputs(self, inputs):
+        s = self.copy()
+        s.inputs = inputs
+        return s
 
-    @property
-    def outputs(self) -> Any:
-        return self.second
+    def new_outputs(self, outputs):
+        s = self.copy()
+        s.outputs = outputs
+        return s
 
-    @property
-    def targets(self) -> Any:
-        return self.second
+    def new_targets(self, targets):
+        s = self.copy()
+        s.targets = targets
+        return s
+
+    def new_meta(self, meta):
+        s = self.copy()
+        s.meta = meta
+        return s
 
 
 @dataclass_json

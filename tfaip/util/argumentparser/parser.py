@@ -71,11 +71,11 @@ def str2str_enum(v: str, enum_cls: Type[enum.Enum]):
     raise ValueError(f"Could not match {v} to any valid key in {enum_cls.__members__.keys()}.")
 
 
-def parse_list_arg(val, formatter):
+def parse_list_arg(val, formatter, splitter=','):
     if len(val) == 0:
         return []
 
-    if ',' not in val:
+    if splitter not in val:
         # only one argument, may also have no brackets at all
         if val[0] == '[' and val[-1] == ']':
             val = val[1:-1]
@@ -88,7 +88,11 @@ def parse_list_arg(val, formatter):
     elif val[-1] != ']':
         raise ValueError("List argument must end with ']' but got '{}'".format(val))
 
-    return [formatter(s.strip()) for s in val[1:-1].split(',') if len(s.strip()) > 0]
+    return [formatter(s.strip()) for s in val[1:-1].split(splitter) if len(s.strip()) > 0]
+
+
+def parse_list_list_arg(val, formatter):
+    return [parse_list_arg(sub, formatter) for sub in parse_list_arg(val.replace('],[', ']|['), str, '|')]
 
 
 def is_int_enum(t):
@@ -235,6 +239,10 @@ def make_store_dataclass_action(data_cls: Any, required_fields: List):
                         setattr(params, key, cast_list(val, int, parse_list_arg, field))
                     elif field.type == Optional[List[float]] or field.type == List[float]:
                         setattr(params, key, cast_list(val, float, parse_list_arg, field))
+
+                    # Lists of Lists
+                    elif field.type == List[List[float]]:
+                        setattr(params, key, cast_list(val, float, parse_list_list_arg, field))
 
                     # Enum
                     elif is_int_enum(field.type):

@@ -46,11 +46,11 @@ class DataProcessor(ABC):
         return True
 
     @typechecked
-    def __call__(self, first: Any, second: Any, meta: dict) -> Tuple[Any, Any]:
-        return self.apply(first, second, meta)
+    def __call__(self, sample: Sample) -> Sample:
+        return self.apply(sample)
 
     @abstractmethod
-    def apply(self, first, second, meta: dict):
+    def apply(self, sample: Sample) -> Sample:
         raise NotImplementedError
 
     def preload(self,
@@ -74,14 +74,10 @@ class DataProcessor(ABC):
             mapped = filter(lambda s: s is not None, mapped)
         return mapped
 
-    def apply_on_sample(self, sample: Sample):
-        first, second, meta = sample
-        if meta is None:
-            meta = {}
-        r = self.apply(first, second, meta)
-        if r is None:
-            return r
-        return Sample(*r, meta)
+    def apply_on_sample(self, sample: Sample) -> Sample:
+        if sample.meta is None:
+            sample = sample.new_meta({})
+        return self.apply(sample.copy())
 
 
 class SequenceProcessor(DataProcessor):
@@ -96,26 +92,26 @@ class SequenceProcessor(DataProcessor):
                 break
         return self.split_by_processor(i)
 
-    def is_valid_sample(self, inputs, targets):
-        if inputs is None and self.mode in INPUT_PROCESSOR:
+    def is_valid_sample(self, sample: Sample) -> bool:
+        if sample.inputs is None and self.mode in INPUT_PROCESSOR:
             return False
-        if targets is None and self.mode in TARGETS_PROCESSOR:
+        if sample.targets is None and self.mode in TARGETS_PROCESSOR:
             return False
         return True
 
-    def apply(self, inputs, targets, meta: dict):
-        if meta is None:
-            meta = {}
+    def apply(self, sample: Sample) -> Optional[Sample]:
+        if sample.meta is None:
+            sample = sample.new_meta({})
 
-        if not self.is_valid_sample(inputs, targets):
+        if not self.is_valid_sample(sample):
             return None
 
         for p in self.processors:
-            inputs, targets = p(inputs, targets, meta)
-            if not self.is_valid_sample(inputs, targets):
+            sample = p(sample)
+            if not self.is_valid_sample(sample):
                 return None
 
-        return inputs, targets
+        return sample
 
     def __init__(self, params, mode, processors: List[DataProcessor]):
         super(SequenceProcessor, self).__init__(params, mode)

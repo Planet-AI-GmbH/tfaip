@@ -90,7 +90,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         if tf.version.VERSION >= "2.4.0" or isinstance(training, bool):
             op = reset_op if training else print_op
         else:
-            op = tf.cond(training, reset_op, print_op)
+            op = tf.cond(tf.convert_to_tensor(training), reset_op, print_op)
 
         with tf.control_dependencies([op]):
             return v
@@ -127,8 +127,10 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
                     outputs = {k: v[batch] for k, v in out_np.items()}
                     targets = {k: v[batch] for k, v in target_np.items()}
 
-                    _, outputs, _ = self._post_proc_pred.apply_on_sample(Sample(inputs.copy(), outputs))
-                    inputs, targets, _ = self._post_proc_targets.apply_on_sample(Sample(inputs.copy(), targets))
+                    sample = Sample(inputs=inputs.copy(), outputs=outputs, targets=targets)
+                    outputs = self._post_proc_pred.apply_on_sample(sample).outputs
+                    s = self._post_proc_targets.apply_on_sample(sample)
+                    inputs, targets = s.inputs, s.targets
 
                     self.scenario.model.print_evaluate(
                         inputs, outputs, targets,

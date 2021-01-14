@@ -21,11 +21,12 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBase
-from tfaip.base.data.pipeline.definitions import OutputTargetsSample
+from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.imports import ScenarioBase, ScenarioBaseParams, ModelBase
 from tfaip.scenario.tutorial.full.data import Data
 from tfaip.scenario.tutorial.full.model import TutorialModel
+from tfaip.scenario.tutorial.full.predictor import TutorialMultiModelPredictor
 from tfaip.util.typing import AnyNumpy
 
 
@@ -49,6 +50,10 @@ class TutorialScenario(ScenarioBase):
         return ScenarioParams
 
     @classmethod
+    def multi_predictor_cls(cls) -> Type['MultiModelPredictor']:
+        return TutorialMultiModelPredictor
+
+    @classmethod
     def evaluator_cls(cls) -> Type['Evaluator']:
         class MNISTEvaluator(Evaluator):
             def __init__(self, params):
@@ -60,7 +65,7 @@ class TutorialScenario(ScenarioBase):
                 self.true_count = 0
                 self.total_count = 0
 
-            def update_state(self, sample: OutputTargetsSample):
+            def update_state(self, sample: Sample):
                 self.total_count += 1
                 self.true_count += np.sum(sample.targets['gt'] == sample.outputs['class'])
 

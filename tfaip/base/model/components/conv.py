@@ -90,6 +90,7 @@ class Conv2D(keras.layers.Layer):
 
         self._conv_layer: Optional[keras.layers.Layer] = None
         self._batch_norm_layer: Optional[keras.layers.Layer] = None
+        self._activation_layer: Optional[keras.layers.Layer] = None
         self._dropout_layer: Optional[keras.layers.Layer] = None
 
     def build(self, input_shape):
@@ -114,7 +115,7 @@ class Conv2D(keras.layers.Layer):
             self.kernel_size,
             strides=self.strides,
             padding=self.padding,
-            activation=self.activation,
+            activation=None,
             use_bias=self.use_bias,
             kernel_initializer=kernel_initializer,
             bias_initializer=keras.initializers.Constant(self.bias_init),
@@ -129,6 +130,9 @@ class Conv2D(keras.layers.Layer):
         if self.batch_norm:
             self._batch_norm_layer = keras.layers.BatchNormalization(name="batchNorm")
 
+        if self.activation:
+            self._activation_layer = keras.layers.Activation(self.activation)
+
         if self.drop_rate > 0:
             self._dropout_layer = keras.layers.Dropout(rate=self.drop_rate)
 
@@ -140,6 +144,8 @@ class Conv2D(keras.layers.Layer):
         y = self._conv_layer(inputs, **kwargs)
         if self.batch_norm:
             y = self._batch_norm_layer(y, **kwargs)
+        if self.activation:
+            y = self._activation_layer(y, **kwargs)
         if self.drop_rate:
             y = self._dropout_layer(y, **kwargs)
 
@@ -201,7 +207,7 @@ class Conv3D(keras.layers.Layer):
             self.kernel_size,
             strides=self.strides,
             padding=self.padding,
-            activation=self.activation,
+            activation=None,
             use_bias=self.use_bias,
             kernel_initializer=kernel_initializer,
             bias_initializer=keras.initializers.Constant(self.bias_init),
@@ -216,6 +222,9 @@ class Conv3D(keras.layers.Layer):
         if self.batch_norm:
             self._batch_norm_layer = keras.layers.BatchNormalization(name="batchNorm")
 
+        if self.activation:
+            self._activation_layer = keras.layers.Activation(self.activation)
+
         if self.drop_rate > 0:
             self._dropout_layer = keras.layers.Dropout(rate=self.drop_rate)
 
@@ -223,6 +232,87 @@ class Conv3D(keras.layers.Layer):
         # TODO: Swapped activation and batch norm compared to tf1_aip
         if mask is not None:
             assert (len(inputs.get_shape()) == len(mask.get_shape()))
+            inputs *= mask
+        y = self._conv_layer(inputs, **kwargs)
+        if self.batch_norm:
+            y = self._batch_norm_layer(y, **kwargs)
+        if self.activation:
+            y = self._activation_layer(y,**kwargs)
+        if self.drop_rate:
+            y = self._dropout_layer(y, **kwargs)
+
+        return y
+
+
+class SepConv2D(keras.layers.Layer):
+    def __init__(self,
+                 kernel_size: Tuple[int, int],
+                 filters: int,
+                 depth_multiplier: int = 1,
+                 strides: Tuple[int, int] = (1, 1),
+                 activation: Optional[str] = 'relu',
+                 drop_rate: float = 0.0,
+                 init_opt: int = 0,
+                 use_bias: bool = True,
+                 bias_init: float = 0.1,
+                 padding: str = 'SAME',
+                 batch_norm: bool = False,
+                 name: str = 'sep_conv2d',
+                 **kwargs):
+        super(SepConv2D, self).__init__(name=name, **kwargs)
+        assert(filters > 0)
+        self.kernel_size = kernel_size
+        self.filters = filters
+        self.depth_multiplier = depth_multiplier
+        self.strides = strides
+        self.activation = activation_by_str(activation)
+        self.drop_rate = drop_rate
+        self.init_opt = init_opt if 0 <= init_opt <= 2 else 0
+        self.use_bias = use_bias
+        self.bias_init = bias_init
+        self.padding = padding
+        self.batch_norm = batch_norm
+
+        self._conv_layer: Optional[keras.layers.Layer] = None
+        self._batch_norm_layer: Optional[keras.layers.Layer] = None
+        self._dropout_layer: Optional[keras.layers.Layer] = None
+
+    def build(self, input_shape):
+        kernel_shape = [self.kernel_size[0], self.kernel_size[1], input_shape[-1], self.filters]
+        if self.init_opt == 0:
+            stddev1 = np.sqrt(2.0 / (kernel_shape[0] * kernel_shape[1] * kernel_shape[2] + 1))
+            stddev2 = np.sqrt(2.0 / (kernel_shape[2] + kernel_shape[3]))
+        if self.init_opt == 1:
+            stddev1 = 5e-2
+            stddev2 = 5e-2
+        if self.init_opt == 2:
+            stddev1 = min(np.sqrt(2.0 / (kernel_shape[0] * kernel_shape[1] * kernel_shape[2])), 5e-2)
+            stddev2 = min(np.sqrt(2.0 / (kernel_shape[2])), 5e-2)
+
+        self._conv_layer = keras.layers.SeparableConv2D(
+            filters=self.filters,
+            kernel_size=self.kernel_size,
+            strides=self.strides,
+            padding=self.padding,
+            depth_multiplier=self.depth_multiplier,
+            activation=self.activation,
+            use_bias=self.use_bias,
+            depthwise_initializer=keras.initializers.RandomNormal(stddev=stddev1),
+            pointwise_initializer=keras.initializers.RandomNormal(stddev=stddev2),
+            bias_initializer=keras.initializers.Constant(self.bias_init),
+            name='sep_conv2d'
+        )
+
+        if self.batch_norm:
+            self._batch_norm_layer = keras.layers.BatchNormalization(name="batchNorm")
+
+        if self.drop_rate > 0:
+            self._dropout_layer = keras.layers.Dropout(rate=self.drop_rate)
+
+    def call(self, inputs, mask=None, **kwargs):
+        # TODO: Swapped activation and batch norm compared to tf1_aip
+        if mask is not None:
+            assert(len(inputs.get_shape()) == len(mask.get_shape()))
             inputs *= mask
         y = self._conv_layer(inputs, **kwargs)
         if self.batch_norm:

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 
 from tfaip.base.device_config import DeviceConfigParams
+from tfaip.util.argumentparser import dc_meta
 
 
 @dataclass_json
@@ -30,3 +31,4 @@ class PredictorParams:
     silent: bool = False
     progress_bar: bool = True
     run_eagerly: bool = False
+    include_targets: bool = field(default=False, metadata=dc_meta(arg_mode='ignore'))

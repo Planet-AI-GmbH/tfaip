@@ -24,7 +24,7 @@ import importlib
 
 
 if TYPE_CHECKING:
-    from tfaip.base.scenario import ScenarioBase
+    from tfaip.base.imports import ScenarioBase
 
 
 @dataclass

@@ -33,12 +33,17 @@ class Predictor(PredictorBase):
     def set_model(self, model: Union[str, keras.Model]):
         self._keras_model = self._load_model(model)
 
-    def _unwrap_batch(self, inputs, outputs) -> Iterable:
+    @property
+    def model(self):
+        return self._keras_model
+
+    def _unwrap_batch(self, inputs, targets, outputs) -> Iterable[Sample]:
         batch_size = next(iter(outputs.values())).shape[0]
         for i in range(batch_size):
             un_batched_outputs = {k: v[i] for k, v in outputs.items()}
             un_batched_inputs = {k: v[i] for k, v in inputs.items()}
-            sample = Sample(un_batched_inputs, un_batched_outputs)
+            un_batched_targets = {k: v[i] for k, v in targets.items()}
+            sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets)
 
             yield sample
 

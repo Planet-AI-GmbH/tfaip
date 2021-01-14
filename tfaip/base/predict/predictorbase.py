@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 class PredictorBenchmarkResults:
     n_batches: float = 0
     n_samples: float = 0
-    total_time: float = 0
+    total_time: float = 1e-10
     avg_time_per_batch: float = 0
     avg_time_per_sample: float = 0
     batches_per_second: float = 0
@@ -80,6 +80,10 @@ class PredictorBase(ABC):
         self._keras_model: Optional[keras.Model] = None
 
     @property
+    def params(self):
+        return self._params
+
+    @property
     def data(self):
         return self._data
 
@@ -91,8 +95,12 @@ class PredictorBase(ABC):
         if convert_to_input_output:
             inputs = self._data.create_input_layers()
             outputs = model(inputs)
-            model = keras.models.Model(inputs=inputs,
-                                       outputs=(inputs, outputs))
+            if self._params.include_targets:
+                targets = self._data.create_target_as_input_layers()
+                joined = {**inputs, **targets}
+                model = keras.models.Model(inputs=joined, outputs=(inputs, targets, outputs))
+            else:
+                model = keras.models.Model(inputs=inputs, outputs=(inputs, outputs))
 
         model.run_eagerly = self._params.run_eagerly
         return model
@@ -101,7 +109,7 @@ class PredictorBase(ABC):
         return self.predict_pipeline(self._data.get_predict_data(params))
 
     @abstractmethod
-    def _unwrap_batch(self, inputs, r) -> Iterable:
+    def _unwrap_batch(self, inputs, targets, outputs) -> Iterable[Sample]:
         raise NotImplementedError
 
     def predict_raw(self, inputs: Iterable[Any], *, size=None, batch_size=1) ->Iterable[Sample]:
@@ -118,7 +126,7 @@ class PredictorBase(ABC):
                 return size
 
             def generate(self) -> Iterable[Sample]:
-                return map(lambda x: Sample(x, None, {}), inputs)
+                return map(lambda x: Sample(inputs=x, meta={}), inputs)
 
         class RawInputsPipeline(DataPipeline):
             def create_data_generator(self) -> DataGenerator:
@@ -143,6 +151,9 @@ class PredictorBase(ABC):
 
     @distribute_strategy
     def predict_database(self, dataset: tf.data.Dataset) -> Iterable[Sample]:
+        if self._params.include_targets:
+            dataset = dataset.map(lambda i, t: {**i, **t})
+
         if self._keras_model is None:
             raise ValueError("No model set. Call predictor.set_model(model)")
         with MeasureTime() as total_time:
@@ -154,9 +165,14 @@ class PredictorBase(ABC):
                         for step in data_handler.steps():
                             with MeasureTime() as batch_time:
                                 r = predict_function(iterator)  # hack to access inputs
-                                inputs, r = tf_utils.to_numpy_or_python_type(r)
+                                if self._params.include_targets:
+                                    inputs, targets, r = tf_utils.to_numpy_or_python_type(r)
+                                else:
+                                    inputs, r = tf_utils.to_numpy_or_python_type(r)
+                                    targets = {}  # No targets in normal prediction
+
                                 batch_size = next(iter(inputs.values())).shape[0]
-                                for sample in self._unwrap_batch(inputs, r):
+                                for sample in self._unwrap_batch(inputs, targets, r):
                                     self._on_sample_end(sample)
                                     if not self._params.silent:
                                         self._print_prediction(sample, logger.info)
@@ -167,7 +183,7 @@ class PredictorBase(ABC):
                             self.benchmark_results.n_samples += batch_size
                             self.benchmark_results.avg_time_per_batch += batch_time.duration
                             self.benchmark_results.avg_time_per_sample += batch_time.duration
-                            self._on_step_end(Sample(inputs, r))
+                            self._on_step_end(Sample(inputs=inputs, outputs=r, targets=targets))
 
         self.benchmark_results.total_time = total_time.duration
         self.benchmark_results.avg_time_per_batch /= self.benchmark_results.n_batches

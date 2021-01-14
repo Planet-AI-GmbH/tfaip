@@ -21,6 +21,7 @@ from tensorflow.keras.callbacks import Callback
 from typing import TYPE_CHECKING
 import logging
 import os
+import numpy as np
 
 if TYPE_CHECKING:
     from tfaip.base.trainer.params import TrainerParams
@@ -38,7 +39,7 @@ class LAVCallback(Callback):
         self.trainer_params = trainer_params
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.device_params = trainer_params.device_params
-        lav_params.model_path_ = os.getcwd()  # Here resources are still relative to current working dir
+        lav_params.model_path = os.getcwd()  # Here resources are still relative to current working dir
         lav_params.silent = True
         self.lav = scenario.create_lav(lav_params=lav_params, scenario_params=scenario.params)
         self.lav_this_epoch = False
@@ -55,7 +56,7 @@ class LAVCallback(Callback):
         start = time.time()
         logs = logs if logs else {}
         for i, r in enumerate(self.lav.run(self.scenario.keras_predict_model)):
-            logs_str = ' - '.join(f"{k}: {r[k]:.4f}" for k in sorted(r.keys()))
+            logs_str = ' - '.join(f"{k}: {np.mean(r[k]):.4f}" for k in sorted(r.keys()))
             logger.info(f"LAV l{i} Metrics (dt={(time.time() - start)/60:.2f}min) - {logs_str}")
             for k, v in r.items():
                 if 'multi_metric' in k:
