@@ -22,7 +22,6 @@ import os
 from datetime import datetime
 from typing import Type, Tuple, Union, Callable
 import tensorflow as tf
-from tensorflow.python.keras.callbacks import ProgbarLogger
 from tfaip.base.trainer.callbacks.extract_logs import ExtractLogsCallback
 from typeguard import typechecked
 
@@ -33,6 +32,7 @@ from tfaip.base.trainer.callbacks.ema_callback import EMACallback
 from tfaip.base.trainer.callbacks.earlystopping.callback import EarlyStoppingCallback
 from tfaip.base.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.base.trainer.callbacks.logger_callback import LoggerCallback
+from tfaip.base.trainer.callbacks.progbar import TFAIPProgbarLogger
 from tfaip.base.trainer.callbacks.tensor_board_callback import TensorBoardCallback
 from tfaip.base.trainer.callbacks.tensorflow_fix import TensorflowFix
 from tfaip.base.trainer.callbacks.train_params_logger import TrainParamsLoggerCallback
@@ -207,7 +207,7 @@ class Trainer(ABC):
         callbacks.append(FixMetricLabelsCallback())
         extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
         callbacks.append(extract_logs_cb)
-        callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
+        callbacks.append(TFAIPProgbarLogger(count_mode='steps'))  # Progbar after label fix
         callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback())
 
@@ -272,6 +272,7 @@ class Trainer(ABC):
                            steps_per_epoch=self._steps_per_epoch,
                            validation_freq=self._params.val_every_n,
                            callbacks=self._callbacks,
+                           verbose=2,
                            )
 
     @typechecked
