@@ -195,7 +195,6 @@ class Trainer(ABC):
 
         return TrainParamsLoggerCallback(self._params, save_freq)
 
-
     def setup_callbacks(self,
                         optimizer,
                         callbacks=None,
@@ -207,7 +206,7 @@ class Trainer(ABC):
         callbacks.append(FixMetricLabelsCallback())
         extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
         callbacks.append(extract_logs_cb)
-        callbacks.append(TFAIPProgbarLogger(count_mode='steps'))  # Progbar after label fix
+        callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode='steps'))
         callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback())
 
@@ -239,7 +238,6 @@ class Trainer(ABC):
 
         return callbacks
 
-
     def setup_steps_per_epoch(self):
         if self._params.samples_per_epoch < 0:
             logger.info(f"Setting samples per epoch relative to dataset size with a factor of "
@@ -265,14 +263,13 @@ class Trainer(ABC):
             raise ValueError(f"Samples per epoch must be greater than the train batch size, but got "
                              f"{samples_per_epoch} < {self._data.params().train.batch_size}")
 
-
     def fit(self):
         self._scenario.fit(epochs=self._params.epochs,
                            initial_epoch=self._params.current_epoch,
                            steps_per_epoch=self._steps_per_epoch,
                            validation_freq=self._params.val_every_n,
                            callbacks=self._callbacks,
-                           verbose=2,
+                           verbose=self._params.verbose,
                            )
 
     @typechecked

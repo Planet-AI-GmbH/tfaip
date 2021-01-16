@@ -5,10 +5,10 @@ from tensorflow.python.keras.utils.tf_utils import to_numpy_or_python_type
 
 
 class TFAIPProgbarLogger(ProgbarLogger):
-    def __init__(self, **kwargs):
+    def __init__(self, delta_time=5, **kwargs):
         super(TFAIPProgbarLogger, self).__init__(**kwargs)
         self._time_remaining = 0
-        self._delta_time = 5  # Output every 5 secs
+        self._delta_time = delta_time  # Output every 5 secs, by default
         self._last_time = time.time()
 
     def _batch_update_progbar(self, batch, logs=None):

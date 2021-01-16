@@ -81,6 +81,12 @@ class TrainerParams:
              "them. This factor has to be multiplied with data_params.train_batch_size to compute the 'actual' batch "
              "size"
     ))
+    verbose: int = field(default=1, metadata=dc_meta(
+        help="Verbose level of the progress bar."
+    ))
+    progbar_delta_time: float = field(default=5, metadata=dc_meta(
+        help="If verbose=2 the interval after which to output the current progress"
+    ))
     tf_cpp_min_log_level: int = field(default=2, metadata=dc_meta(
         help="The log level for tensorflow cpp code."
     ))
