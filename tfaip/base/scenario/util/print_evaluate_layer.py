@@ -85,10 +85,11 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
             return tf.group([a, b])
 
         def reset_op():
-            return tf.py_function(self.reset_training, [], Tout=[], name='print_reset')
+            with tf.control_dependencies([self._still_allowed.assign(self.limit)]):
+                return tf.no_op()
 
-        if tf.version.VERSION >= "2.4.0" or isinstance(training, bool):
-            op = reset_op if training else print_op
+        if isinstance(training, bool):
+            op = reset_op() if training else print_op()
         else:
             op = tf.cond(tf.convert_to_tensor(training), reset_op, print_op)
 
@@ -99,10 +100,6 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         if training is None:
             training = tf.keras.backend.learning_phase()
         return self.operation(inputs, training)
-
-    def reset_training(self):
-        self._still_allowed.assign(self.limit)
-        return tf.no_op()
 
     def run_print(self, *args):
         inputs = unpack(list(args))
