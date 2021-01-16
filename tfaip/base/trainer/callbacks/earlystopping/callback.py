@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-
 class EarlyStoppingCallback(Callback):
     def __init__(self, scenario: 'ScenarioBase', trainer_params: 'TrainerParams'):
         # mode = min or max
@@ -76,9 +75,9 @@ class EarlyStoppingCallback(Callback):
                     break
 
             if initial != self._params.monitor_:
-                logger.warning("{} was not found in logs, using {} instead.".format(initial, self._params.monitor_))
+                logger.warning(f"{initial} was not found in logs, using {self._params.monitor_} instead.")
             else:
-                logger.error("Could not find '{}' in logs: {}".format(self._params.monitor_, logs))
+                logger.error(f"Could not find '{self._params.monitor_}' in logs: {logs}")
                 return
 
         new_value = logs.get(self._params.monitor_)
@@ -113,7 +112,7 @@ class EarlyStoppingCallback(Callback):
                 else:
                     logger.debug(f"Epoch {epoch + 1} ignored in early stopping as frequency={self._params.frequency}.")
 
-            logger.info(f"No better value of {self._params.monitor_} found. Worst = {new_value}, Best = {self._params.current_}")
+            logger.info(f"No better value of {self._params.monitor_} = {new_value} found. Keeping best = {self._params.current_}")
 
         if self._params.mode_ == 'min':
             if self._params.current_ <= self._params.lower_threshold:

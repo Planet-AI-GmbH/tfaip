@@ -38,22 +38,33 @@ class ModelParams(ModelBaseParams):
 class TutorialModel(ModelBase):
     @staticmethod
     def get_params_cls():
+        # Parameters of the model
         return ModelParams
 
     def create_graph(self, params: ModelParams) -> 'GraphBase':
+        # Create an instance of the graph (layers will be created but are not connected yet!)
         return ConvLayersGraph(params)
 
     def _best_logging_settings(self):
+        # Logging the model with the best ("max") accuracy ("acc")
+        # The first argument is either "min" or "max", the second argument refers to a metric which is defined below
         return "max", "acc"
 
     def _loss(self, inputs, outputs) -> Dict[str, AnyTensor]:
+        # Loss of the model
+        # Return a keras layer which outputs the loss (multiple losses are allowed)
+        # Here, a sparse categorical crossentropy is used
         return {'loss': tf.keras.layers.Lambda(
             lambda x: tf.keras.metrics.sparse_categorical_crossentropy(*x, from_logits=True), name='loss')(
             (inputs['gt'], outputs['logits']))}
 
     def _metric(self):
+        # Metric of the model
+        # The accuracy (called 'acc') is computed by using the 'gt' node of the dataset and the 'class' of the graph
         return {'acc': MetricDefinition("gt", "class", keras.metrics.Accuracy())}
 
     def _print_evaluate(self, inputs, outputs: Dict[str, AnyNumpy], targets: Dict[str, AnyNumpy], data, print_fn=print):
+        # This optional function can be used to nicely print the data at the end of a epoch on the validation data
+        # Here, the prediction and ground truth is printed and whether it is correct
         correct = outputs['class'] == targets['gt']
         print_fn(f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})")

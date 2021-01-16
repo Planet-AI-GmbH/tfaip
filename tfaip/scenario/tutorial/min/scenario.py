@@ -28,18 +28,22 @@ from tfaip.scenario.tutorial.min.model import TutorialModel
 @dataclass_json
 @dataclass
 class ScenarioParams(ScenarioBaseParams):
+    # Optionally add parameters that are scenario specific and to not fit in the DataParams or ModelParams
     pass
 
 
 class TutorialScenario(ScenarioBase):
     @classmethod
     def model_cls(cls) -> Type['ModelBase']:
+        # Which model class belongs to this scenario
         return TutorialModel
 
     @classmethod
     def data_cls(cls) -> Type['DataBase']:
+        # Which data class belongs to this scenario
         return Data
 
     @staticmethod
     def get_params_cls() -> Type[ScenarioBaseParams]:
+        # Which parameter class belongs to this scenario
         return ScenarioParams

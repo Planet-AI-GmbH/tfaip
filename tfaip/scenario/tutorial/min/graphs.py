@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 class ConvLayersGraph(GraphBase):
     @classmethod
     def params_cls(cls):
+        # Parameter class for the graph, local import to prevent recursive imports
         from tfaip.scenario.tutorial.full.model import ModelParams
         return ModelParams
 
@@ -39,6 +40,7 @@ class ConvLayersGraph(GraphBase):
         super(ConvLayersGraph, self).__init__(params, name=name, **kwargs)
         self._params = params
 
+        # Create all layers
         self.conv1 = Conv2D(kernel_size=(2, 2), filters=16, strides=(1, 1), padding='same', name='conv1')
         self.pool1 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name='pool1')
         self.conv2 = Conv2D(kernel_size=(2, 2), filters=32, strides=(1, 1), padding='same', name='conv2')
@@ -48,6 +50,7 @@ class ConvLayersGraph(GraphBase):
         self.logits = FF(out_dimension=self._params.n_classes, activation=None, name='classify')
 
     def call(self, inputs, **kwargs):
+        # Connect all layers and return a dict of the outputs
         rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))
         logits = self.logits(self.ff(self.flatten(conv_out)))
