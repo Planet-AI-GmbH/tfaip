@@ -50,7 +50,9 @@ def parse_args(args=None):
     from tfaip.base.imports import ScenarioBase
     parser = TFAIPArgumentParser()
     parser.add_argument('--export_dir', required=True)
-    parser.add_argument('--run_eagerly', action='store_true', help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!")
+    parser.add_argument('--run_eagerly', action='store_true',
+                        help="Run the graph in eager mode. This is helpful for debugging. "
+                             "Note that all custom layers must be added to ModelBase!")
     parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
 
     args, unknown_args = parser.parse_known_args(args)

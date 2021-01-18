@@ -56,7 +56,6 @@ def parse_args(args=None):
         default_trainer_params = scenario_def.scenario.default_trainer_params()
         add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=default_trainer_params.__class__)
 
-
     return parser.parse_args(args)
 
 

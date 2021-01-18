@@ -20,6 +20,10 @@ from tfaip.base.predict.multimodelpredictor import MultiModelPredictor, MultiMod
 
 
 class TutorialVoter(MultiModelVoter):
+    """
+    This MultiModelVoter performs a majority vote of several predictions.
+    Alternatively, one could sum up all probabilities of the classes and pick the argmax.
+    """
     def vote(self, sample: Sample) -> Sample:
         # sample.outputs is a list of the output of each model
         # just do a majority voting
@@ -33,5 +37,10 @@ class TutorialVoter(MultiModelVoter):
 
 
 class TutorialMultiModelPredictor(MultiModelPredictor):
+    """
+    Tutorial class for a MultiModelPredictor to show how to implement a voting mechanism to vote the output of
+    multiple models.
+    """
     def create_voter(self, data_params: 'DataBaseParams') -> MultiModelVoter:
+        # Create an instance of the voter
         return TutorialVoter()

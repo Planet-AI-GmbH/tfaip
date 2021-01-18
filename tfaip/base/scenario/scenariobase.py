@@ -252,12 +252,13 @@ class ScenarioBase(ABC):
                              )
 
     @classmethod
-    def create_multi_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams'):
+    def create_multi_lav(cls, lav_params: 'LAVParams', scenario_params: 'ScenarioBaseParams', predictor_params: Optional['PredictorParams']=None):
         return MultiLAV(
             lav_params,
             scenario_params.data_params.val,
             cls.create_multi_predictor,
             cls.create_evaluator(scenario_params.evaluator_params),
+            predictor_params=predictor_params if predictor_params is not None else cls.multi_predictor_cls().get_params_cls()(),
         )
 
     @classmethod

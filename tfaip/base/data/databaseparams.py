@@ -22,7 +22,7 @@ from typing import Optional
 
 from dataclasses_json import dataclass_json
 
-from tfaip.base.data.pipeline.datapipeline import SamplePipelineParams
+from tfaip.base.data.pipeline.sample.params import SamplePipelineParams
 from tfaip.util.argumentparser import dc_meta
 
 logger = logging.getLogger(__name__)

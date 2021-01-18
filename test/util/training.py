@@ -17,6 +17,7 @@
 # ==============================================================================
 import json
 import os
+import sys
 import tempfile
 import time
 import unittest
@@ -31,7 +32,11 @@ from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.random import set_global_random_seed
 
 
-def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True,
+debug_test = sys.flags.debug
+
+
+def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams,
+                                 debug=debug_test,
                                  delta=None):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
@@ -77,7 +82,7 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
                 test.assertAlmostEqual(v, initial_logs[k], delta=delta)
 
 
-def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True):
+def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=debug_test):
     scenario_params.debug_graph_construction = debug
     scenario_params.debug_graph_n_examples = 1
     trainer_params = TrainerParams(
@@ -95,7 +100,7 @@ def single_train_iter(test: unittest.TestCase, scenario, scenario_params: Scenar
     trainer.train()
 
 
-def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=True,
+def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=False,
                   delta=None):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = TrainerParams(
@@ -147,7 +152,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
             test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
-def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=None):
+def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=None, debug=debug_test):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         store_logs_callback = StoreLogsCallback()
@@ -156,6 +161,7 @@ def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=No
             epochs=1,
             samples_per_epoch=scenario_params.data_params.train.batch_size,
             skip_model_load_test=True,  # not required in this test
+            force_eager=debug,
             export_final=False,
             export_best=False,
             scenario_params=scenario_params,

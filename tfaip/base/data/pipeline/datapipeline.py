@@ -18,18 +18,15 @@
 import copy
 import gc
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from functools import partial
-from random import shuffle
 from typing import TYPE_CHECKING, List, Iterable, Optional, Callable, Type
 import logging
 
-from dataclasses_json import dataclass_json
-
-from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory, SequenceProcessor, DataProcessor
-from tfaip.base.data.pipeline.definitions import Sample, PipelineMode, DataProcessorFactoryParams, \
-    GENERAL_PROCESSOR
-from tfaip.base.data.pipeline.parallelpipeline import ParallelDataProcessorPipeline
+from tfaip.base.data.pipeline.datagenerator import DataGenerator, RawDataGenerator
+from tfaip.base.data.pipeline.dataprocessor import SequenceProcessor, DataProcessor
+from tfaip.base.data.pipeline.definitions import Sample, PipelineMode
+from tfaip.base.data.pipeline.sample.params import SamplePipelineParams
+from tfaip.base.data.pipeline.sample.processorpipeline import SampleProcessorPipeline, ParallelSampleProcessingPipeline
 from tfaip.base.data.pipeline.tfdatasetgenerator import TFDatasetGenerator
 from tfaip.util.multiprocessing.join import JoinableHolder
 
@@ -39,78 +36,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
-
-class SampleConsumer:
-    pass
-
-
-def create_processor_fn(factory: DataProcessorFactory, processors: List[DataProcessorFactoryParams], params, mode: PipelineMode) -> SequenceProcessor:
-    return factory.create_sequence(processors, params, mode)
-
-
-@dataclass_json
-@dataclass
-class SamplePipelineParams:
-    run_parallel: bool = True
-    sample_processors: List[DataProcessorFactoryParams] = field(default_factory=list)
-
-
-class SampleProcessorPipeline:
-    def __init__(self, data_pipeline: 'DataPipeline', processor_fn: Optional[Callable[[], SequenceProcessor]] = None):
-        self.data_pipeline = data_pipeline
-        self.create_processor_fn = processor_fn
-
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
-        if not self.create_processor_fn:
-            for sample in samples:
-                yield sample
-        else:
-            processor = self.create_processor_fn()
-            for sample in samples:
-                r = processor.apply_on_sample(sample)
-                if r is not None:
-                    yield r
-
-
-class ParallelSampleProcessingPipeline(SampleProcessorPipeline):
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
-        parallel_pipeline = ParallelDataProcessorPipeline(self.data_pipeline, samples,
-                                                          create_processor_fn=self.create_processor_fn,
-                                                          auto_repeat_input=False)
-        for x in parallel_pipeline.output_generator():
-            yield x
-
-        parallel_pipeline.join()
-
-
-class DataGenerator(ABC):
-    def __init__(self, mode: PipelineMode, params: 'DataGeneratorParams'):
-        params.validate()
-        self.mode = mode
-        self.params = params
-
-    @abstractmethod
-    def __len__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def generate(self) -> Iterable[Sample]:
-        raise NotImplementedError
-
-
-class RawDataGenerator(DataGenerator):
-    def __init__(self, raw_data: List[Sample], mode: PipelineMode, params: 'DataGeneratorParams'):
-        super(RawDataGenerator, self).__init__(mode, params)
-        self.raw_data = raw_data
-
-    def __len__(self):
-        return len(self.raw_data)
-
-    def generate(self) -> Iterable[Sample]:
-        if self.mode == PipelineMode.Training:
-            shuffle(self.raw_data)
-        return self.raw_data
 
 
 def _create_sequence_processor_fn(factory, *args) -> Callable[[], SequenceProcessor]:
@@ -161,7 +86,9 @@ class DataPipeline(JoinableHolder, ABC):
     def create_data_generator(self) -> DataGenerator:
         raise NotImplementedError
 
-    def flat_input_processors(self, preload=False, non_preloadable_params=[]) -> List[DataProcessor]:
+    def flat_input_processors(self, preload=False, non_preloadable_params=None) -> List[DataProcessor]:
+        if non_preloadable_params is None:
+            non_preloadable_params = []
         factory = self.data.__class__.data_processor_factory()
         params: SamplePipelineParams = self._input_processors
 
@@ -208,9 +135,6 @@ class DataPipeline(JoinableHolder, ABC):
                 return SampleProcessorPipeline(self, self._sequence_processor_fn(params))
         return SampleProcessorPipeline(self)
 
-    def create_data_consumer(self) -> SampleConsumer:
-        return SampleConsumer()
-
     def __enter__(self):
         from tfaip.base.data.pipeline.runningdatapipeline import RunningDataPipeline
         return RunningDataPipeline(self)
@@ -253,7 +177,6 @@ class RawDataPipeline(DataPipeline):
                  ):
         super(RawDataPipeline, self).__init__(mode, data_base, generator_params, input_processors, output_processors)
         self.samples = samples
-
 
     def to_mode(self, mode: PipelineMode) -> 'DataPipeline':
         return self.__class__(self.samples, mode, self.data, self.generator_params, self._input_processors, self._output_processors)

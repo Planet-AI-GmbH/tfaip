@@ -21,7 +21,7 @@ from tensorflow.keras.backend import clear_session
 
 from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.base import TrainerParams
-from tfaip.scenario.tutorial.full.data import DataParams
+from tfaip.scenario.tutorial.full.data.data_params import DataParams
 from tfaip.scenario.tutorial.full.scenario import TutorialScenario
 
 

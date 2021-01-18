@@ -20,7 +20,7 @@ import unittest
 from tensorflow.python.keras.backend import clear_session
 
 from tfaip.base import TrainerParams
-from tfaip.scenario.tutorial.full.data import DataParams
+from tfaip.scenario.tutorial.full.data.data_params import DataParams
 from tfaip.scenario.tutorial.full.scenario import TutorialScenario
 import logging
 logging.basicConfig(level=logging.DEBUG)

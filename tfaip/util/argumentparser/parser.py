@@ -165,9 +165,14 @@ def is_list_field(field):
             )
 
 
-def make_store_dataclass_action(data_cls: Any, required_fields: List):
+def make_store_dataclass_action(data_cls: Any, required_fields: List, exclude_field_names: List[str] = None):
+    if exclude_field_names is None:
+        exclude_field_names = []
     safe_separator = ":"
     all_fields = fields_to_dict(data_cls, safe_separator=safe_separator)
+    for name in exclude_field_names:
+        if name in all_fields:
+            del all_fields[name]
     required_fields.extend([field for name, field in all_fields.items() if field.metadata.get('required', False)])
 
     class DataClassAction(Action):
@@ -335,18 +340,23 @@ def argument_list_to_str(arguments):
     return "[" + ', '.join(f"{name}" for name in arguments) + "]"
 
 
-def add_args_group(parser: TFAIPArgumentParser, group: str, params_cls: Any, default=None):
+def add_args_group(parser: TFAIPArgumentParser, group: str, params_cls: Any, default=None, exclude_field_names=None):
+    if exclude_field_names is None:
+        exclude_field_names = []
     assert(isinstance(parser, TFAIPArgumentParser))
     default = default if default else params_cls()
     params_cls = default.__class__
     parser.add_argument("--" + group,
-                        action=make_store_dataclass_action(params_cls, parser.get_required_fields("--" + group)),
+                        action=make_store_dataclass_action(params_cls, parser.get_required_fields("--" + group),
+                                                           exclude_field_names=exclude_field_names),
                         default=default,
                         nargs='*',
                         metavar="KEY=VAL",
                         help=generate_help(params_cls))
 
     for name, field in params_cls.__dataclass_fields__.items():
+        if name in exclude_field_names:
+            continue
         if field_is_dataclass(field) and not name.endswith("_"):
             if 'arg_mode' not in field.metadata or field.metadata['arg_mode'] == 'flat':
                 add_args_group(parser, group=name, params_cls=extract_dataclass_from_field(field), default=getattr(default, name))

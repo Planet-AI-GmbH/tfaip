@@ -46,7 +46,6 @@ class TestLAVScript(unittest.TestCase):
                         '--data_params', 'train.batch_size=2',
                         ])
             check_call(['tfaip-multi-lav',
-                        '--scenario', 'tutorial.full',
                         '--export_dirs', os.path.join(d, 'best'), os.path.join(d, 'best'),
                         '--data', 'limit=10',
                         ])

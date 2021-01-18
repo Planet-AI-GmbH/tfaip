@@ -24,7 +24,6 @@ from tfaip.base.data.data import DataBase
 from tfaip.base.data.pipeline.definitions import Sample
 from tfaip.base.evaluator.evaluator import Evaluator
 from tfaip.base.imports import ScenarioBase, ScenarioBaseParams, ModelBase
-from tfaip.scenario.tutorial.full.data import Data
 from tfaip.scenario.tutorial.full.model import TutorialModel
 from tfaip.scenario.tutorial.full.predictor import TutorialMultiModelPredictor
 from tfaip.util.typing import AnyNumpy
@@ -43,6 +42,7 @@ class TutorialScenario(ScenarioBase):
 
     @classmethod
     def data_cls(cls) -> Type['DataBase']:
+        from tfaip.scenario.tutorial.full.data.data import Data
         return Data
 
     @staticmethod

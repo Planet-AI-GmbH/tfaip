@@ -43,6 +43,7 @@ class MultiLAV(ABC):
                  data_gen_params: DataGeneratorParams,
                  predictor_fn: Callable[[List[str], PredictorParams], MultiModelPredictor],
                  evaluator: Evaluator,
+                 predictor_params: PredictorParams
                  ):
         assert params.model_path
         self._params = params
@@ -51,6 +52,10 @@ class MultiLAV(ABC):
         self._evaluator = evaluator
         self.device_config = DeviceConfig(self._params.device_params)
         self.benchmark_results = PredictorBenchmarkResults()
+        self.predictor_params = predictor_params
+        predictor_params.silent = True
+        predictor_params.progress_bar = True
+        predictor_params.include_targets = True
 
     @distribute_strategy
     def run(self,
@@ -60,11 +65,8 @@ class MultiLAV(ABC):
         if callbacks is None:
             callbacks = []
 
-        predictor_params = PredictorParams(self._params.device_params,
-                                           silent=True, progress_bar=True, run_eagerly=run_eagerly,
-                                           include_targets=True,
-                                           )
-        predictor = self._predictor_fn(self._params.model_path, predictor_params)
+        self.predictor_params.run_eagerly = run_eagerly
+        predictor = self._predictor_fn(self._params.model_path, self.predictor_params)
         lav_pipeline = predictor.data.get_pipeline(PipelineMode.Evaluation, self._data_gen_params)
 
         for cb in callbacks:

@@ -11,6 +11,11 @@ class TFAIPProgbarLogger(ProgbarLogger):
         self._delta_time = delta_time  # Output every 5 secs, by default
         self._last_time = time.time()
 
+    def on_epoch_begin(self, epoch, logs=None):
+        self._last_time = time.time()
+        self._time_remaining = 0
+        super(TFAIPProgbarLogger, self).on_epoch_begin(epoch, logs)
+
     def _batch_update_progbar(self, batch, logs=None):
         super(TFAIPProgbarLogger, self)._batch_update_progbar(batch, logs)
         if self.verbose == 2:

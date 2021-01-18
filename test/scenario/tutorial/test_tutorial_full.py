@@ -21,7 +21,8 @@ from tensorflow.python.keras.backend import clear_session
 
 from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
 from tfaip.base.data.databaseparams import DataGeneratorParams
-from tfaip.scenario.tutorial.full.data import DataParams, Data
+from tfaip.scenario.tutorial.full.data.data import Data
+from tfaip.scenario.tutorial.full.data.data_params import DataParams
 from tfaip.scenario.tutorial.full.scenario import TutorialScenario
 
 
@@ -66,7 +67,7 @@ class TestTutorialData(unittest.TestCase):
 
 
 class TestTutorialTrain(unittest.TestCase):
-    def setUp(self) -> None:
+    def tearDown(self) -> None:
         clear_session()
 
     def test_single_train_iter(self):

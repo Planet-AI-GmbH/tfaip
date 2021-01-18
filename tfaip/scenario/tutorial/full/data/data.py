@@ -15,69 +15,53 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import glob
-from dataclasses import dataclass, field
 import logging
-from typing import Iterable, Type
+from typing import Type
 
 import tensorflow as tf
 import tensorflow.keras as keras
-from dataclasses_json import dataclass_json
 
 from tfaip.base.data.data import DataBaseParams, DataBase
 from tfaip.base.data.databaseparams import DataGeneratorParams
-from tfaip.base.data.pipeline.datapipeline import DataPipeline, DataGenerator, RawDataGenerator, RawDataPipeline
+from tfaip.base.data.pipeline.datapipeline import RawDataPipeline, SamplePipelineParams
 from tfaip.base.data.listfile.listfiledata import ListFilePipelineParams
 from tfaip.base.data.pipeline.dataprocessor import DataProcessorFactory
-from tfaip.base.data.pipeline.definitions import PipelineMode, Sample
-from tfaip.util.argumentparser import dc_meta
-from tfaip.util.imaging.io import load_image_from_img_file
+from tfaip.base.data.pipeline.definitions import PipelineMode, DataProcessorFactoryParams
+from tfaip.scenario.tutorial.full.data.data_params import DataParams
+from tfaip.scenario.tutorial.full.data.data_pipeline import TutorialPipeline, to_samples
+from tfaip.scenario.tutorial.full.data.processors.normalize import NormalizeProcessor
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass_json
-@dataclass
-class DataParams(DataBaseParams):
-    dataset: str = field(default='mnist', metadata=dc_meta(
-        help="The dataset to select (chose also fashion_mnist)."
-    ))
-
-
-def to_samples(samples):
-    return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
 class Data(DataBase):
     @classmethod
     def data_processor_factory(cls) -> DataProcessorFactory:
-        return DataProcessorFactory([])
+        # List all available processors here
+        return DataProcessorFactory([NormalizeProcessor])
 
     @classmethod
-    def data_pipeline_cls(cls) -> Type[DataPipeline]:
-        class TutorialPipeline(DataPipeline):
-            def create_data_generator(self) -> DataGenerator:
-                if self.mode == PipelineMode.Training:
-                    return RawDataGenerator(to_samples(self.data.train), self.mode, self.generator_params)
-                elif self.mode == PipelineMode.Evaluation:
-                    return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
-                elif self.mode == PipelineMode.Prediction:
-                    if isinstance(self.generator_params, ListFilePipelineParams):
-                        # Instead of loading images to a raw pipeline, you should create a custom preprocessing pipeline
-                        # That is used during training and prediction
-                        assert self.generator_params.list, "No images provided"
-                        return RawDataGenerator(
-                            [Sample(inputs={'img': img}) for img in map(load_image_from_img_file, glob.glob(self.generator_params.list))],
-                            self.mode, self.generator_params)
-                    else:
-                        return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
-                elif self.mode == PipelineMode.Targets:
-                    return RawDataGenerator(to_samples(self.data.test), self.mode, self.generator_params)
+    def data_pipeline_cls(cls) -> Type[TutorialPipeline]:
         return TutorialPipeline
 
     @classmethod
     def prediction_generator_params_cls(cls) -> Type[DataGeneratorParams]:
         return ListFilePipelineParams
+
+    @classmethod
+    def get_default_params(cls) -> DataBaseParams:
+        params = super(Data, cls).get_default_params()
+        # Define the default python input pipeline by specifying the list of processors
+        # A DataProcessorFactoryParams requires the name of the class registered above in data_processor_factory
+        # The second argument is the mode when to apply (Training (e.g., data augmentation), Prediction, Evaluation
+        # (=validation during training), Targets (only produce GroundTruth)), the third parameter are optional args.
+        params.pre_processors_ = SamplePipelineParams(
+            run_parallel=True,  # Run the pipeline in parallel (by spawning subprocesses)
+            sample_processors=[
+                DataProcessorFactoryParams(NormalizeProcessor.__name__)
+            ])
+
+        return params
 
     @staticmethod
     def get_params_cls():
@@ -97,7 +81,7 @@ class Data(DataBase):
     def _target_layer_specs(self):
         return {'gt': tf.TensorSpec(shape=[1], dtype='uint8')}
 
-    def _list_lav_dataset(self) -> Iterable[DataPipeline]:
+    def _list_lav_dataset(self):
         # Create two evaluation datasets using test and train data
         test = RawDataPipeline(to_samples(self.test), PipelineMode.Evaluation, self, self._params.val)
         train = RawDataPipeline(to_samples(self.train), PipelineMode.Evaluation, self, self._params.val)
