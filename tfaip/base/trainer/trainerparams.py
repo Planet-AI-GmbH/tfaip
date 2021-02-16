@@ -1,15 +1,31 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 from dataclasses_json import dataclass_json
 
 from tfaip.base.scenario import ScenarioBaseParams
 from tfaip.base.device_config import DeviceConfigParams
-from tfaip.base.trainer.callbacks.export_best import ExportBestState
+from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingParams
 from tfaip.base.trainer.scheduler.learningrate_params import LearningRateParams
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
 from tfaip.util.argument_parser import dc_meta
-from tfaip.util.versioning import get_commit_hash
 
 
 @dataclass_json
@@ -20,6 +36,25 @@ class OptimizerParams:
     ))
     clip_grad: float = field(default=0, metadata=dc_meta(
         help="Gradient clipping. If == 0 -> disabled, > 0: global norm, < 0: local norm"
+    ))
+
+    momentum: float = field(default=0.0, metadata=dc_meta(
+        help="(optimizer=SGD,RMSprop) Momentum"
+    ))
+    rho: float = field(default=0.0, metadata=dc_meta(
+        help="(optimizer=RMSprop) rho"
+    ))
+    centered: bool = field(default=False, metadata=dc_meta(
+        help="(optimizer=RMSprop) centered"
+    ))
+    beta_1: float = field(default=0.9, metadata=dc_meta(
+        help="(optimizer=Adam) beta_1"
+    ))
+    beta_2: float = field(default=0.999, metadata=dc_meta(
+        help="(optimizer=Adam) beta_2"
+    ))
+    epsilon: float = field(default=1e-7, metadata=dc_meta(
+        help="(optimizer=Adam,RMSprop) epsilon"
     ))
 
 
@@ -84,7 +119,7 @@ class TrainerParams:
     profile: bool = field(default=False, metadata=dc_meta(
         help="Enable profiling for tensorboard, profiling batch 10 to 20, initial setup:"
              "pip install -U tensorboard_plugin_profile"
-             "LD_LIBRARY_PATH=:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64"
+             "LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64"
              'options nvidia "NVreg_RestrictProfilingToAdminUsers=0" to /etc/modprobe.d/nvidia-kernel-common.conf'
              'reboot system'
     ))
@@ -103,8 +138,9 @@ class TrainerParams:
     warmstart_params: WarmstartParams = field(default_factory=lambda: WarmstartParams(), metadata=dc_meta(
         help="Parameters to specify parameters to load before training (e.g. warmstart or finetuning)"
     ))
+    early_stopping_params: EarlyStoppingParams = field(default_factory=lambda: EarlyStoppingParams())
 
-
-    # Logging of the best state during training, required for resume training
-    export_best_state_: ExportBestState = field(default_factory=lambda: ExportBestState())
-    commit_id_: str = field(default_factory=get_commit_hash)
+    # Additional params
+    saved_checkpoint_sub_dir_: str = ''  # formatted checkpoint_sub_dir of the actual epoch (no formatters)
+    checkpoint_sub_dir_: str = ''  # `filepath` may contain placeholders such as `{epoch:02d}`
+    checkpoint_save_freq_: Union[str, int] = 'epoch'  # or after this many epochs

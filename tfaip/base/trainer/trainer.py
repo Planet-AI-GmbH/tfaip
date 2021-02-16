@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import json
 from abc import ABC
 import logging
@@ -12,7 +29,7 @@ from tfaip.base.device_config import DeviceConfig, distribute_strategy
 from tfaip.base.scenario import ScenarioBase
 from tfaip.base.trainer.callbacks.benchmark_callback import BenchmarkCallback
 from tfaip.base.trainer.callbacks.ema_callback import EMACallback
-from tfaip.base.trainer.callbacks.export_best import ExportBestCallback
+from tfaip.base.trainer.callbacks.early_stopping import EarlyStoppingCallback
 from tfaip.base.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.base.trainer.callbacks.logger_callback import LoggerCallback
 from tfaip.base.trainer.callbacks.tensor_board_callback import TensorBoardCallback
@@ -46,9 +63,9 @@ class Trainer(ABC):
         else:
             d = checkpoint
 
-        trainer_params: TrainerParams = TrainerParams.from_dict(d)
-        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
         scenario, scenario_params = ScenarioBase.from_dict(d['scenario_params'])
+        trainer_params: TrainerParams = scenario.trainer_cls().get_params_cls().from_dict(d)
+        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
 
         # Load the actual scenario params for the particular scenario
         trainer_params.scenario_params = scenario_params
@@ -121,11 +138,12 @@ class Trainer(ABC):
             logger.info("Restoring from checkpoint '{}'".format(self._params.checkpoint_dir))
             # load_weights also restores the optimizer weights!
             self._scenario.keras_train_model.load_weights(
-                os.path.join(self._params.checkpoint_dir, 'variables', 'variables'))
+                os.path.join(self._params.checkpoint_dir, self._params.saved_checkpoint_sub_dir_, 'variables', 'variables'))
             if self._params.warmstart_params.model:
                 logger.warning("Ignoring warmstart since training is resumed from a checkpoint")
         else:
-            self._warmstarter.warmstart(self._scenario.keras_train_model)
+            custom_objects = self._model.__class__.get_all_custom_objects()
+            self._warmstarter.warmstart(self._scenario.keras_train_model, custom_objects)
 
         callbacks.append(FixMetricLabelsCallback())
         callbacks.append(ProgbarLogger(count_mode='steps'))  # Progbar after label fix
@@ -137,20 +155,27 @@ class Trainer(ABC):
             callbacks.append(LAVCallback(self._params, self._scenario))
 
         if self._params.checkpoint_dir:
+            save_freq = self._params.checkpoint_save_freq_
             if self._params.write_checkpoints:
                 # we need only weights to restore the training, the graph will be reconstructed
-                variables_path = os.path.join(self._params.checkpoint_dir, 'variables', 'variables')
-                callbacks.append(tf.keras.callbacks.ModelCheckpoint(variables_path, save_weights_only=True))
-            callbacks.append(TrainParamsLoggerCallback(self._params, self._params.checkpoint_dir))
+                variables_path = os.path.join(self._params.checkpoint_dir, self._params.checkpoint_sub_dir_, 'variables', 'variables')
+                if isinstance(save_freq, str) and save_freq.isdigit():
+                    save_freq = int(save_freq)
+                if isinstance(save_freq, int):
+                    save_freq = save_freq * self._steps_per_epoch
+                if save_freq == 0:
+                    save_freq = None
+        else:
+            save_freq = None
+
+        callbacks.append(TrainParamsLoggerCallback(self._params, save_freq))
 
         if self._params.calc_ema:
             # EMA must be before export best to export ema
             # noinspection PyTypeChecker
             callbacks.append(EMACallback(optimizer))
 
-        if self._params.export_best and self._params.checkpoint_dir:
-            callbacks.append(
-                ExportBestCallback(os.path.join(self._params.checkpoint_dir, 'best'), self._scenario, self._params))
+        callbacks.append(EarlyStoppingCallback(self._scenario, self._params))
 
         if self._params.checkpoint_dir:
             # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
@@ -201,6 +226,18 @@ class Trainer(ABC):
                 "clipnorm": clip_grad if clip_grad > 0 else None,
                 "clipvalue": -clip_grad if clip_grad < 0 else None,
             }
+            if self._params.optimizer_params.optimizer == 'SGD':
+                args['momentum'] = self._params.optimizer_params.momentum
+            elif self._params.optimizer_params.optimizer in ['Adam', 'Adamax']:
+                args['beta_1'] = self._params.optimizer_params.beta_1
+                args['beta_2'] = self._params.optimizer_params.beta_2
+                args['epsilon'] = self._params.optimizer_params.epsilon
+            elif self._params.optimizer_params.optimizer in ['RMSprop']:
+                args['momentum'] = self._params.optimizer_params.momentum
+                args['rho'] = self._params.optimizer_params.rho
+                args['centered'] = self._params.optimizer_params.centered
+                args['epsilon'] = self._params.optimizer_params.epsilon
+
             if self._params.calc_ema:
                 return WeightsMovingAverage, {'optimizer': real_optimizer(**args)}
             else:

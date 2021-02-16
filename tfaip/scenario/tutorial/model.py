@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from typing import Dict, Any
@@ -31,12 +48,8 @@ class TutorialModel(ModelBase):
     def get_params_cls():
         return ModelParams
 
-    def __init__(self, params: ModelParams, *args, **kwargs):
-        super(TutorialModel, self).__init__(params, *args, **kwargs)
-        self._params: ModelParams = self._params  # For IntelliSense
-        self.graph = self._params.graph.cls(self._params)
-        self.predict_layer = keras.layers.Lambda(lambda x: K.softmax(x), name='pred')
-        self.class_layer = keras.layers.Lambda(lambda x: K.argmax(x), name='class')
+    def create_graph(self, params) -> 'GraphBase':
+        return params.graph.cls(params)
 
     def _best_logging_settings(self):
         return "max", "acc"
@@ -52,12 +65,6 @@ class TutorialModel(ModelBase):
 
     def _metric(self):
         return {'simple_acc': SimpleMetric("gt", "class", keras.metrics.Accuracy())}
-
-    def _build(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        logits = self.graph(K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1))
-        pred = self.predict_layer(logits)
-        cls = self.class_layer(pred)
-        return {'pred': pred, 'logits': logits, 'class': cls}
 
     def _print_evaluate(self, inputs, outputs: Dict[str, AnyNumpy], targets: Dict[str, AnyNumpy], data, print_fn=print):
         correct = outputs['class'] == targets['gt']

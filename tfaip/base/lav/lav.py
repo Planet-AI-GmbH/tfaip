@@ -1,19 +1,40 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import json
 import logging
+import os
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator
+from typing import TYPE_CHECKING, Type, Dict, List, Callable, Generator, Optional
 
 import prettytable
 import tensorflow.keras as keras
 from dataclasses_json import dataclass_json
+from tfaip.util.argument_parser import dc_meta
 
 from tfaip.base.device_config import DeviceConfig, DeviceConfigParams, distribute_strategy
 from tfaip.base.lav.callbacks.lav_callback import LAVCallback
+from tfaip.util.file.oshelper import ChDir
 from tfaip.util.time import MeasureTime
 
 if TYPE_CHECKING:
-    from tfaip.base import DataBase, ModelBase
+    from tfaip.base.data.data import DataBase
+    from tfaip.base.model import ModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +48,15 @@ class LAVParams:
 
     device_params: DeviceConfigParams = field(default_factory=lambda: DeviceConfigParams())
 
-    silent: bool = False
+    silent: bool = field(default=False, metadata=dc_meta(help="Suppress model prediction print to console/log"))
+
+    store_results: bool = field(default=True, metadata=dc_meta(help="Save lav results (metrics) in "
+                                                                    "json-file in the checkpoint"))
+    # remove during merge with devel
+    use_global_resources: bool = field(default=False, metadata=dc_meta(help="intermediate fallback to use same relative "
+                                                                           "path for data_fn as in training"))
+
+
 
 
 class MetricsAccumulator:
@@ -102,15 +131,21 @@ class LAV(ABC):
         self._data_fn = data_fn
         self._model_fn = model_fn
         self.device_config = DeviceConfig(self._params.device_params)
-        self._data: 'DataBase' = None
-        self._model: 'ModelBase' = None
+        self._data: Optional['DataBase'] = None
+        self._model: Optional['ModelBase'] = None
         self.benchmark_results = LAVBenchmarkResults()
 
     @distribute_strategy
-    def run(self, model: keras.Model = None, silent=False, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
+    def run(self, model: keras.Model = None, run_eagerly=False, callbacks: List[LAVCallback] = None) -> Generator[Dict[str, float], None, None]:
         callbacks = callbacks if callbacks else []
-        self._data = self._data_fn()
-        self._data.resources_dir = self._params.model_path_
+        # remove 'use_global_resources' during merge with devel
+        if self._params.use_global_resources:
+            self._data = self._data_fn()
+        else:
+            with ChDir(os.path.join(self._params.model_path_)):
+                # resources are located in parent dir
+                self._data = self._data_fn()
+
         self._model = self._model_fn()
         for cb in callbacks:
             cb.lav, cb.data, cb.model = self, self._data, self._model
@@ -122,7 +157,7 @@ class LAV(ABC):
         else:
             custom_objects = None
 
-        _keras_model: keras.Model = model if model else keras.models.load_model(self._params.model_path_, compile=False, custom_objects=custom_objects)
+        _keras_model: keras.Model = model if model else keras.models.load_model(os.path.join(self._params.model_path_, 'serve'), compile=False, custom_objects=custom_objects)
         _keras_model.run_eagerly = run_eagerly
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model
@@ -180,8 +215,16 @@ class LAV(ABC):
                 self._on_lav_end(all_metric_results)
                 for cb in callbacks:
                     cb.on_lav_end(all_metric_results)
-                if not self._params.silent:
-                    print(json.dumps(all_metric_results, indent=2))
+                print(json.dumps(all_metric_results, indent=2))
+                if self._params.store_results:
+                    dump_dict = {"metrics": all_metric_results,
+                                 "lav_params": self._params.to_dict(),
+                                 "data_params": self._data.params().to_dict(),
+                                 "model_params": self._model.params().to_dict()}
+                    json_fn = os.path.join(self._params.model_path_, f"lav_results_{os.path.basename(self._data.params().val_list)}.json")
+                    with open(json_fn, "w") as json_fp:
+                        json.dump(dump_dict, json_fp, indent=2)
+
                 yield all_metric_results
 
     def _on_sample_end(self, inputs, targets, outputs):

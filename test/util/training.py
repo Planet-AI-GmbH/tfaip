@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import json
 import os
 import tempfile
@@ -7,7 +24,7 @@ from typing import Type
 
 from tensorflow.python.keras.backend import clear_session
 
-from test.scenario.util.store_logs_callback import StoreLogsCallback
+from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.base.scenario import ScenarioBaseParams, ScenarioBase
 from tfaip.base.trainer import TrainerParams, Trainer
 from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
@@ -59,40 +76,42 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
                 test.assertAlmostEqual(v, initial_logs[k])
 
 
-def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True):
+def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=True, trainer_params: TrainerParams =None):
     scenario_params.debug_graph_construction = debug
     scenario_params.debug_graph_n_examples = 1
-    trainer_params = TrainerParams(
-        epochs=1,
-        samples_per_epoch=scenario_params.data_params.train_batch_size,
-        scenario_params=scenario_params,
-        write_checkpoints=False,
-        force_eager=debug,
-        random_seed=1324,
-        lav_every_n=1,
-    )
+    if trainer_params is None:
+        trainer_params = TrainerParams(
+            epochs=1,
+            samples_per_epoch=scenario_params.data_params.train_batch_size,
+            scenario_params=scenario_params,
+            write_checkpoints=False,
+            force_eager=debug,
+            random_seed=1324,
+            lav_every_n=1,
+        )
     trainer = scenario.create_trainer(trainer_params)
     trainer.train()
 
 
-def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=True):
+def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=True, trainer_params: TrainerParams =None):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        trainer_params = TrainerParams(
-            checkpoint_dir=tmp_dir,
-            epochs=1,
-            samples_per_epoch=3,
-            skip_model_load_test=True,  # not required in this test
-            scenario_params=scenario_params,
-            force_eager=debug,
-            export_best=True,
-            export_final=True,
-            write_checkpoints=False,
-            random_seed=324,
-        )
+        if trainer_params is None:
+            trainer_params = TrainerParams(
+                checkpoint_dir=tmp_dir,
+                epochs=1,
+                samples_per_epoch=3,
+                skip_model_load_test=True,  # not required in this test
+                scenario_params=scenario_params,
+                force_eager=debug,
+                export_best=True,
+                export_final=True,
+                write_checkpoints=False,
+                random_seed=324,
+            )
         trainer = scenario.create_trainer(trainer_params)
         trainer.train()
 
-        json_path = os.path.join(tmp_dir, 'trainer_params.json')
+        json_path = os.path.join(trainer_params.checkpoint_dir, 'trainer_params.json')
         with open(json_path) as f:
             trainer_params_dict = json.load(f)
         trainer_params_dict['epochs'] = 2
@@ -100,21 +119,24 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.max_iter = 1
 
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export', 'serve')
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'export')
         clear_session()
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         lav = scenario.create_lav(lav_params, scenario_params)
         lav.run()
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 5
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best', 'serve')
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         scenario_params.data_params.val_batch_size = 1
         lav = scenario.create_lav(lav_params, scenario_params)
         bs1_results = next(lav.run())
         set_global_random_seed(trainer_params.random_seed)
         lav_params.max_iter = 1
-        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best', 'serve')
+        lav_params.model_path_ = os.path.join(trainer_params.checkpoint_dir, 'best')
         clear_session()
+        _, scenario_params = scenario.from_path(lav_params.model_path_)
         scenario_params.data_params.val_batch_size = 5
         lav = scenario.create_lav(lav_params, scenario_params)
         bs5_results = next(lav.run())

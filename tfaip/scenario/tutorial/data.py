@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 from dataclasses import dataclass, field
 import logging
 import tensorflow as tf
@@ -37,15 +54,15 @@ class Data(DataBase):
     def _get_train_data(self):
         def group(img, gt):
             return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._train).batch(self._params.train_batch_size).repeat().map(group)
+        return tf.data.Dataset.from_tensor_slices(self._train).repeat().map(group)
 
     def _get_val_data(self, val_list):
         def group(img, gt):
             return {'img': img}, {'gt': gt}
-        return tf.data.Dataset.from_tensor_slices(self._test).batch(self._params.val_batch_size).map(group)
+        return tf.data.Dataset.from_tensor_slices(self._test).map(group)
 
     def _input_layer_specs(self):
-        return {'img': tf.TensorSpec(shape=(28, 28), dtype='int32')}
+        return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
 
     def _target_layer_specs(self):
-        return {'gt': tf.TensorSpec(shape=[], dtype='int32')}
+        return {'gt': tf.TensorSpec(shape=[], dtype='uint8')}

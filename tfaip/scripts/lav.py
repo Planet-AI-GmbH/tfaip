@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import json
 import os
 from argparse import ArgumentParser
@@ -25,7 +42,7 @@ def main(args, scenario_meta, scenario_params):
     logger.info("data_params=" + scenario_params.data_params.to_json(indent=2))
     logger.info("lav_params=" + lav_params.to_json(indent=2))
 
-    # create the trainer and run it
+    # create the lav and run it
     lav = scenario_meta.create_lav(lav_params, scenario_params)
     for i, r in enumerate(lav.run(run_eagerly=args.run_eagerly, callbacks=callbacks)):
         lav.benchmark_results.pretty_print()
@@ -39,19 +56,7 @@ def parse_args(args=None):
     parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
 
     args, unknown_args = parser.parse_known_args(args)
-
-    trainer_params_json_path = os.path.join(args.export_dir, 'trainer_params.json')
-    scenario_params_json_path = os.path.join(args.export_dir, 'scenario_params.json')
-    if os.path.exists(trainer_params_json_path):
-        with open(trainer_params_json_path) as f:
-            scenario_params_dict = json.load(f)['scenario_params']
-    elif os.path.exists(scenario_params_json_path):
-        with open(scenario_params_json_path) as f:
-            scenario_params_dict = json.load(f)
-    else:
-        raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
-
-    scenario, scenario_params = ScenarioBase.from_dict(scenario_params_dict)
+    scenario, scenario_params = ScenarioBase.from_path(args.export_dir)
 
     lav_params = scenario.lav_cls().get_params_cls()()
     lav_params.model_path_ = args.export_dir

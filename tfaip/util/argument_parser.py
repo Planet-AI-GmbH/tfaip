@@ -1,6 +1,24 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import enum
 from argparse import ArgumentParser, Action
 from typing import Optional, List, Union, Any, Type
+import Levenshtein
 
 
 def dc_meta(*, help: str = None):
@@ -106,13 +124,24 @@ def make_store_dataclass_action(data_cls: Any):
                 if len(kv.split('=')) == 2:
                     key, val = kv.split("=")
                 else:
-                    raise ValueError("Could not parse '{}' must by KEY=VALUE".format(kv))
+                    raise ValueError(f"Could not parse '{kv}' must by KEY=VALUE")
 
                 # get parameter of data_cls
                 try:
                     field = next(f for name, f in data_cls.__dataclass_fields__.items() if f.name == key)
                 except StopIteration:
-                    raise AttributeError('Invalid argument {}. Available arguments {}'.format(key, generate_argument_list(data_cls)))
+                    arguments = generate_argument_list(data_cls)
+                    closest = None
+                    for arg in arguments:
+                        if key in arg:
+                            closest = key
+
+                    if not closest and len(arguments) > 0:
+                        distances = {a: Levenshtein.distance(a, key) for a in arguments}
+                        closest = sorted(arguments, key=lambda a: distances[a])[0]
+
+                    str_args = argument_list_to_str(arguments)
+                    raise AttributeError(f'Invalid argument {key}. Did you mean "{closest}={val}"? Available arguments {str_args}')
 
                 # Single
                 if field.type == Optional[str] or field.type == str:
@@ -187,7 +216,11 @@ def generate_help(data_cls: Any):
 
 
 def generate_argument_list(data_cls: Any):
-    return "[" + ", ".join(["{}".format(name) for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')]) + "]"
+    return [name for name, f in data_cls.__dataclass_fields__.items() if not field_is_dataclass(f) and not name.endswith('_')]
+
+
+def argument_list_to_str(arguments):
+    return "[" + ', '.join(f"{name}" for name in arguments) + "]"
 
 
 def add_args_group(parser: ArgumentParser, group: str, params_cls: Any, default=None):

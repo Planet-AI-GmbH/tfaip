@@ -1,6 +1,24 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 from dataclasses import dataclass, field
 from typing import Optional, List
 import logging
+import os
 
 from dataclasses_json import dataclass_json
 
@@ -28,6 +46,9 @@ class DataBaseParams:
         help="Number of processes for validation data loading. Is train_num_processes by default."
              "Must be supported by the scenario."
     ))
+    val_batch_drop_remainder: bool = field(default=False, metadata=dc_meta(
+        help="Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size."
+    ))
 
     train_lists: List[str] = field(default=None, metadata=dc_meta(
         help="Training list files."
@@ -48,6 +69,9 @@ class DataBaseParams:
     train_num_processes: int = field(default=4, metadata=dc_meta(
         help="Number of processes in the training dataset (must be supported by the scenario)"
     ))
+    train_batch_drop_remainder: bool = field(default=False, metadata=dc_meta(
+        help="Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size."
+    ))
 
     lav_lists: Optional[List[str]] = field(default=None, metadata=dc_meta(
         help="List to use for LAV (to enable LAV during training set --trainer_params lav_every_n). By default use the"
@@ -59,6 +83,8 @@ class DataBaseParams:
              "Higher numbers for better performance but on the drawback if higher memory consumption. "
              "Only used if the scenario uses a DataPipeline."
     ))
+
+    resource_base_path_: str = os.getcwd()
 
     def validate(self):
         if self.train_num_processes <= 0:

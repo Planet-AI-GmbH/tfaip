@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import time
 
 from tensorflow.keras.callbacks import Callback
@@ -21,7 +38,8 @@ class LAVCallback(Callback):
         self.trainer_params = trainer_params
         lav_params = scenario.lav_cls().get_params_cls()()
         lav_params.device_params = trainer_params.device_params
-        lav_params.model_path_ = trainer_params.checkpoint_dir or os.getcwd()  # possible since paths are absolute anyway
+        lav_params.model_path_ = os.getcwd()  # Here resources are still relative to current working dir
+        lav_params.silent = True
         self.lav = scenario.create_lav(lav_params=lav_params, scenario_params=scenario.params)
         self.lav_this_epoch = False
 
@@ -36,7 +54,7 @@ class LAVCallback(Callback):
         logger.info("Running LAV")
         start = time.time()
         logs = logs if logs else {}
-        for i, r in enumerate(self.lav.run(self.scenario.keras_predict_model, silent=True)):
+        for i, r in enumerate(self.lav.run(self.scenario.keras_predict_model)):
             logs_str = ' - '.join(f"{k}: {r[k]:.4f}" for k in sorted(r.keys()))
             logger.info(f"LAV l{i} Metrics (dt={(time.time() - start)/60:.2f}min) - {logs_str}")
             for k, v in r.items():

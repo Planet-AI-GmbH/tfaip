@@ -1,3 +1,20 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import logging
 from tfaip.util.logging import setup_log
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -37,9 +54,8 @@ def parse_args(args=None):
     for scenario_def in scenarios():
         # add scenario parameters as sub parameters
         p = sub_parsers.add_parser(scenario_def.name, formatter_class=parser.formatter_class)
-        default_trainer_params = scenario_def.scenario.trainer_cls().get_params_cls()()
-        default_trainer_params.scenario_params = scenario_def.scenario.default_params()
-        add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=scenario_def.scenario.trainer_cls().get_params_cls())
+        default_trainer_params = scenario_def.scenario.default_trainer_params()
+        add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=default_trainer_params.__class__)
 
     return parser.parse_args(args)
 

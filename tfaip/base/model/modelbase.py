@@ -1,8 +1,20 @@
-import importlib
-import inspect
-import os
-import pkgutil
-import sys
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 from abc import abstractmethod, ABC
 from typing import Type, Dict, Any, Tuple, NamedTuple, Optional, List, TYPE_CHECKING
 import tensorflow as tf
@@ -10,6 +22,7 @@ from typeguard import typechecked
 import logging
 
 from tfaip.base.data.data import DataBase
+from tfaip.base.model.exportgraph import ExportGraph
 from tfaip.base.model.modelbaseparams import ModelBaseParams
 from tfaip.util.typing import AnyNumpy
 
@@ -77,6 +90,7 @@ class ModelBase(ABC):
     def __init__(self, params: ModelBaseParams, *args, **kwargs):
         super(ModelBase, self).__init__(*args, **kwargs)
         self._params = params
+        self._graph = None
 
     def params(self) -> ModelBaseParams:
         return self._params
@@ -97,19 +111,30 @@ class ModelBase(ABC):
     @typechecked
     def build(self, inputs_targets: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
         """
-        Override _build for custom implementation
+        Override _build for custom implementation. Do this with caution
         :param inputs_targets: Dictionary of both the inputs and the targets
         :return: The outputs of the model
         """
-        return self._build(inputs_targets)
+        if not self._graph:
+            self._graph = self.create_graph(self._params)
+        return self._graph(inputs_targets)
 
     @abstractmethod
-    def _build(self, inputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
-        raise NotImplemented
+    def create_graph(self, params: ModelBaseParams) -> 'GraphBase':
+        raise NotImplementedError
+
+    @typechecked()
+    def additional_outputs(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+        return self._additional_outputs(inputs, outputs)
+
+    def _additional_outputs(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+        return {}
 
     @typechecked
-    def extended_metric(self, inputs_targets: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[
-        str, tf.Tensor]:
+    def extended_metric(self,
+                        inputs_targets: Dict[str, tf.Tensor],
+                        outputs: Dict[str, tf.Tensor]
+                        ) -> Dict[str, tf.Tensor]:
         """
         use lambda layers, you can not use self.<variables> directly, it will result in pickle-error
         Override _extended_metric for custom implementation.
@@ -203,7 +228,18 @@ class ModelBase(ABC):
         print_fn(f"\n    TARGET: {target}\nPREDICTION: {prediction}")
 
     @typechecked
-    def target_prediction(self, targets: Dict[str, AnyNumpy], outputs: Dict[str, AnyNumpy], data: DataBase) -> Tuple[Any, Any]:
+    def print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
+        self._print_prediction(outputs, data, print_fn)
+
+    def _print_prediction(self, outputs: Dict[str, AnyNumpy], data: DataBase, print_fn=print):
+        print_fn(f"\n     PREDICTION:\n" + "\n".join([f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in outputs.items()]))
+
+    @typechecked
+    def target_prediction(self,
+                          targets: Dict[str, AnyNumpy],
+                          outputs: Dict[str, AnyNumpy],
+                          data: DataBase
+                          ) -> Tuple[Any, Any]:
         t, p = self._target_prediction(targets, outputs, data)
         """
         Return the actual final target and prediction (e.g. the strings in ATR).
@@ -219,5 +255,27 @@ class ModelBase(ABC):
 
         return t, p
 
-    def _target_prediction(self, targets: Dict[str, AnyNumpy], outputs: Dict[str, AnyNumpy], data: DataBase) -> Tuple[Any, Any]:
+    def _target_prediction(self,
+                           targets: Dict[str, AnyNumpy],
+                           outputs: Dict[str, AnyNumpy],
+                           data: DataBase,
+                           ) -> Tuple[Any, Any]:
         return None, None
+
+    @typechecked()
+    def export_graphs(self,
+                      inputs: Dict[str, tf.Tensor],
+                      outputs: Dict[str, tf.Tensor],
+                      targets: Dict[str, tf.Tensor],
+                      ) -> Dict[str, ExportGraph]:
+        eg = {g.label: g for g in self._export_graphs(inputs, outputs, targets)}
+        if 'default' not in eg:
+            raise KeyError(f"Expected at least an export graph with label 'default' in {eg}.")
+        return eg
+
+    def _export_graphs(self,
+                       inputs: Dict[str, tf.Tensor],
+                       outputs: Dict[str, tf.Tensor],
+                       targets: Dict[str, tf.Tensor],
+                       ) -> List[ExportGraph]:
+        return [ExportGraph("default", inputs=inputs, outputs=outputs)]

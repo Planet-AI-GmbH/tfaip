@@ -1,18 +1,34 @@
+# Copyright 2020 The tfaip authors. All Rights Reserved.
+#
+# This file is part of tfaip.
+#
+# tfaip is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# tfaip is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# tfaip. If not, see http://www.gnu.org/licenses/.
+# ==============================================================================
 import tensorflow.keras as keras
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
-from tfaip.base.model.components.attention.masking import _create_padding_mask, _create_image_padding_mask
+from tfaip.base.model.components.attention.masking import create_padding_mask, create_image_padding_mask
 from tfaip.base.model.components.conv import Conv2D
 from tfaip.base.model.components.normalization import NormalizeImage
 from tfaip.base.model.components.pool import MaxPool2D
 
 
 class ConvLayers3(keras.layers.Layer):
-    def __init__(self, subsampling: int, num_classes, mvn: bool = True, sobel_filter=False, drop_rate=0.0, auto_masking=True):
+    def __init__(self, subsampling: int, mvn: bool = True, sobel_filter=False, drop_rate=0.0, auto_masking=True):
         super(ConvLayers3, self).__init__()
         self._subsampling = subsampling
-        self._num_classes = num_classes
         self._mvn = mvn
         self._sobel_filter = sobel_filter
         self._auto_masking = auto_masking
@@ -54,7 +70,7 @@ class ConvLayers3(keras.layers.Layer):
 
         def create_mask(sl):
             if self._auto_masking:
-                return K.expand_dims(_create_image_padding_mask(sl))
+                return K.expand_dims(create_image_padding_mask(sl))
             return None
 
         conv1 = self._conv1(images, training=training, mask=create_mask(seq_length))
