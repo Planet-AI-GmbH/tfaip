@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""A pool of processes derived from multiprocessing.Pool with a custom worker function"""
 import multiprocessing
 import logging
 import sys
@@ -34,26 +35,26 @@ class Initializer:
 
     def __call__(self, *args, **kwargs):
         if not Initializer.worker:
-            logger.debug("Initializing Worker")
+            logger.debug('Initializing Worker')
             Initializer.worker = self.worker_creator()
             Initializer.worker.initialize_thread()
 
             if 'tensorflow' in sys.modules:
-                logger.warning("You imported tensorflow at some point in the parallel pipeline. "
-                               "Running the code will work, but consume more memory and takes more time for "
-                               "initialization. Consider to remove all tensorflow imports from your data workers. "
-                               "(Watch out for import in __init__.py cause they are done automatically."
-                               "For Debugging I recommend to set a breakpoint in tensorflow.__init__.py. "
-                               "The first stop is legitimate (import from main thread), any other import is from a "
-                               "spawned child. Try to track down the import history and find the bad boy that causes "
-                               "to import tensorflow."
-                               "Note: Use local imports if you must import tensorflow.")
+                logger.warning('You imported tensorflow at some point in the parallel pipeline. '
+                               'Running the code will work, but consume more memory and takes more time for '
+                               'initialization. Consider to remove all tensorflow imports from your data workers. '
+                               '(Watch out for import in __init__.py cause they are done automatically.'
+                               'For Debugging I recommend to set a breakpoint in tensorflow.__init__.py. '
+                               'The first stop is legitimate (import from main thread), any other import is from a '
+                               'spawned child. Try to track down the import history and find the bad boy that causes '
+                               'to import tensorflow.'
+                               'Note: Use local imports if you must import tensorflow.')
         return Initializer.worker
 
 
 class WrappedPool(multiprocessing.pool.Pool):
     def __init__(self, worker_constructor, **kwargs):
-        super(WrappedPool, self).__init__(initializer=Initializer(worker_constructor), **kwargs)
+        super().__init__(initializer=Initializer(worker_constructor), **kwargs)
 
     def imap_gen(self, gen):
         return self.imap(worker_func, gen)

@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Definition of enum utilities such as StrEnum"""
 import enum
 
 

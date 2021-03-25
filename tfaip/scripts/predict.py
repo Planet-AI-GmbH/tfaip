@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -18,12 +18,13 @@
 import io
 import logging
 import os
-import tarfile
 import pickle
+import tarfile
 import time
+from argparse import Action
 
-from tfaip.util.argumentparser.parser import add_args_group, TFAIPArgumentParser
-from tfaip.base.imports import ScenarioBase
+from tfaip.imports import ScenarioBase
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,9 @@ def run():
 
 
 def main(args, scenario_cls: ScenarioBase, scenario_params):
-    predict_params = args.predict_params
-    logger.info("data_params=" + scenario_params.data_params.to_json(indent=2))
-    logger.info("predict_params=" + args.predict_params.to_json(indent=2))
+    predict_params = args.predict
+    logger.info("data_params=" + scenario_params.data.to_json(indent=2))
+    logger.info("predict_params=" + predict_params.to_json(indent=2))
 
     # create the predictor and data and run it
     if len(args.export_dir) == 1:
@@ -67,21 +68,25 @@ def main(args, scenario_cls: ScenarioBase, scenario_params):
     predictor.benchmark_results.pretty_print()
 
 
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        scenario, scenario_params = ScenarioBase.from_path(values[0])
+        predict_params = scenario.predictor_cls().params_cls()()
+        parser.add_root_argument('data', scenario.predict_generator_params_cls())
+        parser.add_root_argument('predict', predict_params.__class__, default=predict_params)
+
+        setattr(namespace, self.dest, values)
+        setattr(namespace, 'scenario', scenario)
+        setattr(namespace, 'scenario_params', scenario_params)
+
+
 def parse_args(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('--export_dir', required=True, nargs="+")
+    parser.add_argument('--export_dir', required=True, nargs="+", action=ScenarioSelectionAction)
     parser.add_argument('--dump_prediction', type=str, help="Dumps the prediction results as tar.gz")
 
-    args, unknown_args = parser.parse_known_args(args)
-    scenario, scenario_params = ScenarioBase.from_path(args.export_dir[0])
-    predict_params = scenario.predictor_cls().get_params_cls()()
-    pipeline_params = scenario.data_cls().prediction_generator_params_cls()()
-
-    parser = TFAIPArgumentParser()
-    add_args_group(parser, group='data', default=pipeline_params, params_cls=pipeline_params.__class__)
-    add_args_group(parser, group='predict_params', default=predict_params, params_cls=predict_params.__class__)
-
-    return parser.parse_args(unknown_args, namespace=args), scenario, scenario_params
+    args = parser.parse_args(args=args)
+    return args, args.scenario, args.scenario_params
 
 
 if __name__ == '__main__':

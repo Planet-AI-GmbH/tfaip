@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,12 +15,24 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""os utilities"""
 import os
 
 
 class ChDir:
+    """
+    Utility class to change the working directory in a `with` block and restoring the old dir afterwards.
+
+    Usage:
+    ```
+    with ChDir("my_path"):
+        # Working dir is my_path
+
+    # working dir is reset
+    ```
+    """
     def __init__(self, path):
-        self._cd = os.getcwd()
+        self._cd = os.getcwd()  # store the current working dir to reset it on exit
         self.path = path
 
     def __enter__(self):

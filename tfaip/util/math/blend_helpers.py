@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -16,7 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import logging
-from collections import Iterator, Iterable
+from collections.abc import Iterator, Iterable
 from numbers import Number
 from random import Random
 from typing import List
@@ -64,7 +64,7 @@ class BlendIterablor(Iterator, Iterable):
                 try:
                     ingredient.shuffle(self._random)
                 except AttributeError:
-                    logger.warning('ingredient {}: missing method "shuffle(random)" - skipping'.format(type(ingredient)))
+                    logger.warning(f'ingredient {type(ingredient)}: missing method "shuffle(random)" - skipping')
                 self._cumulative_mri_dict[key] = ingredient
         self._key_helper = KeyHelper(self._cumulative_mri_dict)
 
@@ -77,34 +77,4 @@ class BlendIterablor(Iterator, Iterable):
     def __next__(self):
         r = self._random.random()
         key = self._key_helper.get_key(r)
-        # print str(r) + " -> " + str(key)
         return self._cumulative_mri_dict[key].next()
-#
-#
-# def repetitor(val, n=None):
-#     if n is not None and n > -1:
-#         for _ in range(n):
-#             yield val
-#     else:
-#         while True:
-#             yield val
-#
-# # if __name__ == '__main__':
-# #     generators = [repetitor('a', -1), repetitor('b', -1), repetitor('c')]
-# #     mix_def = [1, 2, 3]
-# #
-# #     iterators = [GeneratorWrapperIterablor(generator) for generator in generators]
-# #     bi = BlendIterablor(iterators, mix_def, Random(1234))
-# #
-# #     stat = {}
-# #     for _, j in zip(range(1000), bi):
-# #         print j
-# #         if not j in stat:
-# #             stat[j] = 0
-# #         stat[j] = stat[j] + 1
-# #
-# #     s = sum(num for _, num in stat.items())
-# #     for key in stat:
-# #         stat[key] /= float(s)
-# #
-# #     print stat

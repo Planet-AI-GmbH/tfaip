@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,36 +15,41 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.imports import Trainer
 import logging
+from argparse import Action
 
-from tfaip.util.argumentparser import TFAIPArgumentParser, add_args_group
+from tfaip.imports import Trainer
 from tfaip.util.logging import setup_log
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
 
-def main():
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        output_dir = values
+        setup_log(output_dir, append=True)
+
+        logger.info("=================================================================")
+        logger.info(f"RESUMING TRAINING from {output_dir}")
+        logger.info("=================================================================")
+
+        trainer_params, scenario = Trainer.parse_trainer_params(output_dir)
+
+        # parse additional args
+        parser.add_root_argument('trainer', trainer_params.__class__, default=trainer_params)
+        setattr(namespace, self.dest, values)
+        setattr(namespace, 'scenario_cls', scenario)
+
+
+def main(args=None):
     parser = TFAIPArgumentParser()
-
-    parser.add_argument('checkpoint_dir', type=str, help='path to the checkpoint dir to resume from')
-
-    args, unknown_args = parser.parse_known_args()
-    setup_log(args.checkpoint_dir, append=True)
-
-    logger.info("=================================================================")
-    logger.info(f"RESUMING TRAINING from {args.checkpoint_dir}")
-    logger.info("=================================================================")
-
-    trainer_params, scenario = Trainer.parse_trainer_params(args.checkpoint_dir)
-
-    # parse additional args
-    parser = TFAIPArgumentParser(ignore_required=True)
-    add_args_group(parser, group='trainer_params', default=trainer_params, params_cls=trainer_params)
-    parser.parse_args(unknown_args)
+    parser.add_argument('output_dir', type=str, help='path to the checkpoint dir to resume from',
+                        action=ScenarioSelectionAction)
+    args = parser.parse_args(args=args)
 
     # create the trainer
-    trainer = scenario.create_trainer(trainer_params, restore=True)
+    trainer = args.scenario_cls.create_trainer(args.trainer, restore=True)
     trainer.train()
 
 

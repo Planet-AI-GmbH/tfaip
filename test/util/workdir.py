@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -20,11 +20,13 @@ import os
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 
-def get_workdir(name: str, *args):
+def workdir_path(name: str, *args):
     # name expected to be a path .../test/scenario/{SCENARIO_NAME}/workdir
     # or .../test/scenario/workdir (to support single scenario setups)
     scenario_dir = os.path.join('test', 'scenario')
     name = os.path.abspath(name)
+    if scenario_dir not in name:
+        scenario_dir = 'tfaip_scenario_test'
     assert(scenario_dir in name)
     pos = name.find('/', name.rfind(scenario_dir) + len(scenario_dir) + 1)
     if pos >= 0:

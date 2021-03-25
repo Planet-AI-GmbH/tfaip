@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -16,7 +16,6 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import os
-import subprocess
 import unittest
 from subprocess import check_call
 import tempfile

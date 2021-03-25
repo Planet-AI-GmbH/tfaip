@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -18,10 +18,11 @@
 import logging
 import tarfile
 import pickle
+from argparse import Action
 
-from tfaip.scenario import get_scenario_by_name
-from tfaip.util.argumentparser.parser import TFAIPArgumentParser, add_args_group
+from tfaip.scenario.scenariobase import import_scenario
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -40,20 +41,23 @@ def main(prediction: str, scenario, evaluator_params):
                 e.update_state(sample)
 
 
-def parse_args():
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        scenario = import_scenario(values)
+        evaluator_params = scenario.evaluator_cls().default_params()
+
+        parser = TFAIPArgumentParser()
+        parser.add_root_argument('evaluator', evaluator_params.__class__, evaluator_params)
+        setattr(namespace, self.dest, scenario)
+
+
+def parse_args(args=None):
     parser = TFAIPArgumentParser()
     parser.add_argument('--prediction', type=str, required=True, help="Path to the prediction dump")
-    parser.add_argument('--scenario', type=str, required=True)
+    parser.add_argument('--scenario', type=str, required=True, action=ScenarioSelectionAction)
 
-    args, unknown_args = parser.parse_known_args()
-    scenario = get_scenario_by_name(args.scenario).scenario
-    evaluator_params = scenario.evaluator_cls().default_params()
-
-    parser = TFAIPArgumentParser()
-    add_args_group(parser, 'evaluation_params', evaluator_params, evaluator_params)
-    parser.parse_args(unknown_args)
-
-    return args.prediction, scenario, evaluator_params
+    args = parser.parse_args(args=args)
+    return args.prediction, args.scenario, args.evaluator_params
 
 
 if __name__ == '__main__':

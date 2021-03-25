@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 from pandas import read_excel
 import numpy as np
@@ -51,17 +51,17 @@ class Parameter:
 
         return p
 
-    def to_str(self, value):
+    def to_str(self, value) -> List[str]:
         if self.sub_param:
             if value is None:
                 if self.allow_empty:
-                    return self.flag + '='
-                return ""
+                    return [self.flag]
+                return [""]
             value = '{}'.format(value)
             if self.split:
-                return self.flag + '=[' + ",".join(value.split(self.delim)) + ']'
+                return [self.flag] + value.split(self.delim)
 
-            return self.flag + '=' + value
+            return [self.flag, value]
         else:
             if value is None:
                 if self.allow_empty:
@@ -201,14 +201,26 @@ class XLSXExperimenter:
                 tsp_call = ['tsp', '-L', c.id]
 
             def single_param(k, v):
-                return get_parameter_by_flag(k).to_str(v)
+                params = get_parameter_by_flag(k).to_str(v)
+                if params[0].endswith("__cls__"):
+                    # Override class type of parameter
+                    params[0] = params[0][:-len('__cls__')]
+                return params
+
+            def group_param(group_name, k, v):
+                params = single_param(k, v)
+                if len(params[0]) == 0:
+                    return []  # empty parameter, skip
+                else:
+                    params[0] = '--' + group_name + '.' + params[0]
+                return params
 
             call = (tsp_call
                     + [c.command, c.scenario]
-                    + (['--device_params', f'gpus={self.devices[device_idx].device_id}'] if self.with_gpu else [])
+                    + (['--device.gpus', str(self.devices[device_idx].device_id)] if self.with_gpu else [])
                     + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
-                    + sum([['--{}'.format(group_name)] + [single_param(k, v) for k, v in group.items()] for
-                           group_name, group in c.grouped_commands.items()], [])
+                    + sum(sum([[group_param(group_name, k, v) for k, v in group.items()] for
+                           group_name, group in c.grouped_commands.items()], []), [])
                     )
             call = [str(c) for c in call if c]
             if not self.dry_run:

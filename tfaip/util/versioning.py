@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,22 +15,26 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import subprocess
+"""Utils for versioning of the code"""
 import logging
 from typing import Optional
 import os
-
+import git
 
 logger = logging.getLogger(__name__)
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def get_commit_hash() -> Optional[str]:
+    """
+    Retrieve the commit hash of tfaip or None if tfaip is not installed via git, e.g. directly from the pip packages.
+    """
     try:
-        h = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True, cwd=this_dir).strip()
+        repo = git.Repo(path=this_dir, search_parent_directories=True)
+        h = repo.head.object.hexsha
         logger.debug(f"Git commit hash {h}")
         return h
-    except subprocess.CalledProcessError:
-        logger.debug("tfaip not running from git repository")
+    except Exception:  # pylint: disable=broad-except
+        logger.debug("Could not read commit hash. Maybe tfaip not running from git repository or git not installed")
         # Not a git repo
         return None

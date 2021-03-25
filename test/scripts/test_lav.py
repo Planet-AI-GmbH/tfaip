@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -20,32 +20,43 @@ from subprocess import check_call
 import tempfile
 import os
 
+work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tutorial', 'workdir'))
+
 
 class TestLAVScript(unittest.TestCase):
     def test_lav_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial.full',
-                        '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train.batch_size=2',
+            check_call(['tfaip-train', 'examples.tutorial.full',
+                        '--trainer.samples_per_epoch', '10',
+                        '--trainer.epochs', '1',
+                        '--trainer.output_dir', d,
+                        '--train.batch_size', '2',
+                        '--val.limit', '10',
                         ])
             check_call(['tfaip-lav',
                         '--export_dir', os.path.join(d, 'best'),
-                        '--data_params', 'val.limit=10',
+                        '--pipeline.limit', '10',
+                        '--data.files', os.path.join(work_dir, 'data', '*.png'),
                         ])
             check_call(['tfaip-lav',
                         '--export_dir', os.path.join(d, 'best'),
-                        '--data_params', 'val.limit=10',
+                        '--pipeline.limit', '10',
+                        '--data.files', os.path.join(work_dir, 'data', '*.png'),
                         '--run_eagerly',
                         '--dump', os.path.join(d, 'dump.pkl'),
                         ])
 
     def test_multi_lav_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial.full',
-                        '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train.batch_size=2',
+            check_call(['tfaip-train', 'examples.tutorial.full',
+                        '--trainer.samples_per_epoch', '10',
+                        '--trainer.epochs', '1',
+                        '--trainer.output_dir', d,
+                        '--train.batch_size', '2',
+                        '--val.limit', '10',
                         ])
             check_call(['tfaip-multi-lav',
                         '--export_dirs', os.path.join(d, 'best'), os.path.join(d, 'best'),
-                        '--data', 'limit=10',
+                        '--data.files', os.path.join(work_dir, 'data', '*.png'),
+                        '--pipeline.limit', '10',
                         ])

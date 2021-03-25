@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,11 +15,17 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Definition of a Joinable and a JoinableHolder"""
 from abc import ABC, abstractmethod
 from typing import List
 
 
 class JoinableHolder:
+    """The join-able holder stores a list of Joinables
+
+    When join() is called, the JoinableHolder waits for all joinables to join() until resuming.
+    This is useful for waiting for processes to finish.
+    """
     def __init__(self):
         self._joinables: List[Joinable] = []
 
@@ -32,7 +38,9 @@ class JoinableHolder:
 
     def join(self):
         while len(self._joinables) > 0:
-            self._joinables[0].join()
+            joinable = self._joinables[0]
+            joinable.join()
+            self.withdraw_joinable(joinable)  # this should be called on joinable.join()
 
         self._joinables = []
 

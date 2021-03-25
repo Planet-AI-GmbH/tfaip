@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -21,19 +21,57 @@ import tempfile
 import unittest
 from subprocess import check_call
 
+from tfaip.util.file.oshelper import ChDir
+
+this_dir = os.path.dirname(os.path.realpath(__file__))
+root_dir = os.path.join(this_dir, '..', '..')
+
 
 class TestTrainingScript(unittest.TestCase):
     def test_train_tutorial(self):
-        check_call(['tfaip-train', 'tutorial.full',
-                    '--trainer_params', 'samples_per_epoch=10', 'epochs=2',
-                    '--data_params', 'train.batch_size=2',
+        check_call(['tfaip-train',
+                    'examples.tutorial.full',  # tfaip is in PYTHONPATH so this import works
+                    '--trainer.samples_per_epoch', '10',
+                    '--trainer.epochs', '2',
+                    '--train.batch_size', '2',
+                    '--val.limit', '10',
+                    '--model.graph', 'MLPGraph',  # Check selection without 'Params'-suffix
                     ])
+
+    def test_train_tutorial_with_class_name(self):
+        check_call(['tfaip-train',
+                    'examples.tutorial.full.scenario:TutorialScenario',
+                    '--trainer.samples_per_epoch', '10',
+                    '--trainer.epochs', '2',
+                    '--train.batch_size', '2',
+                    '--val.limit', '10',
+                    '--model.graph', 'MLPGraph',  # Check selection without 'Params'-suffix
+                    ])
+
+    def test_train_tutorial_python_path(self):
+        env = os.environ.copy()
+        if 'PYTHONPATH' in env:
+            env['PYTHONPATH'] += ":" + os.path.join(root_dir, 'examples')
+        else:
+            env['PYTHONPATH'] = os.path.join(root_dir, 'examples')
+
+        check_call(['tfaip-train',
+                    'tutorial.full',  # scenarios is in python path PYTHONPATH so this import works
+                    '--trainer.samples_per_epoch', '10',
+                    '--trainer.epochs', '2',
+                    '--train.batch_size', '2',
+                    '--val.limit', '10',
+                    '--model.graph', 'MLPGraph',  # Check selection without 'Params'-suffix
+                    ], env=env)
 
     def test_resume_train_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial.full',
-                        '--trainer_params', 'samples_per_epoch=10', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train.batch_size=2',
+            check_call(['tfaip-train', 'examples.tutorial.full',
+                        '--trainer.samples_per_epoch', '10',
+                        '--trainer.epochs', '1',
+                        '--trainer.output_dir', d,
+                        '--train.batch_size', '2',
+                        '--val.limit', '10',
                         ])
 
             # train one more epoch (training was not cancelled)
@@ -44,9 +82,12 @@ class TestTrainingScript(unittest.TestCase):
 
     def test_train_from_params_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'tutorial.full',
-                        '--trainer_params', 'samples_per_epoch=1', 'epochs=1', f'checkpoint_dir={d}',
-                        '--data_params', 'train.batch_size=1',
+            check_call(['tfaip-train', 'examples.tutorial.full',
+                        '--trainer.samples_per_epoch', '1',
+                        '--trainer.epochs', '1',
+                        '--trainer.output_dir', d,
+                        '--train.batch_size', '1',
+                        '--val.limit', '10',
                         ])
 
             check_call(['tfaip-train-from-params', os.path.join(d, 'trainer_params.json')])

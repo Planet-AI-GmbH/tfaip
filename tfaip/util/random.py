@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,21 +15,29 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Utilities to handle randomness"""
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 def set_global_random_seed(n):
+    """
+    Set all random seeds:
+    - PYTHONHASHSEED
+    - numpy
+    - tensorflow
+    - random
+    """
     if n is None:
         return
 
-    logger.info(f"Setting all random seed to {n}")
-    import os
+    import os  # pylint: disable=import-outside-toplevel
+    from numpy.random import seed  # pylint: disable=import-outside-toplevel
+    import random  # pylint: disable=import-outside-toplevel
+    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+    logger.info(f'Setting all random seed to {n}')
     os.environ['PYTHONHASHSEED'] = str(n)
-    from numpy.random import seed
     seed(n + 1)
-    import tensorflow as tf
     tf.random.set_seed(n + 2)
-    import random
     random.seed(n + 3)

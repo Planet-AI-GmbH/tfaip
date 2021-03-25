@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Helper to implement a true parallel tf.data.Dataset.map with python functions"""
 from functools import partial
 
 from tfaip.util.multiprocessing.data.pipeline import ParallelPipeline
@@ -42,10 +43,12 @@ def create_worker(func):
 
 
 class ParallelMapPipeline(ParallelPipeline):
-    def __init__(self, data, dataset: 'tf.data.Dataset', worker_func: Callable[[], DataWorker], processes: int, auto_repeat_input: bool = False):
+    """Helper class to run a tf.data.Dataset map with a py-function in parallel"""
+    def __init__(self, data, dataset: 'tf.data.Dataset', worker_func: Callable[[], DataWorker],
+                 processes: int, auto_repeat_input: bool = False):
         self.dataset = dataset
         self.worker_func = worker_func
-        super(ParallelMapPipeline, self).__init__(data, processes, auto_repeat_input)
+        super().__init__(data, processes, auto_repeat_input)
 
     def create_worker_func(self) -> Callable[[], DataWorker]:
         return partial(create_worker, self.worker_func)
@@ -54,7 +57,8 @@ class ParallelMapPipeline(ParallelPipeline):
         return self.dataset.as_numpy_iterator()
 
 
-def parallel_map_dataset(data, dataset: 'tf.data.Dataset', output_types, worker_func: Callable[[], DataWorker], processes: int) -> 'tf.data.Dataset':
-    import tensorflow as tf
+def parallel_map_dataset(data, dataset: 'tf.data.Dataset', output_types, worker_func: Callable[[], DataWorker],
+                         processes: int) -> 'tf.data.Dataset':
+    import tensorflow as tf  # pylint: disable=import-outside-toplevel
     pipeline = ParallelMapPipeline(data, dataset, worker_func, processes)
-    return tf.data.Dataset.from_generator(lambda: pipeline.output_generator(), output_types)
+    return tf.data.Dataset.from_generator(pipeline.output_generator, output_types)

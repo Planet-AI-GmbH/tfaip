@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -17,10 +17,10 @@
 # ==============================================================================
 import json
 import logging
+from argparse import Action
 
-from tfaip.base.lav.callbacks.dump_results import DumpResultsCallback
-from tfaip.util.argumentparser.parser import add_args_group, TFAIPArgumentParser
-
+from tfaip.lav.callbacks.dump_results import DumpResultsCallback
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -35,37 +35,45 @@ def main(args, scenario_meta, scenario_params):
     if args.dump:
         callbacks.append(DumpResultsCallback(args.dump))
 
-    lav_params = args.lav_params
-    logger.info("data_params=" + scenario_params.data_params.to_json(indent=2))
+    lav_params = args.lav
+    data_generator_params = args.data
+    logger.info("data_generator=" + data_generator_params.to_json(indent=2))
     logger.info("lav_params=" + lav_params.to_json(indent=2))
 
     # create the lav and run it
     lav = scenario_meta.create_lav(lav_params, scenario_params)
-    for i, r in enumerate(lav.run(run_eagerly=args.run_eagerly, callbacks=callbacks)):
+    for i, r in enumerate(lav.run([data_generator_params], run_eagerly=args.run_eagerly, callbacks=callbacks)):
         print(json.dumps(r, indent=2))
         lav.benchmark_results.pretty_print()
 
 
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        from tfaip.imports import ScenarioBase
+        export_dir = values
+        scenario, scenario_params = ScenarioBase.from_path(export_dir)
+
+        lav_params = scenario.lav_cls().params_cls()()
+        lav_params.model_path = export_dir
+
+        parser.add_root_argument('data', scenario.predict_generator_params_cls())
+        parser.add_root_argument('lav', scenario.lav_cls().params_cls(), default=lav_params)
+
+        setattr(namespace, self.dest, values)
+        setattr(namespace, 'scenario', scenario)
+        setattr(namespace, 'scenario_params', scenario_params)
+
+
 def parse_args(args=None):
-    from tfaip.base.imports import ScenarioBase
-    parser = TFAIPArgumentParser()
-    parser.add_argument('--export_dir', required=True)
+    parser = TFAIPArgumentParser(add_help=False)
+    parser.add_argument('--export_dir', required=True, action=ScenarioSelectionAction)
     parser.add_argument('--run_eagerly', action='store_true',
                         help="Run the graph in eager mode. This is helpful for debugging. "
                              "Note that all custom layers must be added to ModelBase!")
     parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
 
-    args, unknown_args = parser.parse_known_args(args)
-    scenario, scenario_params = ScenarioBase.from_path(args.export_dir)
-
-    lav_params = scenario.lav_cls().get_params_cls()()
-    lav_params.model_path = args.export_dir
-
-    parser = TFAIPArgumentParser(ignore_required=True)
-    add_args_group(parser, group='data_params', default=scenario_params.data_params, params_cls=scenario.data_cls().get_params_cls())
-    add_args_group(parser, group='lav_params', default=lav_params, params_cls=scenario.lav_cls().get_params_cls())
-
-    return parser.parse_args(unknown_args, namespace=args), scenario, scenario_params
+    args = parser.parse_args(args=args)
+    return args, args.scenario, args.scenario_params
 
 
 if __name__ == '__main__':

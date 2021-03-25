@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,30 +15,31 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tfaip.base.imports import Trainer
 import logging
+from argparse import Action
 
-from tfaip.util.argumentparser import TFAIPArgumentParser, add_args_group
+from tfaip.imports import Trainer
 from tfaip.util.logging import setup_log
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
 
 
-def main():
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        trainer_params, scenario = Trainer.parse_trainer_params(values)
+        setup_log(trainer_params.output_dir, False)
+        parser.add_root_argument('trainer', trainer_params.__class__, default=trainer_params)
+        setattr(namespace, 'scenario_cls', scenario)
+
+
+def main(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('params_file', type=str, help='path to the trainer_params.json')
-    args, unknown_args = parser.parse_known_args()
-
-    trainer_params, scenario = Trainer.parse_trainer_params(args.params_file)
-    setup_log(trainer_params.checkpoint_dir, False)
-
-    # parse additional args
-    parser = TFAIPArgumentParser(ignore_required=True)
-    add_args_group(parser, group='trainer_params', default=trainer_params, params_cls=trainer_params)
-    parser.parse_args(unknown_args)
+    parser.add_argument('params_file', type=str, help='path to the trainer_params.json', action=ScenarioSelectionAction)
+    args = parser.parse_args(args=args)
 
     # create the trainer
-    trainer = scenario.create_trainer(trainer_params, restore=False)
+    trainer = args.scenario_cls.create_trainer(args.trainer, restore=False)
     trainer.train()
 
 

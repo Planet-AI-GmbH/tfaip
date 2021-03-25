@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -16,47 +16,61 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import logging
+from argparse import Action
+from typing import Type, TYPE_CHECKING
+
+from tfaip.scenario.scenariobase import import_scenario
+from tfaip import TrainerParams
 from tfaip.util.logging import setup_log
-from argparse import RawTextHelpFormatter
-from tfaip.scenario import scenarios
-from tfaip.util.argumentparser.parser import add_args_group, TFAIPArgumentParser
+from tfaip.util.tfaipargparse import TFAIPArgumentParser
+
+
+if TYPE_CHECKING:
+    from tfaip.imports import ScenarioBase
 
 logger = logging.getLogger(__name__)
 
 
 def run():
-    main(parse_args())
+    main(*parse_args())
 
 
-def main(args):
-    # parse the arguments
-    scenario_meta = next(s.scenario for s in scenarios() if s.name == args.scenario)
-
-    trainer_params = args.trainer_params
-    if trainer_params.checkpoint_dir:
-        setup_log(trainer_params.checkpoint_dir, append=False)
+def main(scenario: Type['ScenarioBase'], trainer_params: TrainerParams):
+    if trainer_params.output_dir:
+        setup_log(trainer_params.output_dir, append=False)
 
     logger.info("trainer_params=" + trainer_params.to_json(indent=2))
 
     # create the trainer and run it
-    trainer = scenario_meta.create_trainer(trainer_params)
+    trainer = scenario.create_trainer(trainer_params)
     trainer.train()
 
 
+class ScenarioSelectionAction(Action):
+    def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        scenario = import_scenario(values)
+
+        # Now pass the real args of the scenario
+        default_trainer_params = scenario.default_trainer_params()
+        parser.add_root_argument('trainer', default_trainer_params.__class__, default=default_trainer_params)
+        setattr(namespace, self.dest, scenario)
+
+
 def parse_args(args=None):
-    parser = TFAIPArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser = TFAIPArgumentParser()
 
-    # setup scenarios as subparsers (all available)
-    sub_parsers = parser.add_subparsers(dest='scenario', required=True)
+    parser.add_argument('scenario_selection',
+                        help="Select the scenario by providing the module path which must be in the PYTHONPATH. "
+                             "Since a module is expected, separate with dots '.' not slashes. "
+                             "The module must either comprise a 'scenario.py' file with one "
+                             "scenario, else provide the full path to the Scenario class by separating the class name "
+                             "with a ':'. E.g. 'tfaip.scenario.tutorial.min', or "
+                             "'tfaip.scenario.tutorial.min.scenario:TutorialScenario'",
+                        action=ScenarioSelectionAction,
+                        )
 
-    # loop over all available scenarios
-    for scenario_def in scenarios():
-        # add scenario parameters as sub parameters
-        p = sub_parsers.add_parser(scenario_def.name, formatter_class=parser.formatter_class)
-        default_trainer_params = scenario_def.scenario.default_trainer_params()
-        add_args_group(p, group='trainer_params', default=default_trainer_params, params_cls=default_trainer_params.__class__)
-
-    return parser.parse_args(args)
+    args = parser.parse_args(args=args)
+    return args.scenario_selection, args.trainer
 
 
 if __name__ == '__main__':

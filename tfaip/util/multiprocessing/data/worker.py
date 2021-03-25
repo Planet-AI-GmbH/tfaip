@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,14 +15,17 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Definition of a DataWorker that is run in parallel in a multiprocessing setup"""
 from abc import ABC, abstractmethod
 
 
 class DataWorker(ABC):
     @abstractmethod
     def initialize_thread(self):
+        # Called within the process only, use this to setup the worker (not in __init__!)
         pass
 
     @abstractmethod
     def process(self, *args, **kwargs):
+        # Called within the process only
         pass

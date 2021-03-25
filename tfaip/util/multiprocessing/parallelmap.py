@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Definition of a parallel map with an optional progress bar"""
 import multiprocessing
 from multiprocessing.pool import ThreadPool
 import os
@@ -30,7 +31,9 @@ def tqdm_wrapper(iterable, *, total=1, desc="", progress_bar=False):
         return tqdm(iterable, total=total, desc=desc)
 
 
-def parallel_map(f, d, *, desc="", processes=1, progress_bar=False, use_thread_pool=False, max_tasks_per_child=None) -> Iterable[Any]:
+def parallel_map(f, d, *,
+                 desc="", processes=1, progress_bar=False, use_thread_pool=False, max_tasks_per_child=None
+                 ) -> Iterable[Any]:
     if processes <= 0:
         processes = os.cpu_count()
 

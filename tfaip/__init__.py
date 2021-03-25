@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,4 +15,26 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-__version__ = "0.0.1"
+"""Global imports
+
+The global imports import static classes such as parameters and definitions.
+The other classes can be imported from ``tfaip.imports``
+"""
+
+__version__ = "1.1.0"
+
+from tfaip.data.databaseparams import DataBaseParams, DataGeneratorParams
+# IMPORTANT!!!
+# Global imports here must not import tensorflow (it won't crash but it is slow)
+# This leads to unnecessary imports in spawned sub-processes
+from tfaip.data.pipeline.definitions import PipelineMode, Sample, \
+    INPUT_PROCESSOR, GENERAL_PROCESSOR, TARGETS_PROCESSOR
+from tfaip.device.device_config import DeviceConfigParams
+from tfaip.evaluator.params import EvaluatorParams
+from tfaip.lav.params import LAVParams
+from tfaip.model.modelbaseparams import ModelBaseParams
+from tfaip.predict.params import PredictorParams
+from tfaip.scenario.scenariobaseparams import ScenarioBaseParams
+from tfaip.trainer.scheduler.learningrate_params import LearningRateParams
+from tfaip.trainer.params import TrainerParams, TrainerPipelineParams, TrainerPipelineParamsBase
+from tfaip.trainer.warmstart.warmstart_params import WarmStartParams

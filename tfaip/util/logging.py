@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Definitions for logging in tfaip"""
 import os
 import logging
 
@@ -28,19 +29,20 @@ this_logger = logging.getLogger(__name__)
 logging.basicConfig(level=TFAIP_LOG_LEVEL)
 logging.getLogger().handlers[0].setFormatter(formatter)
 
-for handler in logging.getLogger("tensorflow").handlers:
+for handler in logging.getLogger('tensorflow').handlers:
     handler.setFormatter(formatter)
 
 
+# Define a custom extension handler so that the exceptions are logged to logging
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    this_logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    this_logger.critical('Uncaught exception', exc_info=(exc_type, exc_value, exc_traceback))
 
 
-sys.excepthook = handle_exception
+sys.excepthook = handle_exception  # Overwrite the excepthook
 
 
 def setup_log(log_dir, append, log_name='train.log'):

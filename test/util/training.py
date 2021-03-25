@@ -1,4 +1,4 @@
-# Copyright 2020 The tfaip authors. All Rights Reserved.
+# Copyright 2021 The tfaip authors. All Rights Reserved.
 #
 # This file is part of tfaip.
 #
@@ -23,19 +23,18 @@ import time
 import unittest
 from typing import Type
 
-from tensorflow.python.keras.backend import clear_session
+from tensorflow.keras.backend import clear_session
 
 from test.util.store_logs_callback import StoreLogsCallback
-from tfaip.base import TrainerParams, ScenarioBaseParams
-from tfaip.base.imports import ScenarioBase, Trainer
-from tfaip.base.trainer.warmstart.warmstart_params import WarmstartParams
+from tfaip import WarmStartParams
+from tfaip.scenario.scenariobase import ScenarioBase
+from tfaip.trainer.trainer import Trainer
 from tfaip.util.random import set_global_random_seed
-
 
 debug_test = sys.flags.debug
 
 
-def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams,
+def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase],
                                  debug=debug_test,
                                  delta=None):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
@@ -43,20 +42,18 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
     # The resulting metrics/loss must be identical
     with tempfile.TemporaryDirectory() as tmp_dir:
         store_logs_callback = StoreLogsCallback()
-        scenario_params.data_params.val_limit = 1  # Force the same example
-        scenario_params.data_params.train_limit = 1  # Force the same example
-        trainer_params = TrainerParams(
-            checkpoint_dir=tmp_dir,
-            epochs=1,
-            samples_per_epoch=scenario_params.data_params.train.batch_size,
-            skip_model_load_test=True,  # not required in this test
-            scenario_params=scenario_params,
-            write_checkpoints=False,
-            export_best=True,
-            export_final=False,
-            random_seed=1338,  # Obtain same inputs from the input pipeline
-            force_eager=debug,
-        )
+        trainer_params = scenario.default_trainer_params()
+        trainer_params.gen.setup.val.limit = 1
+        trainer_params.gen.setup.train.limit = 1
+        trainer_params.output_dir = tmp_dir
+        trainer_params.epochs = 1
+        trainer_params.samples_per_epoch = trainer_params.gen.setup.train.batch_size
+        trainer_params.skip_model_load_test = True  # not required in this test
+        trainer_params.write_checkpoints = False
+        trainer_params.export_best = True
+        trainer_params.export_final = False
+        trainer_params.random_seed = 1338  # Obtain same inputs from the input pipeline
+        trainer_params.force_eager = debug
         trainer = scenario.create_trainer(trainer_params)
         trainer.train([store_logs_callback])
 
@@ -64,12 +61,12 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
         # test loading from best
         clear_session()
         trainer_params.current_epoch = 0  # Restart training
-        trainer_params.checkpoint_dir = None
+        trainer_params.output_dir = None
         trainer_params.export_best = False
-        trainer_params.warmstart_params = WarmstartParams(
+        trainer_params.warmstart = WarmStartParams(
             model=os.path.join(tmp_dir, 'best', 'serve')
         )
-        trainer_params.learning_rate_params.lr = 0.0
+        trainer_params.learning_rate.lr = 0.0
 
         trainer = scenario.create_trainer(trainer_params)
         trainer.train([store_logs_callback])
@@ -82,41 +79,44 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario, scenario_par
                 test.assertAlmostEqual(v, initial_logs[k], delta=delta)
 
 
-def single_train_iter(test: unittest.TestCase, scenario, scenario_params: ScenarioBaseParams, debug=debug_test):
-    scenario_params.debug_graph_construction = debug
-    scenario_params.debug_graph_n_examples = 1
-    trainer_params = TrainerParams(
-        epochs=2,
-        samples_per_epoch=scenario_params.data_params.train.batch_size,
-        scenario_params=scenario_params,
-        write_checkpoints=False,
-        force_eager=debug,
-        random_seed=1324,
-        lav_every_n=1,
-        skip_model_load_test=debug,
-        val_every_n=1,
-    )
-    trainer = scenario.create_trainer(trainer_params)
-    trainer.train()
+def single_train_iter(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=debug_test):
+    with tempfile.TemporaryDirectory() as tmp_dir:  # To write best model
+        trainer_params = scenario.default_trainer_params()
+        trainer_params.output_dir = tmp_dir
+        trainer_params.scenario.debug_graph_construction = debug
+        trainer_params.scenario.debug_graph_n_examples = 1
+        trainer_params.epochs = 2
+        trainer_params.samples_per_epoch = trainer_params.gen.setup.train.batch_size
+        trainer_params.export_best = False
+        trainer_params.export_final = True  # required, else due to magic circumstances, some tests will hang up...
+        trainer_params.force_eager = debug
+        trainer_params.random_seed = 1324
+        trainer_params.lav_every_n = 1
+        trainer_params.skip_model_load_test = debug
+        trainer_params.val_every_n = 1
+
+        trainer = scenario.create_trainer(trainer_params)
+        trainer.train()
 
 
-def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenario_params, debug=False,
-                  delta=None):
+def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=False,
+                  delta=None,
+                  batch_size_test=True,
+                  ):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        trainer_params = TrainerParams(
-            checkpoint_dir=tmp_dir,
-            epochs=1,
-            samples_per_epoch=3,
-            skip_model_load_test=True,  # not required in this test
-            scenario_params=scenario_params,
-            force_eager=debug,
-            export_best=True,
-            export_final=True,
-            write_checkpoints=False,
-            random_seed=324,
-        )
+        trainer_params = scenario.default_trainer_params()
+        trainer_params.output_dir = tmp_dir
+        trainer_params.epochs = 1
+        trainer_params.samples_per_epoch = 3
+        trainer_params.skip_model_load_test = True  # not required in this test
+        trainer_params.force_eager = debug
+        trainer_params.export_best = True
+        trainer_params.export_final = True
+        trainer_params.write_checkpoints = False
+        trainer_params.random_seed = 324
+        trainer_params.scenario.data.pre_proc.run_parallel = False  # Deterministic results!
         batch_and_limit = 5
-        trainer_params.scenario_params.debug_graph_construction = debug
+        trainer_params.scenario.debug_graph_construction = debug
         trainer = scenario.create_trainer(trainer_params)
         trainer.train()
 
@@ -125,48 +125,48 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], scenari
             trainer_params_dict = json.load(f)
         trainer_params_dict['epochs'] = 2
 
-        lav_params = scenario.lav_cls().get_params_cls()()
-        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'export')
+        lav_params = scenario.lav_cls().params_cls()()
+        lav_params.model_path = os.path.join(trainer_params.output_dir, 'export')
+        lav_params.pipeline = trainer_params.gen.setup.val
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path)
         lav = scenario.create_lav(lav_params, scenario_params)
-        lav.run()
+        lav.run([trainer_params.gen.val_gen()])
         set_global_random_seed(trainer_params.random_seed)
-        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'best')
+        lav_params.model_path = os.path.join(trainer_params.output_dir, 'best')
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path)
-        scenario_params.data_params.val.batch_size = 1
-        scenario_params.data_params.val.limit = batch_and_limit
+        lav_params.pipeline.batch_size = 1
+        lav_params.pipeline.limit = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)
-        bs1_results = next(lav.run())
-        set_global_random_seed(trainer_params.random_seed)
-        lav_params.model_path = os.path.join(trainer_params.checkpoint_dir, 'best')
-        clear_session()
-        scenario_params = scenario.params_from_path(lav_params.model_path)
-        scenario_params.data_params.val.limit = batch_and_limit
-        scenario_params.data_params.val.batch_size = batch_and_limit
-        lav = scenario.create_lav(lav_params, scenario_params)
-        bs5_results = next(lav.run())
-        time.sleep(0.5)
-        for k in bs1_results.keys():
-            test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
+        bs1_results = next(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug))
+        if batch_size_test:
+            set_global_random_seed(trainer_params.random_seed)
+            lav_params.model_path = os.path.join(trainer_params.output_dir, 'best')
+            clear_session()
+            scenario_params = scenario.params_from_path(lav_params.model_path)
+            lav_params.pipeline.batch_size = batch_and_limit
+            lav_params.pipeline.limit = batch_and_limit
+            lav = scenario.create_lav(lav_params, scenario_params)
+            bs5_results = next(lav.run([trainer_params.gen.val_gen()]))
+            time.sleep(0.5)
+            for k in bs1_results.keys():
+                test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
-def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=None, debug=debug_test):
+def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=None, debug=debug_test):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         store_logs_callback = StoreLogsCallback()
-        trainer_params = TrainerParams(
-            checkpoint_dir=tmp_dir,
-            epochs=1,
-            samples_per_epoch=scenario_params.data_params.train.batch_size,
-            skip_model_load_test=True,  # not required in this test
-            force_eager=debug,
-            export_final=False,
-            export_best=False,
-            scenario_params=scenario_params,
-            random_seed=1338,
-        )
+        trainer_params = scenario.default_trainer_params()
+        trainer_params.output_dir = tmp_dir
+        trainer_params.epochs = 1
+        trainer_params.samples_per_epoch = trainer_params.gen.setup.train.batch_size
+        trainer_params.skip_model_load_test = True  # not required in this test
+        trainer_params.force_eager = debug
+        trainer_params.export_final = True  # due to magic circumstances, some tests will hang up if set to False...
+        trainer_params.export_best = False
+        trainer_params.random_seed = 1338 if trainer_params.random_seed is None else trainer_params.random_seed
         trainer = scenario.create_trainer(trainer_params)
         trainer.train([store_logs_callback])
         initial_logs = store_logs_callback.logs
@@ -179,7 +179,7 @@ def resume_training(test: unittest.TestCase, scenario, scenario_params, delta=No
         # train another epoch
         # set learning rate to 0, thus. evaluation result must not change
         trainer_params_dict['epochs'] = 2
-        trainer_params_dict['learning_rate_params']['lr'] = 0.0
+        trainer_params_dict['learning_rate']['lr'] = 0.0
 
         with open(json_path, 'w') as f:
             json.dump(trainer_params_dict, f)
