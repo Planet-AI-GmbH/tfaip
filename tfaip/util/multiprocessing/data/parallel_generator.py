@@ -112,6 +112,8 @@ class ParallelGenerator(Joinable, ABC):
             self.processes = None
 
     def _spawn_processes(self):
+        logger.debug("Started process spawner")
+
         # Check if subprocesses shall be spawned
         # (e.g. some are not running yet, or some finished to due max_tasks_per_child)
         while self._shall_spawn():
@@ -126,6 +128,7 @@ class ParallelGenerator(Joinable, ABC):
             time.sleep(0.1)
         # stop the remaining processes by sending a Finished signal
         for _ in self.processes:
+            logger.debug("Putting Finished() to stop remaining threads")
             self.in_queue.put(Finished())
 
         # Wait for finished
@@ -136,6 +139,8 @@ class ParallelGenerator(Joinable, ABC):
         while not self.in_queue.empty():
             v = self.in_queue.get_nowait()
             assert isinstance(v, Finished)
+
+        logger.debug("Stopped process spawner")
 
     def join(self):
         logger.debug("Attempting to join")
@@ -150,11 +155,8 @@ class ParallelGenerator(Joinable, ABC):
 
     def __enter__(self):
         self.input_thread.start()
-        while not self.input_thread.is_alive():
-            time.sleep(0.1)
-        self.process_spawner.start()
         while not self.is_running():
-            time.sleep(0.1)
+            time.sleep(0.01)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -199,6 +201,8 @@ class ParallelGenerator(Joinable, ABC):
 
     def _put_inputs(self):
         logger.debug("Input thread started")
+        self.process_spawner.start()  # start the process spawner when input runner was started
+
         for i in self._max_size_input_generator():
             self.in_queue.put(i)
 
