@@ -52,7 +52,7 @@ An application of _tfaip_ resolves recurrent obstacles of research and developme
 * _tfaip_ provides a simple API to deploy a scenario.
   The corresponding module will automatically apply pre-processing, infer the trained model, and optionally transform the output by a post-processing pipeline. 
   The information about the pipeline-construction is embedded within the model which enables to store and load models with a different data pipeline even for the same scenario.
-  This is handy if, for example, certain preprocessing steps are not required for one specific model or other inputs are expected.
+  This is handy if, for example, certain pre-processing steps are not required for one specific model or other inputs are expected.
 * During research, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
   Tensorflow allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
   To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, partly even impossible, and complicates debugging.
