@@ -4,7 +4,7 @@
 # _tfaip_ - A Generic and Powerful Research Framework for Deep Learning based on Tensorflow
 
 *tfaip* is a Python-based research framework for developing, organizing, and deploying Deep Learning models powered by [Tensorflow](https://www.tensorflow.org/).
-It enables to implement both simple and complex scenarios that are structured and highly configurable by parameters that can directly be modified by the command line.
+It enables to implement both simple and complex scenarios that are structured and highly configurable by parameters that can directly be modified by the command line (read the [docs](https://tfaip.readthedocs.io)).
 For example, the [tutorial.full](examples/tutorial/full)-scenario for learning MNIST allows to modify the graph during training but also other hyper-parameters such as the optimizer:
 ```bash
 export PYTHONPATH=$PWD  # set the PYTHONPATH so that the examples dir is found

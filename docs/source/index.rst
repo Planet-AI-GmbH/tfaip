@@ -28,12 +28,13 @@ Templates show the most common functions that must be implemented (search for ``
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials and Template
+   :caption: Tutorials, Template, Examples
 
-    Minimal Tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/tutorial/min>
-    Full Tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/tutorial/full>
-    General Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/template/general>
-    ListFile Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/template/listfile>
+    Minimal Tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/tutorial/min>
+    Full Tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/tutorial/full>
+    General Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/template/general>
+    ListFile Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/template/listfile>
+    Further Examples <https://github.com/Planet-AI-GmbH/tfaip_example_scenarios>
 
 .. toctree::
    :maxdepth: 2
