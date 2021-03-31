@@ -127,6 +127,15 @@ class DataProcessorBase(Generic[T], ABC):
     def supports_preload(self):
         return True
 
+    def is_valid_sample(self, sample: Sample) -> bool:
+        if sample is None:
+            return False
+        if sample.inputs is None and self.mode in INPUT_PROCESSOR:
+            return False
+        if sample.targets is None and self.mode in TARGETS_PROCESSOR:
+            return False
+        return True
+
     @typechecked
     def __call__(self, sample: Union[Sample, Iterable[Sample]]) -> Union[Sample, Iterable[Sample]]:
         if isinstance(self, MappingDataProcessor):
@@ -175,7 +184,7 @@ class GeneratingDataProcessor(DataProcessorBase[T]):
                          ) -> Iterator[Sample]:
         mapped = self.generate(samples)
         if drop_invalid:
-            mapped = filter(lambda s: s is not None, mapped)
+            mapped = filter(self.is_valid_sample, mapped)
         return mapped
 
 
@@ -200,7 +209,7 @@ class MappingDataProcessor(DataProcessorBase[T]):
                               desc=f'Applying data processor {self.__class__.__name__}',
                               )
         if drop_invalid:
-            mapped = filter(lambda s: s is not None, mapped)
+            mapped = filter(self.is_valid_sample, mapped)
         return mapped
 
     def apply_on_sample(self, sample: Sample) -> Sample:
@@ -220,13 +229,6 @@ class SequenceProcessor(MappingDataProcessor[SequenceProcessorParams]):
     The SequenceProcessor (internal usage in tfaip only!) groups multiple MappingDataProcessors into one DataProcessor
     which is then passed to the actual Pipeline.
     """
-
-    def is_valid_sample(self, sample: Sample) -> bool:
-        if sample.inputs is None and self.mode in INPUT_PROCESSOR:
-            return False
-        if sample.targets is None and self.mode in TARGETS_PROCESSOR:
-            return False
-        return True
 
     def apply(self, sample: Sample) -> Optional[Sample]:
         # Apply the complete list of data processors
