@@ -53,7 +53,7 @@ class DeviceConfigParams:
     By default no gpys are added.
     Specify which gpus to use either by setting gpus or CUDA_VISIBLE_DEVICES
     """
-    gpus: List[int] = field(default_factory=default_gpus, metadata=pai_meta(
+    gpus: Optional[List[int]] = field(default=None, metadata=pai_meta(
         help='List of the GPUs to use.'
     ))
     gpu_auto_tune: bool = field(default=False, metadata=pai_meta(
@@ -88,12 +88,13 @@ class DeviceConfig:
 
         logger.info(f'Setting up device config {params}')
         self._params = params
+        gpus = params.gpus if params.gpus is not None else default_gpus()
 
         os.environ['TF_CUDNN_USE_AUTOTUNE'] = '1' if self._params.gpu_auto_tune else '0'
         tf.config.set_soft_device_placement(self._params.soft_device_placement)
         physical_gpu_devices = tf.config.list_physical_devices('GPU')
         try:
-            physical_gpu_devices = [physical_gpu_devices[i] for i in self._params.gpus]
+            physical_gpu_devices = [physical_gpu_devices[i] for i in gpus]
         except IndexError as e:
             raise IndexError(
                 f'GPU device not available. Number of devices detected: {len(physical_gpu_devices)}') from e
