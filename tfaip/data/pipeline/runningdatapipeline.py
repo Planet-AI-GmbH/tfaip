@@ -25,6 +25,7 @@ import tensorflow as tf
 from tensorflow.python.data.experimental import bucket_by_sequence_length
 
 from tfaip import Sample, PipelineMode
+from tfaip.data.pipeline.processor.dataprocessor import is_valid_sample
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
@@ -165,10 +166,11 @@ class RunningDataPipeline:
 
             # Apply the input pipeline
             if input_pipeline:
-                for s in input_pipeline.apply(generate):
-                    yield s
-            else:
-                for s in generate:
+                generate = input_pipeline.apply(generate)
+
+            # Generate the samples (skip invalid samples)
+            for s in generate:
+                if is_valid_sample(s, self.mode):
                     yield s
 
             if not auto_repeat:

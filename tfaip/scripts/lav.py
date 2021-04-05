@@ -17,8 +17,10 @@
 # ==============================================================================
 import json
 import logging
+import os
 from argparse import Action
 
+from tfaip import DataGeneratorParams
 from tfaip.lav.callbacks.dump_results import DumpResultsCallback
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
@@ -53,10 +55,17 @@ class ScenarioSelectionAction(Action):
         export_dir = values
         scenario, scenario_params = ScenarioBase.from_path(export_dir)
 
+        default_gen_params = None
+        if os.path.exists(os.path.join(export_dir, 'trainer_params.json')):
+            # if trainer_params exist load val generator as default
+            with open(os.path.join(export_dir, 'trainer_params.json')) as f:
+                p = scenario.trainer_cls().params_cls().from_json(f.read())
+                default_gen_params = p.gen.lav_gen()[0]
+
         lav_params = scenario.lav_cls().params_cls()()
         lav_params.model_path = export_dir
 
-        parser.add_root_argument('data', scenario.predict_generator_params_cls())
+        parser.add_root_argument('data', DataGeneratorParams, default=default_gen_params)
         parser.add_root_argument('lav', scenario.lav_cls().params_cls(), default=lav_params)
 
         setattr(namespace, self.dest, values)

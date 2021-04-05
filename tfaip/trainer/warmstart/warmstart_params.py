@@ -37,9 +37,15 @@ class WarmStartParams:
         help='Remove the graph name from the loaded model and the target model. This is useful if the model name '
              'changed'
     ))
+
     rename: List[str] = field(default_factory=list, metadata=pai_meta(
         help='A list of renaming rules to perform on the loaded weights. Format: FROM->TO FROM->TO ...'
     ))
+
+    add_suffix: str = field(default="", metadata=pai_meta(
+        help="Add suffix str to all variable names"
+    ))
+
     rename_targets: List[str] = field(default_factory=list, metadata=pai_meta(
         help='A list of renaming rules to perform on the target weights. Format: FROM->TO FROM->TO ...'
     ))
@@ -52,4 +58,3 @@ class WarmStartParams:
     ))
 
     auto_remove_numbers_for: List[str] = field(default_factory=lambda: ['lstm_cell'])
-

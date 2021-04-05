@@ -12,7 +12,7 @@ These guidelines shall be followed when using |tfaip|.
 Conventions
 ~~~~~~~~~~~
 
-|tfaip| follows [Googles Python style guide](https://google.github.io/styleguide/pyguide.html), in short:
+|tfaip| follows `Googles Python style guide <https://google.github.io/styleguide/pyguide.html>`_, in short:
 * Naming of packages: lowercase, no separators, e.g., `ctctransformer`.
 * Naming of files: snake case, e.g., `data_params`
 * Naming of classes: camelcase, e.g., `DataParamsAtr`

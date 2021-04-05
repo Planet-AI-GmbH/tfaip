@@ -62,6 +62,16 @@ class DataProcessorParamsMeta(ABCMeta):
         return cls == subclass or any(cls == sc for sc in subclass.__mro__)
 
 
+def is_valid_sample(sample: Sample, mode: PipelineMode) -> bool:
+    if sample is None:
+        return False
+    if sample.inputs is None and mode in INPUT_PROCESSOR:
+        return False
+    if sample.targets is None and mode in TARGETS_PROCESSOR:
+        return False
+    return True
+
+
 @pai_dataclass
 @dataclass
 class DataProcessorParams(ABC, metaclass=DataProcessorParamsMeta):
@@ -128,13 +138,7 @@ class DataProcessorBase(Generic[T], ABC):
         return True
 
     def is_valid_sample(self, sample: Sample) -> bool:
-        if sample is None:
-            return False
-        if sample.inputs is None and self.mode in INPUT_PROCESSOR:
-            return False
-        if sample.targets is None and self.mode in TARGETS_PROCESSOR:
-            return False
-        return True
+        return is_valid_sample(sample, self.mode)
 
     @typechecked
     def __call__(self, sample: Union[Sample, Iterable[Sample]]) -> Union[Sample, Iterable[Sample]]:

@@ -16,12 +16,13 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Definition of the WarmStarter"""
-from typing import List, Optional, NoReturn
-
-from tfaip import WarmStartParams
-import tensorflow as tf
 import logging
 import re
+from typing import List, Optional, NoReturn
+
+import tensorflow as tf
+
+from tfaip import WarmStartParams
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class WarmStarter:
 
     See WarmStartParams for configuration. Both SavedModels and Checkpoints are supported.
     """
+
     def __init__(self, params: WarmStartParams):
         self._params = params
 
@@ -67,14 +69,15 @@ class WarmStarter:
                     raise ValueError(f"Renaming rule {replace} must follow the 'from->to' schemata")
 
                 name = name.replace(from_to[0], from_to[1])
-
         return name
 
     def _apply_renamings(self, names, rename_params: Optional[List[str]]):
         names = self._trim(names)
         if rename_params:
             names = [self._replace_name(n, rename_params) for n in names]
+
         names = [self._auto_replace_numbers(n) for n in names]
+
         return names
 
     def _auto_replace_numbers(self, name):
@@ -98,22 +101,26 @@ class WarmStarter:
             # if this fails, load the weights as checkpoints, apply additional renamings, and then try to match
             # the source and target weights
             model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
+
             loaded_var_names = self._apply_renamings([w.name for w in model.weights], self._params.rename)
+            model_to_load_var_names = [w.name for w in model.weights]
             loaded_weights = list(zip(loaded_var_names, model.weights, model.get_weights()))
             all_loaded_weights = {name: weight for name, var, weight in loaded_weights if var.trainable}
         except OSError:
             logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
             ckpt = tf.train.load_checkpoint(self._params.model)
             name_shapes = ckpt.get_variable_to_shape_map()
-            var_names_ckpt = name_shapes.keys()
+            model_to_load_var_names = name_shapes.keys()
 
             def rename_ckpt_var_name(name: str):
-                name = name.rstrip('/.ATTRIBUTES/VARIABLE_VALUE')
+                name = name.replace('/.ATTRIBUTES/VARIABLE_VALUE', "")
                 return name
 
-            names = self._apply_renamings(var_names_ckpt, self._params.rename)
+            names = self._apply_renamings(model_to_load_var_names, self._params.rename)
+            if self._params.add_suffix:
+                names = [name + self._params.add_suffix for name in names]
             weights_ckpt = {rename_ckpt_var_name(pp_name): ckpt.get_tensor(name) for pp_name, name in
-                            zip(names, var_names_ckpt)}
+                            zip(names, model_to_load_var_names)}
             all_loaded_weights = weights_ckpt
 
         # Filter the params and validate
@@ -141,11 +148,30 @@ class WarmStarter:
                                 f'\nUse allow_partial to allow partial loading')
 
             names_to_load = names_target
+        if logger.getEffectiveLevel() <= 10:
+            new_weights = []
+            warm_weights_names = []
+            cold_weights_names = []
+            for name in target_var_names:
+                if name in names_to_load:
+                    warm_weights_names.append(name)
+                    new_weights.append(all_loaded_weights[name])
+                else:
+                    cold_weights_names.append(name)
+                    new_weights.append(all_target_weights[name])
+            not_loaded_weights = [name for name in names_loaded if name not in warm_weights_names]
+            newline = '\n\t'
+            logger.debug(f'model-to-load weights:\n {newline.join(model_to_load_var_names)}')
+            logger.debug(f'renamed unmatched weights:\n {newline.join([str(x) for x in not_loaded_weights])}')
+            logger.debug(f'Warm weights:\n {newline.join([str(x) for x in warm_weights_names])}')
+            logger.debug(f'Cold weights:\n {newline.join([str(x) for x in cold_weights_names])}')
 
         new_weights = [all_loaded_weights[name] if name in names_to_load else all_target_weights[name] for name in
                        target_var_names]
         self.apply_weights(target_model, new_weights)
         logger.info(f'Warm-started weights: {names_to_load}')
+        if len(names_to_load) == 0:
+            raise ValueError("No warmstart weight could be matched! Set TFAIP_LOG_LEVEL=debug more information.")
 
     def apply_weights(self, target_model, new_weights) -> NoReturn:
         """

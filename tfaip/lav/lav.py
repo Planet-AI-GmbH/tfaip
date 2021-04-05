@@ -166,6 +166,7 @@ class LAV(ABC):
                 def regroup(i, t, m):
                     return {**i, **t, **m}, t
 
+                # todo (christoph) if input is none warning/exception
                 input_dataset = rd.input_dataset().map(regroup)
 
                 def extract_metric(s: Sample):
