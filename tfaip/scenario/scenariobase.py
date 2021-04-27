@@ -755,10 +755,6 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
                                         **kwargs
                                         )
 
-        if isinstance(self._keras_train_model.optimizer, MovingAverage):
-            # store export model with averaged optimizer weights
-            self._keras_train_model.optimizer.assign_average_vars(self._keras_train_model.variables)
-
     def net_config(self) -> NetConfigParamsBase:
         """
         Create the NetConfigParams for this scenario.

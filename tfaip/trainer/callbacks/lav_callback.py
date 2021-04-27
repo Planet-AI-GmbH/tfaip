@@ -56,7 +56,10 @@ class LAVCallback(Callback):
 
     def on_epoch_begin(self, epoch, logs=None):
         # Determine if LAV should be run in this epoch
-        self.lav_this_epoch = (epoch % self.trainer_params.lav_every_n) == 0 or epoch == self.trainer_params.epochs - 1
+        if epoch < self.trainer_params.lav_min_epoch:
+            self.lav_this_epoch = False
+        else:
+            self.lav_this_epoch = (epoch % self.trainer_params.lav_every_n) == 0 or epoch == self.trainer_params.epochs - 1
 
     def on_epoch_end(self, epoch, logs=None):
         # Run LAV

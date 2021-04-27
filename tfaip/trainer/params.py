@@ -181,6 +181,10 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
         help='Rate at which to LAV the model during training (similar to test, however on the actual prediction model).'
              'LAV uses --data_params lav_lists'
     ))
+    lav_min_epoch: int = field(default=0, metadata=pai_meta(
+        help='The epoch must be at least this value to run. This can be handy if lav takes very long in early epochs '
+             'e.g. in S2S-models'
+    ))
     output_dir: Optional[str] = field(default=None, metadata=pai_meta(
         help='Dictionary to use to write checkpoints, logging files, and export of best and last model.',
         required=True,

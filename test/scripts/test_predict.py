@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import unittest
-from subprocess import check_call
-import tempfile
 import os
+import tempfile
+import unittest
 
+from test.util.workdir import call_in_root
 
 work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tutorial', 'workdir'))
 
@@ -27,14 +27,14 @@ work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tutori
 class TestPredictScript(unittest.TestCase):
     def test_predict_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            check_call(['tfaip-train', 'examples.tutorial.full',
-                        '--trainer.samples_per_epoch', '10',
-                        '--trainer.epochs', '1',
-                        '--trainer.output_dir', d,
-                        '--train.batch_size', '2',
-                        '--val.limit', '10',
-                        ])
-            check_call(['tfaip-predict',
-                        '--data.files', os.path.join(work_dir, 'data', '*.png'),
-                        '--export_dir', os.path.join(d, 'best'),
-                        ])
+            call_in_root(['tfaip-train', 'examples.tutorial.full',
+                          '--trainer.samples_per_epoch', '10',
+                          '--trainer.epochs', '1',
+                          '--trainer.output_dir', d,
+                          '--train.batch_size', '2',
+                          '--val.limit', '10',
+                          ])
+            call_in_root(['tfaip-predict',
+                          '--data.files', os.path.join(work_dir, 'data', '*.png'),
+                          '--export_dir', os.path.join(d, 'best'),
+                          ])

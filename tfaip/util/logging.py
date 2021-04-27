@@ -45,15 +45,30 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception  # Overwrite the excepthook
 
 
-def setup_log(log_dir, append, log_name='train.log'):
-    os.makedirs(log_dir, exist_ok=True)
-    filename = os.path.join(log_dir, log_name)
-    file_handler = logging.FileHandler(filename, 'a' if append else 'w')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level=TFAIP_LOG_LEVEL)
-    logging.getLogger().addHandler(file_handler)
-    this_logger.info(f"Logging training progress to '{filename}'")
-
-
 def logger(name):
     return logging.getLogger(name)
+
+
+class WriteToLogFile:
+    """Context to write logging to a log file
+
+    When exit the stack the log file gets closed and the handler is removed
+    """
+    def __init__(self, log_dir: str, append: bool, log_name='train.log'):
+        assert log_dir is not None
+        os.makedirs(log_dir, exist_ok=True)
+        self.filename = os.path.join(log_dir, log_name)
+        self.file_handler = None
+        self.append = append
+
+    def __enter__(self):
+        self.file_handler = logging.FileHandler(self.filename, 'a' if self.append else 'w')
+        self.file_handler.setFormatter(formatter)
+        self.file_handler.setLevel(level=TFAIP_LOG_LEVEL)
+        logging.getLogger().addHandler(self.file_handler)
+        this_logger.info(f"Logging to '{self.filename}'")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        logging.getLogger().removeHandler(self.file_handler)
+        self.file_handler.flush()
+        self.file_handler.close()

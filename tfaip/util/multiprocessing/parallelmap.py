@@ -37,6 +37,10 @@ def parallel_map(f, d, *,
     if processes <= 0:
         processes = os.cpu_count()
 
+    if len(d) == 0:
+        # Nothing to to
+        return []
+
     processes = min(processes, len(d))
 
     if processes == 1:

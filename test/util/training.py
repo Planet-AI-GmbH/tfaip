@@ -36,7 +36,7 @@ debug_test = sys.flags.debug
 
 def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase],
                                  debug=debug_test,
-                                 delta=None):
+                                 delta=1E-5):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
     # The resulting metrics/loss must be identical
@@ -100,7 +100,7 @@ def single_train_iter(test: unittest.TestCase, scenario: Type[ScenarioBase], deb
 
 
 def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=False,
-                  delta=None,
+                  delta=1E-5,
                   batch_size_test=True,
                   ):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -154,7 +154,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
                 test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
-def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=None, debug=debug_test):
+def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=1E-5, debug=debug_test):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         store_logs_callback = StoreLogsCallback()

@@ -68,6 +68,14 @@ All tests will automatically run for CI/CD.
 Development Setup
 -----------------
 
-Use ``pip install -e <path_to:tf2_aip>`` to link the source, so that changes propagate to the venv without reinstalling (or alternatively ``python setup.py develop``)
+For development support, clone the code, install the requirements in a fresh virtual environment, and link the |tfaip| source to the virtualenv:
 
+.. code-block:: shell
 
+    git clone https://github.com/Planet-AI-GmbH/tfaip.git  # or git clone git@github.com:Planet-AI-GmbH/tfaip.git
+    cd tfaip
+    virtualenv -p python3 venv
+    source venv/bin/activate
+    pip install -U pip  # recommended to get the latest version of pip
+    pip install -r requirements.txt
+    python setup.py develop

@@ -19,7 +19,7 @@ import logging
 from argparse import Action
 
 from tfaip.imports import Trainer
-from tfaip.util.logging import setup_log
+from tfaip.util.logging import WriteToLogFile
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
 logger = logging.getLogger(__name__)
@@ -28,12 +28,6 @@ logger = logging.getLogger(__name__)
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
         output_dir = values
-        setup_log(output_dir, append=True)
-
-        logger.info("=================================================================")
-        logger.info(f"RESUMING TRAINING from {output_dir}")
-        logger.info("=================================================================")
-
         trainer_params, scenario = Trainer.parse_trainer_params(output_dir)
 
         # parse additional args
@@ -48,9 +42,14 @@ def main(args=None):
                         action=ScenarioSelectionAction)
     args = parser.parse_args(args=args)
 
-    # create the trainer
-    trainer = args.scenario_cls.create_trainer(args.trainer, restore=True)
-    trainer.train()
+    with WriteToLogFile(args.trainer.output_dir, append=True):
+        logger.info("=================================================================")
+        logger.info(f"RESUMING TRAINING from {args.trainer.output_dir}")
+        logger.info("=================================================================")
+
+        # create the trainer
+        trainer = args.scenario_cls.create_trainer(args.trainer, restore=True)
+        trainer.train()
 
 
 if __name__ == '__main__':

@@ -16,10 +16,10 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import os
-import unittest
-from subprocess import check_call
 import tempfile
+import unittest
 
+from test.util.workdir import call_in_root
 from tfaip.util.file.oshelper import ChDir
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -30,13 +30,13 @@ class TestExperimenterScript(unittest.TestCase):
     def test_experimenter_example_no_tsp(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             with ChDir(tmp_dir):
-                check_call(['tfaip-experimenter',
-                            '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
-                            '--no_use_tsp',
-                            '--dry_run'])
-                check_call(['tfaip-experimenter',
-                            '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
-                            '--no_use_tsp'])
+                call_in_root(['tfaip-experimenter',
+                              '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
+                              '--no_use_tsp',
+                              '--dry_run'])
+                call_in_root(['tfaip-experimenter',
+                              '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
+                              '--no_use_tsp'])
 
     # Disabled test since weired errors are thrown sometimes
     # def test_experimenter_example_with_tsp(self):

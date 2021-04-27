@@ -17,13 +17,13 @@
 # ==============================================================================
 import logging
 from argparse import Action
+from contextlib import ExitStack
 from typing import Type, TYPE_CHECKING
 
-from tfaip.scenario.scenariobase import import_scenario
 from tfaip import TrainerParams
-from tfaip.util.logging import setup_log
+from tfaip.scenario.scenariobase import import_scenario
+from tfaip.util.logging import WriteToLogFile
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
-
 
 if TYPE_CHECKING:
     from tfaip.imports import ScenarioBase
@@ -36,14 +36,15 @@ def run():
 
 
 def main(scenario: Type['ScenarioBase'], trainer_params: TrainerParams):
-    if trainer_params.output_dir:
-        setup_log(trainer_params.output_dir, append=False)
+    with ExitStack() as stack:
+        if trainer_params.output_dir:
+            stack.enter_context(WriteToLogFile(trainer_params.output_dir, append=False))
 
-    logger.info("trainer_params=" + trainer_params.to_json(indent=2))
+        logger.info("trainer_params=" + trainer_params.to_json(indent=2))
 
-    # create the trainer and run it
-    trainer = scenario.create_trainer(trainer_params)
-    trainer.train()
+        # create the trainer and run it
+        trainer = scenario.create_trainer(trainer_params)
+        trainer.train()
 
 
 class ScenarioSelectionAction(Action):

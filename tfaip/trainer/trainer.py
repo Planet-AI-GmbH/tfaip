@@ -210,11 +210,6 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode='steps'))
         callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback())
-
-        if self._params.lav_every_n >= 1:
-            # LAV callback must be assigned before export best to allow to export based on best LAV
-            callbacks.append(LAVCallback(self._params, self._scenario, extract_logs_cb))
-
         # split storing of parameters and weights
         # first store the actual checkpoint (non EMA weights)
         # after the EarlyStoppingCallback which must be listed after EMACallback we can store the updated trainer
@@ -226,9 +221,15 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             # noinspection PyTypeChecker
             callbacks.append(EMACallback(optimizer))
 
+        if self._params.lav_every_n >= 1:
+            # LAV callback depends on EMACallback
+            # LAV callback must be assigned before export best to allow to export based on best LAV
+            callbacks.append(LAVCallback(self._params, self._scenario, extract_logs_cb))
+
+        # EarlyStoppingCallback depends on LAVCallback and EMA Callback
         callbacks.append(EarlyStoppingCallback(self._scenario, self._params))
 
-        # Now we can store the params
+        # Now we can store the params, depends on EarlyStoppingCallback
         callbacks.append(self.create_train_params_logger_callback(store_params=True, store_weights=False))
 
         if self._params.output_dir:

@@ -222,8 +222,15 @@ class RunningDataPipeline:
                 inputs = args[0]
                 return data_elem_len_fn(inputs)
 
-            num_buckets = len(pipeline_params.bucket_boundaries) + 1
-            bucket_batch_sizes = pipeline_params.bucket_batch_sizes or [pipeline_params.batch_size] * num_buckets
+            if pipeline_params.bucket_batch_sizes:
+                bucket_batch_sizes = pipeline_params.bucket_batch_sizes
+            else:
+                # no batch sizes given, so automatically compute them so that roughly the same amount of "tokens"
+                # is in a batch. The batch size refers to the batch size for the largest bucket
+                max_len = max(pipeline_params.bucket_boundaries)
+                bucket_batch_sizes = [max(1, (pipeline_params.batch_size * size) // max_len) for size in pipeline_params.bucket_boundaries]
+                bucket_batch_sizes.append(bucket_batch_sizes[-1])  # for sizes larger than the upper bucked boundary
+
             return dataset.apply(bucket_by_sequence_length(
                 element_length_func=element_length_func,
                 bucket_batch_sizes=bucket_batch_sizes,

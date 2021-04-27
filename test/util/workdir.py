@@ -16,8 +16,11 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import os
+import platform
+from subprocess import check_call
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
+root_dir = os.path.join(this_dir, '..', '..')
 
 
 def workdir_path(name: str, *args):
@@ -37,3 +40,14 @@ def workdir_path(name: str, *args):
     assert(os.path.exists(wd))
     assert(os.path.isdir(wd))
     return os.path.join(wd, *args)
+
+
+def call_in_root(args, env=None):
+    if env is None:
+        env = os.environ.copy()
+    sep = ';' if platform.system() == 'Windows' else ':'
+    if 'PYTHONPATH' in env:
+        env['PYTHONPATH'] += sep + os.path.join(root_dir)
+    else:
+        env['PYTHONPATH'] = os.path.join(root_dir)
+    return check_call(args, env=env)
