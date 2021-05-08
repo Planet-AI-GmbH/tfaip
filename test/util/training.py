@@ -23,6 +23,7 @@ import time
 import unittest
 from typing import Type
 
+import numpy as np
 from tensorflow.keras.backend import clear_session
 
 from test.util.store_logs_callback import StoreLogsCallback
@@ -102,6 +103,8 @@ def single_train_iter(test: unittest.TestCase, scenario: Type[ScenarioBase], deb
 def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=False,
                   delta=1E-5,
                   batch_size_test=True,
+                  ignore_binary_metric=False,
+                  ignore_array_metric=False
                   ):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
@@ -148,10 +151,25 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
             lav_params.pipeline.batch_size = batch_and_limit
             lav_params.pipeline.limit = batch_and_limit
             lav = scenario.create_lav(lav_params, scenario_params)
-            bs5_results = next(lav.run([trainer_params.gen.val_gen()]))
+            bs5_results = next(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug))
             time.sleep(0.5)
             for k in bs1_results.keys():
-                test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
+                if type(bs1_results[k]) == bytes:
+                    if ignore_binary_metric:
+                        continue
+                    else:
+                        test.assertEqual(bs1_results[k], bs5_results[k], msg=f"on key {k}")
+                elif type(bs1_results[k]).__module__ == 'numpy':
+                    if ignore_array_metric:
+                        continue
+                    else:
+                        for x1, x5 in zip(np.reshape(bs1_results[k], [-1]), np.reshape(bs5_results[k], [-1])):
+                            if str(bs1_results[k].dtype).startswith('int'):
+                                test.assertEqual(x1, x5, msg=f"on key {k}")
+                            else:
+                                test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
+                else:
+                    test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
 def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=1E-5, debug=debug_test):

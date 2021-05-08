@@ -71,7 +71,7 @@ class LAVCallback(Callback):
         start = time.time()
         logs = logs if logs else {}
         for i, r in enumerate(
-                self.lav.run(self.trainer_params.gen.lav_gen(), self.scenario.keras_predict_model)):
+                self.lav.run(self.trainer_params.gen.lav_gen(), self.scenario.keras_predict_model, run_eagerly=self.trainer_params.force_eager)):
             logs_str = ' - '.join(
                 f'{k}: {np.mean(r[k]):.4f}' for k in sorted(r.keys()) if not isinstance(r[k], bytes))
             logs_str = f'LAV l{i} Metrics (dt={(time.time() - start) / 60:.2f}min) - {logs_str}'

@@ -55,7 +55,7 @@ class ScenarioSelectionAction(Action):
         export_dir = values
         scenario, scenario_params = ScenarioBase.from_path(export_dir)
 
-        default_gen_params = None
+        default_gen_params = scenario.predict_generator_params_cls()()
         if os.path.exists(os.path.join(export_dir, 'trainer_params.json')):
             # if trainer_params exist load val generator as default
             with open(os.path.join(export_dir, 'trainer_params.json')) as f:

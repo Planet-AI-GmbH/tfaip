@@ -39,7 +39,7 @@ class LayerBaseParams(ABC):
         raise NotImplementedError
 
     def create(self):
-        return self.cls()(self)
+        return self.cls()(params=self)
 
 
 TLP = TypeVar('TLP', bound=LayerBaseParams)

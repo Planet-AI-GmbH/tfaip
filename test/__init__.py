@@ -17,6 +17,7 @@
 # ==============================================================================
 import os
 import sys
+import tfaip.util.logging  # do not delete
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 

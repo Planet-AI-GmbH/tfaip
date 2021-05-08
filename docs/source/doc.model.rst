@@ -261,11 +261,13 @@ Exporting additional graphs
                        inputs: Dict[str, tf.Tensor],
                        outputs: Dict[str, tf.Tensor],
                        targets: Dict[str, tf.Tensor],
-                       ) -> List[ExportGraph]:
-        return [ExportGraph("default", inputs=inputs, outputs=outputs)]
+                       ) -> Dict[str, tf.keras.Model]:
+        # Override this function
+        del targets  # not required in the default implementation
+        return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
 
 This function defines the graphs to export.
 By default, this is the graph defined by all inputs and all outputs.
 Override this function to export a different or additional graphs, e.g., if you want to only export the encoder in an encoder/decoder setup.
-The ``ExportGraph`` data-structure expects a name, and the inputs and outputs of the ``keras.models.Model`` to export.
+Return a Dict with ``label`` and ``keras.models.Model`` to export.
 

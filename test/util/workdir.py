@@ -30,15 +30,19 @@ def workdir_path(name: str, *args):
     name = os.path.abspath(name)
     if scenario_dir not in name:
         scenario_dir = 'tfaip_scenario_test'
-    assert(scenario_dir in name)
+    return workdir_path_with_path(name, scenario_dir, *args)
+
+
+def workdir_path_with_path(name: str, scenario_dir: str, *args):
+    assert (scenario_dir in name)
     pos = name.find('/', name.rfind(scenario_dir) + len(scenario_dir) + 1)
     if pos >= 0:
         base_dir = name[:pos]
     else:
         base_dir = os.path.dirname(name)
     wd = os.path.join(base_dir, 'workdir')
-    assert(os.path.exists(wd))
-    assert(os.path.isdir(wd))
+    assert (os.path.exists(wd))
+    assert (os.path.isdir(wd))
     return os.path.join(wd, *args)
 
 

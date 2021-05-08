@@ -36,7 +36,6 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from paiargparse import pai_dataclass
 from tensorflow.python.keras.metrics import MeanMetricWrapper
-from tensorflow_addons.optimizers import MovingAverage
 
 from tfaip import DataGeneratorParams, ScenarioBaseParams
 from tfaip import PipelineMode
@@ -45,12 +44,12 @@ from tfaip import TrainerPipelineParamsBase
 from tfaip.data.data import DataBase
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.multilav import MultiLAV
-from tfaip.model.exportgraph import ExportGraph
 from tfaip.model.modelbase import ModelBase
 from tfaip.scenario.scenariobaseparams import NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.scenario.util.keras_debug_model import KerasDebugModel
 from tfaip.scenario.util.outputholder import OutputHolderMetricWrapper
 from tfaip.scenario.util.print_evaluate_layer import PrintEvaluateLayer
+from tfaip.scenario.util.print_model_structure import print_all_layers
 from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.tfaipargparse import post_init
 from tfaip.util.tftyping import AnyTensor
@@ -362,7 +361,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         self._params = params
         self._keras_model_data = KerasModelData([], [], [])
         self._keras_train_model: Optional[keras.Model] = None
-        self._export_graphs: Dict[str, ExportGraph] = {}
+        self._export_graphs: Dict[str, keras.Model] = {}
         self._keras_predict_model: Optional[keras.Model] = None
         self.data: Optional[TData] = None
         self.model: Optional[TModel] = None
@@ -427,7 +426,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
                 else:
                     path_serve = os.path.join(path, self._params.additional_serve_dir, label)
                 os.makedirs(os.path.dirname(path_serve), exist_ok=True)
-                export_graph.model.save(path_serve, include_optimizer=False)
+                export_graph.save(path_serve, include_optimizer=False)
 
         # Export the NetConfigBaseParams
         if self._params.export_net_config:
@@ -455,6 +454,17 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         """
         os.makedirs(os.path.join(root_path), exist_ok=True)
         self.data.dump_resources(root_path, scenario_params_dict['data'])  # export the data resources
+
+    def _print_all_layer(self) -> NoReturn:
+        """
+        Print all model params in detail
+
+        Note: the implementation was tested for Tensorflow 2.3 und 2.4 and might need updates in the future
+        since private functions are used that are not part of the official API.
+
+        Args:
+        """
+        print_all_layers(self._keras_train_model, logger.info)
 
     def _set_no_train_scope(self, regex: Optional[str]) -> NoReturn:
         """
@@ -607,7 +617,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         self._set_no_train_scope(no_train_scope)  # exclude layers from training
         logger.info('Building prediction/export keras model (for export and decoding)')
         self._export_graphs = self.model.export_graphs(real_inputs, pred_outputs, real_targets)
-        self._keras_predict_model = self._export_graphs['default'].model
+        self._keras_predict_model = self._export_graphs['default']
 
         # compile the model but with a dummy loss that just returns the 'output' loss
         # the same goes for the metric
@@ -732,7 +742,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
             initial_epoch: Initial epoch (use if resuming the training)
             **kwargs: Additional args passed to keras.Model.fit
         """
-        self._keras_train_model.summary(print_fn=logger.info)
+        self._print_all_layer()
 
         with ExitStack() as stack:
             # Fill the exit stack that collects `__enter__` of all pipelines that are created.

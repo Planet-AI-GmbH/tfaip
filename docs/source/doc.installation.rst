@@ -15,6 +15,7 @@ You need to install the following on your system:
 
 * Python 3.7 or later, including
 * the python development packages (on Ubuntu ``apt install python3.7 python3.7-dev``, if not available in your distribution, use the `deadsnakes repo <https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa>`_ for ubuntu based distros)
+* a gcc compiler and all other build essentials (on Ubuntu ``apt install build-essential``)
 * (optional) cuda/cudnn libs for GPU support, see `tensorflow <https://www.tensorflow.org/install/source#tested_build_configurations>`_ for the versions which are required/compatible.
 
 Setup in a Virtual Environment

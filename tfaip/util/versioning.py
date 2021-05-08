@@ -19,7 +19,6 @@
 import logging
 from typing import Optional
 import os
-import git
 
 logger = logging.getLogger(__name__)
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -30,6 +29,7 @@ def get_commit_hash() -> Optional[str]:
     Retrieve the commit hash of tfaip or None if tfaip is not installed via git, e.g. directly from the pip packages.
     """
     try:
+        import git  # local import so that no crash occurs if git is not installed
         repo = git.Repo(path=this_dir, search_parent_directories=True)
         h = repo.head.object.hexsha
         logger.debug(f"Git commit hash {h}")

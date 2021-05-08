@@ -32,6 +32,7 @@ class KerasDebugModel(keras.Model):
     def __init__(self, model: ModelBase):
         super().__init__()
         self.model = model
+        model.setup()
 
     def call(self, inputs_targets, training=None, mask=None):
         outputs = self.model.build(inputs_targets)

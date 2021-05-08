@@ -64,7 +64,7 @@ class DataProcessorPipelineParams(ABC):
         """
         Check if a DataProcessor of type `t` is present anywhere in the pipeline
         """
-        return t in self.processors_of_type(t)
+        return len(self.processors_of_type(t)) > 0
 
     @abstractmethod
     def flatten_processors(self) -> List[DataProcessorParams]:

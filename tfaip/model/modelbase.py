@@ -26,7 +26,6 @@ from typeguard import typechecked
 from tfaip import ModelBaseParams
 from tfaip import Sample
 from tfaip.data.data import DataBase
-from tfaip.model.exportgraph import ExportGraph
 from tfaip.model.losses.definitions import LossDefinition
 from tfaip.model.metric.definitions import MetricDefinition
 from tfaip.model.metric.multi import MultiMetricDefinition
@@ -93,6 +92,10 @@ class ModelBase(Generic[TMP], ABC):
         self._graph = None
         self._tensorboard_handler = self._create_tensorboard_handler()
 
+    def setup(self):
+        if not self._graph:
+            self._graph = self.create_graph(self._params)
+
     @property
     def params(self) -> TMP:
         return self._params
@@ -118,8 +121,7 @@ class ModelBase(Generic[TMP], ABC):
         :param inputs_targets: Dictionary of both the inputs and the targets
         :return: The outputs of the model
         """
-        if not self._graph:
-            self._graph = self.create_graph(self._params)
+        self.setup()
         return self._graph(inputs_targets)
 
     @abstractmethod
@@ -287,8 +289,8 @@ class ModelBase(Generic[TMP], ABC):
                       inputs: Dict[str, AnyTensor],
                       outputs: Dict[str, AnyTensor],
                       targets: Dict[str, AnyTensor],
-                      ) -> Dict[str, ExportGraph]:
-        eg = {g.label: g for g in self._export_graphs(inputs, outputs, targets)}
+                      ) -> Dict[str, tf.keras.Model]:
+        eg = self._export_graphs(inputs, outputs, targets)
         if 'default' not in eg:
             raise KeyError(f'Expected at least an export graph with label "default" in {eg}.')
         return eg
@@ -297,10 +299,10 @@ class ModelBase(Generic[TMP], ABC):
                        inputs: Dict[str, tf.Tensor],
                        outputs: Dict[str, tf.Tensor],
                        targets: Dict[str, tf.Tensor],
-                       ) -> List[ExportGraph]:
+                       ) -> Dict[str, tf.keras.Model]:
         # Override this function
         del targets  # not required in the default implementation
-        return [ExportGraph('default', inputs=inputs, outputs=outputs)]
+        return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
 
     @property
     def tensorboard_handler(self):

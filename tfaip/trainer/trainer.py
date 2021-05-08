@@ -132,6 +132,11 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
     @distribute_strategy
     def train(self, callbacks=None):
+        if self._params.random_seed is not None:
+            # Set fixed random seed for training if desired, this makes training independent of previous operations
+            # such as loading/creating model from scratch
+            set_global_random_seed(self._params.random_seed + 1)
+
         self.setup_steps_per_epoch()
 
         self._params.learning_rate.epochs = self._params.epochs
@@ -167,10 +172,6 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             logger.info(
                 f'Starting training in epoch {self._params.current_epoch}. '
                 f'{self._params.epochs - self._params.current_epoch} remaining.')
-            if self._params.random_seed is not None:
-                # Set fixed random seed for training if desired, this makes training independent of previous operations
-                # such as loading/creating model from scratch
-                set_global_random_seed(self._params.random_seed + 1)
 
             self._callbacks = callbacks
             self.fit()
