@@ -21,7 +21,7 @@ The global imports import static classes such as parameters and definitions.
 The other classes can be imported from ``tfaip.imports``
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 from tfaip.data.databaseparams import DataBaseParams, DataGeneratorParams
 # IMPORTANT!!!
