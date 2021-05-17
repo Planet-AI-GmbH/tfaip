@@ -21,6 +21,7 @@ from typing import TypeVar, Generic
 
 from paiargparse import pai_dataclass
 from tensorflow import keras
+from tfaip.model.layerbase import TFAIPLayerBase
 
 
 @pai_dataclass
@@ -34,7 +35,7 @@ class TutorialBackendParams(ABC):
 TBP = TypeVar("TBP", bound=TutorialBackendParams)
 
 
-class TutorialBackend(Generic[TBP], keras.layers.Layer):
+class TutorialBackend(Generic[TBP], TFAIPLayerBase):
     """
     This class defines the interface for creating backends
     """

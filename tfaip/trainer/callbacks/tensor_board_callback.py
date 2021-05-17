@@ -43,7 +43,6 @@ class TensorBoardCallback(TensorBoard):
 
     def __init__(self, log_dir, steps_per_epoch,
                  extracted_logs_cb: 'ExtractLogsCallback',
-                 data_handler: TensorBoardDataHandler,
                  reset=False, profile=0,
                  **kwargs):
         if reset:
@@ -55,14 +54,13 @@ class TensorBoardCallback(TensorBoard):
         super().__init__(log_dir=log_dir, profile_batch=profile, **kwargs)
         self.steps_per_epoch = steps_per_epoch
         self.extracted_logs_cb = extracted_logs_cb
-        self.data_handler = data_handler
 
         self._lav_dir = os.path.join(log_dir, 'lav')
 
     def _lav_writer(self, idx):
-        label = f'lav_{idx}'
+        label = f'lav_l{idx}'
         if label not in self._writers:
-            lav_dir = f'{self._lav_dir}_{idx}'
+            lav_dir = f'{self._lav_dir}_l{idx}'
             os.makedirs(lav_dir, exist_ok=True)
             self._writers[label] = summary_ops_v2.create_file_writer_v2(lav_dir)
         return self._writers[label]
@@ -92,12 +90,12 @@ class TensorBoardCallback(TensorBoard):
             if train_logs:
                 with self._train_writer.as_default():
                     for name, value in train_logs.items():
-                        self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)
             if val_logs:
                 with self._val_writer.as_default():
                     for name, value in val_logs.items():
                         name = name[4:]  # Remove 'val_' prefix.
-                        self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)
 
             # lav logs, include lav list idx
             if lav_logs:
@@ -115,4 +113,4 @@ class TensorBoardCallback(TensorBoard):
                 for idx, v in lavs.items():
                     with self._lav_writer(idx).as_default():
                         for name, value in v.items():
-                            self.data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                            self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)

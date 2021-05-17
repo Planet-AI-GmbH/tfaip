@@ -21,7 +21,7 @@ from examples.template.listfile.params import TemplateScenarioParams
 from tfaip.scenario.listfile.listfilescenario import ListFileScenario
 
 
-class TemplateScenario(ListFileScenario[TemplateData, TemplateModel, TemplateScenarioParams]):
+class TemplateScenario(ListFileScenario[TemplateScenarioParams]):
     @classmethod
     def default_trainer_params(cls):
         p = super().default_trainer_params()

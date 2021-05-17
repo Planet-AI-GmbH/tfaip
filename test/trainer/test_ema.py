@@ -20,7 +20,6 @@ import unittest
 from tensorflow.keras.backend import clear_session
 
 from test.tutorial.test_tutorial_full import TutorialScenarioTest
-from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.data.databaseparams import DataPipelineParams
 
 
@@ -52,23 +51,20 @@ class TestEMA(unittest.TestCase):
     def test_ema_on_tutorial(self):
         # Train with ema and without ema with same seeds
         # train loss must be equals, but with ema the validation outcomes must be different
-        store_logs_callback = StoreLogsCallback()
         trainer_params = ScenarioTest.default_trainer_params()
         trainer = ScenarioTest.create_trainer(trainer_params)
-        trainer.train(callbacks=[store_logs_callback])
-        first_train_logs = store_logs_callback.logs
+        first_train_logs = trainer.train()
 
         clear_session()
         trainer_params.ema_decay = 0.9
         trainer_params.current_epoch = 0
 
-        store_logs_callback = StoreLogsCallback()
         trainer = ScenarioTest.create_trainer(trainer_params)
-        trainer.train(callbacks=[store_logs_callback])
+        after_train_logs = trainer.train()
 
         # loss and acc on train must be equal, but lower on val
-        self.assertEqual(first_train_logs['keras_loss'], store_logs_callback.logs['keras_loss'])
-        self.assertEqual(first_train_logs['extended_loss'], store_logs_callback.logs['extended_loss'])
-        self.assertEqual(first_train_logs['acc'], store_logs_callback.logs['acc'])
-        self.assertLess(first_train_logs['val_loss'], store_logs_callback.logs['val_loss'])
-        self.assertGreaterEqual(first_train_logs['val_acc'], store_logs_callback.logs['val_acc'])
+        self.assertEqual(first_train_logs['keras_loss'], after_train_logs['keras_loss'])
+        self.assertEqual(first_train_logs['raw_loss'], after_train_logs['raw_loss'])
+        self.assertEqual(first_train_logs['acc'], after_train_logs['acc'])
+        self.assertLess(first_train_logs['val_loss'], after_train_logs['val_loss'])
+        self.assertGreaterEqual(first_train_logs['val_acc'], after_train_logs['val_acc'])

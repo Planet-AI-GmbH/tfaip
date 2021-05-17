@@ -35,25 +35,18 @@ To implement a ``ScenarioBase``, first :ref:`setup a directory and the files<doc
 
     @pai_dataclass
     @dataclass
-    class MyScenarioParams(ScenarioBaseParams[DataBaseParams, ModelBaseParams]):
-        pass
-
-    # alternatively, if custom data and/or model params are defined
-    @pai_dataclass
-    @dataclass
     class MyScenarioParams(ScenarioBaseParams[MyDataParams, MyModelParams]):
         pass
 
-The generics (``DataBaseParams`` and ``ModelBaseParams``) define the parameters for the data and the model and can also be implemented.
+The ``MyDataParams`` and ``MyModelParams`` implement ``DataBaseParams`` and ``ModelBaseParams`` to define the parameters for the data and the model.
 
 Next, implement the actual scenario:
 
 .. code-block:: python
 
-    class MyScenario(ScenarioBase[MyModel, MyData, MyScenarioParams, MyTrainerPipelineParams]):
+    class MyScenario(ScenarioBase[MyScenarioParams, MyTrainerPipelineParams]):
         pass
 
-The four generics are used to glue together the different modules. ``MyData`` must then be implemented as a ``DataBase``, ``MyModel`` as a ``ModelBase``.
 The ``MyTrainerPipelineParams`` define how the input data source for training and extend either ``TrainerPipelineParamsBase`` or ``TrainerPipelineParams``.
 The derived ``ListFileScenario`` already implements the ``TrainerPipelineParams`` by assuming a list file as input (see :ref:`here<doc.scenario:listfilescenario>`).
 
@@ -150,5 +143,5 @@ Note, that both classes are empty since in most cases no extra functionality is 
     class ScenarioParams(ScenarioBaseParams[DataParams, ModelParams]):
         pass
 
-    class Scenario(ListFileScenario(Data, Model, ScenarioParams)):
+    class Scenario(ListFileScenario(ScenarioParams)):
         pass

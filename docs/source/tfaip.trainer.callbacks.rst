@@ -19,10 +19,6 @@ ExtractLogsCallback
 -------------------
 .. automodule:: tfaip.trainer.callbacks.extract_logs
 
-FixLogLabels
-------------
-.. automodule:: tfaip.trainer.callbacks.fix_logs_labels
-
 LAVCallback
 -----------
 .. automodule:: tfaip.trainer.callbacks.lav_callback

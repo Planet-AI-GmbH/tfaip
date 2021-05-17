@@ -15,13 +15,11 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from examples.template.general.data import TemplateData
-from examples.template.general.model import TemplateModel
 from examples.template.general.params import TemplateScenarioParams, TemplateTrainerGeneratorParams
 from tfaip.scenario.scenariobase import ScenarioBase
 
 
-class TemplateScenario(ScenarioBase[TemplateData, TemplateModel, TemplateScenarioParams, TemplateTrainerGeneratorParams]):
+class TemplateScenario(ScenarioBase[TemplateScenarioParams, TemplateTrainerGeneratorParams]):
     @classmethod
     def default_trainer_params(cls):
         p = super().default_trainer_params()

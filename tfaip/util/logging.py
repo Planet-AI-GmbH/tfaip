@@ -62,7 +62,7 @@ class WriteToLogFile:
         self.append = append
 
     def __enter__(self):
-        self.file_handler = logging.FileHandler(self.filename, 'a' if self.append else 'w')
+        self.file_handler = logging.FileHandler(self.filename, 'a' if self.append else 'w', encoding='utf-8')
         self.file_handler.setFormatter(formatter)
         self.file_handler.setLevel(level=TFAIP_LOG_LEVEL)
         logging.getLogger().addHandler(self.file_handler)

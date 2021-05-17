@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-"""Definition of the LAVCallback"""
+"""Definition of the LAVCallback
+"""
 import logging
 import os
 import time
@@ -32,8 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class LAVCallback(Callback):
-    """
-    This callback runs LAV at the end of a epoch.
+    """This callback runs LAV at the end of a epoch.
 
     All output metrics of LAV are added to the logs (prefix lav_) and can thus be accessed in other callbacks.
     Therefore, LAV results are also added to the tensorboard (with a custom LAV handler)
@@ -71,7 +71,10 @@ class LAVCallback(Callback):
         start = time.time()
         logs = logs if logs else {}
         for i, r in enumerate(
-                self.lav.run(self.trainer_params.gen.lav_gen(), self.scenario.keras_predict_model, run_eagerly=self.trainer_params.force_eager)):
+                self.lav.run(self.trainer_params.gen.lav_gen(),
+                             self.scenario.keras_predict_model,
+                             run_eagerly=self.trainer_params.force_eager,
+                             return_tensorboard_outputs=True)):
             logs_str = ' - '.join(
                 f'{k}: {np.mean(r[k]):.4f}' for k in sorted(r.keys()) if not isinstance(r[k], bytes))
             logs_str = f'LAV l{i} Metrics (dt={(time.time() - start) / 60:.2f}min) - {logs_str}'
@@ -79,7 +82,7 @@ class LAVCallback(Callback):
             for k, v in r.items():
                 if 'multi_metric' in k:
                     continue
-                if self.scenario.model.tensorboard_handler.is_tensorboard_only(k, v):
+                if self.extract_logs_cb.tensorboard_data_handler.is_tensorboard_only(k, v):
                     self.extract_logs_cb.extracted_logs[f'lav_l{i}_{k}'] = v
                 else:
                     logs[f'lav_l{i}_{k}'] = v

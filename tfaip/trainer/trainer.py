@@ -21,9 +21,10 @@ import logging
 import os
 from abc import ABC
 from datetime import datetime
-from typing import Type, Tuple, Union, TypeVar, Generic, Optional
+from typing import Type, Tuple, Union, TypeVar, Generic, Optional, Dict
 
 import tensorflow as tf
+from tfaip.util.typing import AnyNumpy
 from typeguard import typechecked
 
 from tfaip import TrainerParams
@@ -33,7 +34,6 @@ from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback
 from tfaip.trainer.callbacks.earlystopping.callback import EarlyStoppingCallback
 from tfaip.trainer.callbacks.ema_callback import EMACallback
 from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
-from tfaip.trainer.callbacks.fix_logs_labels import FixLogLabelsCallback
 from tfaip.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.trainer.callbacks.logger_callback import LoggerCallback
 from tfaip.trainer.callbacks.progbar import TFAIPProgbarLogger
@@ -113,12 +113,11 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             '%Y-%m-%d')
 
         self._scenario = scenario
-        scenario.setup()
-        self._data = scenario.data
-        self._model = scenario.model
         self.stop_training = False
         self._steps_per_epoch: Optional[int] = None  # Not initialized yet
         self._callbacks = []
+        self._data = None
+        self._model = None
 
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(self._params.tf_cpp_min_log_level)
 
@@ -130,13 +129,32 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
     def params(self):
         return self._params
 
-    @distribute_strategy
-    def train(self, callbacks=None):
+    def setup_data(self):
+        if self._data is not None:
+            return
+
+        self._data = self._scenario.data
+
+    def setup_model(self):
+        if self._model is not None:
+            return
+
         if self._params.random_seed is not None:
             # Set fixed random seed for training if desired, this makes training independent of previous operations
             # such as loading/creating model from scratch
             set_global_random_seed(self._params.random_seed + 1)
 
+        self._model = self._scenario.model
+
+    @distribute_strategy
+    def train(self, callbacks=None) -> Dict[str, AnyNumpy]:
+        """ Start training
+
+        Returns:
+            The last logs
+        """
+        self.setup_data()
+        self.setup_model()
         self.setup_steps_per_epoch()
 
         self._params.learning_rate.epochs = self._params.epochs
@@ -159,10 +177,11 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             if self._params.warmstart.model:
                 logger.warning('Ignoring warmstart since training is resumed from a checkpoint')
         else:
-            custom_objects = self._model.__class__.all_custom_objects()
+            custom_objects = self._model.all_custom_objects()
             self.create_warmstarter().warmstart(self._scenario.keras_train_model, custom_objects)
 
         callbacks = self.setup_callbacks(optimizer, callbacks)
+        logger_callback = next(c for c in callbacks if isinstance(c, LoggerCallback))  # get the logger callback
 
         if self._params.epochs <= self._params.current_epoch:
             logger.warning(
@@ -180,6 +199,8 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         if self._params.output_dir and self._params.export_final:
             logger.info('Final export of the model.')
             self._scenario.export(os.path.join(self._params.output_dir, 'export'))
+
+        return logger_callback.last_logs
 
     def create_train_params_logger_callback(self, store_weights, store_params):
         if self._params.output_dir:
@@ -203,10 +224,8 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
                         ):
         external_callbacks = callbacks
         callbacks = []
-        tensorboard_data_handler = self._model.tensorboard_handler
 
-        callbacks.append(FixLogLabelsCallback())
-        extract_logs_cb = ExtractLogsCallback(tensorboard_data_handler)
+        extract_logs_cb = ExtractLogsCallback()
         callbacks.append(extract_logs_cb)
         callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode='steps'))
         callbacks.append(TensorflowFix())
@@ -238,7 +257,6 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             callbacks.append(TensorBoardCallback(log_dir=self._params.output_dir,
                                                  steps_per_epoch=self._steps_per_epoch,
                                                  extracted_logs_cb=extract_logs_cb,
-                                                 data_handler=tensorboard_data_handler,
                                                  reset=self._params.current_epoch == 0,
                                                  profile='10,20' if self._params.profile else 0))
 

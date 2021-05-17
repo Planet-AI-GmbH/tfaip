@@ -19,17 +19,17 @@ from dataclasses import dataclass
 
 from paiargparse import pai_dataclass
 
-from tfaip import ScenarioBaseParams, DataBaseParams
+from tfaip import ScenarioBaseParams
 from tfaip.imports import ScenarioBase
-from examples.tutorial.min.data import TutorialData, TutorialTrainerGeneratorParams
-from examples.tutorial.min.model import TutorialModel, TutorialModelParams
+from examples.tutorial.min.data import TutorialTrainerGeneratorParams, TutorialDataParams
+from examples.tutorial.min.model import TutorialModelParams
 
 
 @pai_dataclass
 @dataclass
-class TutorialScenarioParams(ScenarioBaseParams[DataBaseParams, TutorialModelParams]):
+class TutorialScenarioParams(ScenarioBaseParams[TutorialDataParams, TutorialModelParams]):
     pass
 
 
-class TutorialScenario(ScenarioBase[TutorialData, TutorialModel, TutorialScenarioParams, TutorialTrainerGeneratorParams]):
+class TutorialScenario(ScenarioBase[TutorialScenarioParams, TutorialTrainerGeneratorParams]):
     pass

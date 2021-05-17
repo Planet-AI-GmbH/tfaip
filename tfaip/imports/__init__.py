@@ -26,8 +26,6 @@ from tfaip.lav.lav import LAV
 from tfaip.model.modelbase import ModelBase
 from tfaip.model.graphbase import GraphBase
 from tfaip.model.metric.multi import MultiMetricDefinition, MultiMetric
-from tfaip.model.metric.definitions import MetricDefinition
-from tfaip.model.losses.definitions import LossDefinition
 from tfaip.predict.predictor import Predictor
 from tfaip.predict.multimodelpredictor import MultiModelPredictor, MultiModelVoter
 from tfaip.scenario.scenariobase import ScenarioBase

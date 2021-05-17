@@ -15,34 +15,27 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from typing import Dict
+from typing import Dict, List
 
-from examples.template.general.graphs import TemplateGraph
 from examples.template.general.params import TemplateModelParams
 from tfaip import Sample
-from tfaip.model.graphbase import GraphBase
-from tfaip.model.losses.definitions import LossDefinition
-from tfaip.model.metric.definitions import MetricDefinition
 from tfaip.model.modelbase import ModelBase
+from tfaip.util.tftyping import AnyTensor
 
 
 class TemplateModel(ModelBase[TemplateModelParams]):
-    def create_graph(self, params: TemplateModelParams) -> 'GraphBase':
-        # Create an instance of the graph (layers will be created but are not connected yet!)
-        return TemplateGraph(params)
-
     def _best_logging_settings(self):
         # Return the settings how the best model shall be detected, e.g. the maximum accuracy (acc is a metric which
         # must be defined in _metric or _extended_metric):
         # return "max", "acc"
         raise NotImplementedError
 
-    def _loss(self) -> Dict[str, LossDefinition]:
-        # Implement the loss for this scenario (alternative use _extended_loss)
+    def _loss(self, inputs, targets, outputs) -> Dict[str, AnyTensor]:
+        # Implement the loss for this scenario
         raise NotImplementedError
 
-    def _metric(self) -> Dict[str, MetricDefinition]:
-        # (optional) Implement the metric for the scenario (see also _extended_metric)
+    def _metric(self, inputs, targets, outputs) -> List[AnyTensor]:
+        # Implement the metrics of the scenario
         raise NotImplementedError
 
     def _print_evaluate(self, sample: Sample, data, print_fn=print):

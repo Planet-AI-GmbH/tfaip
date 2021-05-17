@@ -25,6 +25,6 @@ class TemplateGraph(GraphBase[TemplateModelParams]):
         # Create all layers
         raise NotImplementedError
 
-    def call(self, inputs, **kwargs):
+    def build_graph(self, inputs, training=None):
         # Connect all layers and return a dict of the outputs
         raise NotImplementedError

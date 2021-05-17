@@ -20,10 +20,12 @@ import json
 from typing import Union, Iterable
 
 from tensorflow import keras
+import tensorflow as tf
 
 from tfaip import Sample
 from tfaip.predict.predictorbase import PredictorBase
 from tfaip.util.json_helper import TFAIPJsonDecoder
+
 
 
 class Predictor(PredictorBase):
@@ -47,10 +49,7 @@ class Predictor(PredictorBase):
             raise ValueError(f'Outputs are empty: {outputs}') from e
 
         for i in range(batch_size):
-            un_batched_outputs = {k: v[i] for k, v in outputs.items()}
-            un_batched_inputs = {k: v[i] for k, v in inputs.items()}
-            un_batched_targets = {k: v[i] for k, v in targets.items()}
-            un_batched_meta = {k: v[i] for k, v in meta.items()}
+            un_batched_outputs, un_batched_inputs, un_batched_targets, un_batched_meta = tf.nest.map_structure(lambda x: x[i], (outputs, inputs, targets, meta))
             parsed_meta = json.loads(un_batched_meta['meta'][0].decode('utf-8'), cls=TFAIPJsonDecoder)
             sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets,
                             meta=parsed_meta)

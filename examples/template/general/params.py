@@ -35,14 +35,26 @@ class TemplateTrainerGeneratorParams(TrainerPipelineParams[TemplateDataGenerator
 @dataclass
 class TemplateDataParams(DataBaseParams):
     # [Add global data params that can be accessed by every data processor]
-    pass
+
+    @staticmethod
+    def cls():
+        from examples.template.general.data import TemplateData
+        return TemplateData
 
 
 @pai_dataclass
 @dataclass
 class TemplateModelParams(ModelBaseParams):
     # [Add general model params, also including parameters that define the graph]
-    pass
+
+    @staticmethod
+    def cls():
+        from examples.template.general.model import TemplateModel
+        return TemplateModel
+
+    def graph_cls(self):
+        from examples.template.general.graphs import TemplateGraph
+        return TemplateGraph
 
 
 @pai_dataclass

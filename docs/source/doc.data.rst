@@ -26,7 +26,14 @@ A data class has to extend ``from tfaip.data.data import DataBase`` and implemen
 
 .. code-block:: python
 
-    class Data(DataBase[DataBaseParams]):
+    @pai_dataclass
+    @dataclass
+    class DataParams(DataBaseParams):
+        @staticmethod
+        def cls():
+            return Data
+
+    class Data(DataBase[DataParams]):
         @abstractmethod
         def _input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
             raise NotImplementedError
@@ -44,7 +51,7 @@ A data class has to extend ``from tfaip.data.data import DataBase`` and implemen
             ]
             return p
 
-You can optionally extend DataBaseParams (recommended: do this in a separate python file) to add more parameters.
+Extend DataBaseParams to return the actual implementation in the ``cls`` method. It is recommended to do this in a separate python file (e.g. called ``params.py``).
 
 Required Overrides
 ~~~~~~~~~~~~~~~~~~

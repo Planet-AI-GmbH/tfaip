@@ -31,24 +31,20 @@ from itertools import chain
 from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, TypeVar, Generic, \
     NoReturn
 
-import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
 from paiargparse import pai_dataclass
-from tensorflow.python.keras.metrics import MeanMetricWrapper
 
 from tfaip import DataGeneratorParams, ScenarioBaseParams
-from tfaip import PipelineMode
 from tfaip import EvaluatorParams
+from tfaip import PipelineMode
 from tfaip import TrainerPipelineParamsBase
 from tfaip.data.data import DataBase
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.multilav import MultiLAV
+from tfaip.model.graphbase import create_training_graph, RootGraph
 from tfaip.model.modelbase import ModelBase
 from tfaip.scenario.scenariobaseparams import NetConfigParamsBase, NetConfigNodeSpec
-from tfaip.scenario.util.keras_debug_model import KerasDebugModel
-from tfaip.scenario.util.outputholder import OutputHolderMetricWrapper
-from tfaip.scenario.util.print_evaluate_layer import PrintEvaluateLayer
 from tfaip.scenario.util.print_model_structure import print_all_layers
 from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.tfaipargparse import post_init
@@ -56,7 +52,7 @@ from tfaip.util.tftyping import AnyTensor
 
 if TYPE_CHECKING:
     from tfaip.imports import LAVParams, LAV, TrainerParams, Predictor, PredictorParams, MultiModelPredictor, \
-    Trainer
+        Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +76,6 @@ class KerasModelData:
     tensorboard_output_names: List[str]
 
 
-TData = TypeVar('TData', bound=DataBase)
-TModel = TypeVar('TModel', bound=ModelBase)
 TScenarioParams = TypeVar('TScenarioParams', bound=ScenarioBaseParams)
 TTrainerPipelineParams = TypeVar('TTrainerPipelineParams', bound=TrainerPipelineParamsBase)
 
@@ -90,7 +84,7 @@ class ScenarioBaseMeta(CollectGenericTypes):
     pass
 
 
-class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParams], ABC, metaclass=ScenarioBaseMeta):
+class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metaclass=ScenarioBaseMeta):
     """
     The scenario base handles the setup of the scenario including training and model exporting.
 
@@ -136,10 +130,10 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
 
         Returns: TrainerParams with adapted defaults
         """
-        trainer_params = cls.trainer_cls().params_cls()()
-        trainer_params.scenario = cls.default_params()
-        trainer_params.gen = cls.trainer_pipeline_params_cls()()
-        return trainer_params
+        return cls.trainer_cls().params_cls()(
+            scenario=cls.default_params(),
+            gen=cls.trainer_pipeline_params_cls()()
+        )
 
     @classmethod
     def params_from_dict(cls, d: dict) -> TScenarioParams:
@@ -248,17 +242,26 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         return scenario_params.cls(), scenario_params
 
     @classmethod
-    def data_cls(cls) -> Type[TData]:
-        return cls.__generic_types__[TData.__name__]
+    def data_cls(cls) -> Type[DataBase]:
+        return cls.params_cls().data_cls().cls()
 
     @classmethod
-    def model_cls(cls) -> Type[TModel]:
-        return cls.__generic_types__[TModel.__name__]
+    def model_cls(cls) -> Type[ModelBase]:
+        return cls.params_cls().model_cls().cls()
 
     @classmethod
     def trainer_cls(cls) -> Type['Trainer[TrainerParams]']:
-        from tfaip.trainer.trainer import Trainer  # pylint: disable=import-outside-toplevel
-        return Trainer
+        # setup default trainer and trainer params with the correct sub-classes
+        from tfaip.trainer.trainer import Trainer, TrainerParams  # pylint: disable=import-outside-toplevel
+
+        @dataclass
+        class LocalTrainerParams(TrainerParams[cls.params_cls(), cls.trainer_pipeline_params_cls()]):
+            pass
+
+        class LocalTrainer(Trainer[LocalTrainerParams]):
+            pass
+
+        return LocalTrainer
 
     @classmethod
     def lav_cls(cls) -> Type['LAV']:
@@ -295,8 +298,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         post_init(scenario_params)
         return cls.lav_cls()(lav_params,
                              data_fn=lambda: cls.data_cls()(scenario_params.data),
-                             model_fn=lambda: cls.model_cls()(scenario_params.model),
-                             predictor_fn=cls.predictor_cls(),
+                             model_fn=lambda: scenario_params.model.create(),
                              evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
                              )
 
@@ -363,8 +365,9 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         self._keras_train_model: Optional[keras.Model] = None
         self._export_graphs: Dict[str, keras.Model] = {}
         self._keras_predict_model: Optional[keras.Model] = None
-        self.data: Optional[TData] = None
-        self.model: Optional[TModel] = None
+        self._data: Optional[DataBase] = None
+        self._graph: Optional[RootGraph] = None
+        self._model: Optional[ModelBase] = None
 
     @property
     def params(self) -> TScenarioParams:
@@ -378,18 +381,31 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
     def keras_predict_model(self):
         return self._keras_predict_model
 
-    def setup(self):
-        if not self.data:
-            self.data = self.create_data()
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = self.create_data()
+        return self._data
 
-        if not self.model:
-            self.model = self.create_model()
+    @property
+    def model(self):
+        if self._model is None:
+            self._model, self._graph = self.create_model_and_graph()
+        return self._model
 
-    def create_data(self) -> TData:
-        return self.__class__.data_cls()(self._params.data)
+    @property
+    def graph(self):
+        if self._graph is None:
+            self._model, self._graph = self.create_model_and_graph()
 
-    def create_model(self) -> TModel:
-        return self.__class__.model_cls()(self._params.model)
+        return self._graph
+
+    def create_data(self) -> DataBase:
+        return self.data_cls()(self._params.data)
+
+    def create_model_and_graph(self) -> Tuple[ModelBase, RootGraph]:
+        graph = self.model_cls().root_graph_cls()(self.params.model)
+        return graph.model, graph
 
     def print_params(self) -> NoReturn:
         """
@@ -401,7 +417,7 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         """
         Returns: See ModelBase.best_logging_settings()
         """
-        return self.model.best_logging_settings()
+        return self.graph.model.best_logging_settings()
 
     def export(self, path: str, trainer_params: Optional['TrainerParams'] = None,
                export_resources: bool = True) -> NoReturn:
@@ -511,38 +527,9 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
             run_eagerly: Run the model in eager mode
             no_train_scope: Regex to match layers to exclude from training
         """
-        self.setup()
-
         real_inputs = self.data.create_input_layers()
         real_targets = self.data.create_target_as_input_layers()
         real_meta = self.data.create_meta_as_input_layers()
-
-        if self._params.debug_graph_construction:
-            # Debugging the construction of a graph
-            #  - Create the prediction graph as actual keras Model (non-Functional API), see KerasDebugModel
-            #  - Construct a training pipeline and compute the metrics and losses for one batch
-            if not run_eagerly:
-                raise ValueError(
-                    'Setting debug_graph_construction requires --train_params force_eager=True')
-            logger.info('Debugging Graph Construction. Breakpoints during construction are supported')
-            # process one example in KerasDebugModel which builds the graph based on this example
-            keras_debug_model = KerasDebugModel(self.model)
-            with self.data.pipeline_by_mode(PipelineMode.TRAINING) as train_data:
-                prev = tf.config.functions_run_eagerly()
-                tf.config.run_functions_eagerly(run_eagerly)
-                keras_debug_model({**real_inputs,
-                                   **real_targets,
-                                   **real_meta,
-                                   'step': tf.keras.layers.Input(shape=[1], dtype=tf.int32),
-                                   'epoch': tf.keras.layers.Input(shape=[1], dtype=tf.int32),
-                                   })
-                out = keras_debug_model.predict(
-                    self._wrap_data(train_data.input_dataset(), steps_per_epoch=1,
-                                    is_debug_data=True).take(
-                        self._params.debug_graph_n_examples))
-                tf.config.run_functions_eagerly(
-                    prev)  # reset to allow for multiple calls with different mode
-            logger.info('Mean values of debug model output: {}', {k: np.mean(v) for k, v in out.items()})
 
         # This regroups all inputs/targets as input to allow to access the complete data during training
         # This is required to allow for custom loss functions that require multiple inputs (e.g., ctc)
@@ -563,110 +550,30 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
         all_keys = list(chain(real_inputs.keys(), real_targets.keys(), real_meta.keys()))
         assert_unique_keys(all_keys)
 
-        # all inputs (step and epoch shall have a dimension of [1])
-        inputs_targets = {**real_inputs, **real_targets, **real_meta,
-                          'step': keras.layers.Input([1], name='step', dtype='int32'),
-                          'epoch': keras.layers.Input([1], name='epoch', dtype='int32')}
-
-        # Inputs have already correct names (checked by data) for exporting
-        # real_inputs = {k: v if v.op.name == k else keras.layers.Layer(name=k)(v) for k, v in real_inputs.items()}
-        # network outputs (ignores the targets)
-        logger.info('Building training graph')
-        real_outputs = self.model.build(inputs_targets)
-        assert_unique_keys(all_keys + list(real_outputs.keys()))
-
-        logger.info('Building prediction graph')
-        pred_outputs = self.model.build(real_inputs)
-        assert_unique_keys(all_keys + list(real_outputs.keys()))
-
-        # inject the evaluate layer to the first output.
-        # Note, if the first output is not used in the graph, nothing will be printed
-        pel_key = next(iter(real_outputs.keys()))
-        logger.debug(f'Injecting print evaluate layer to output {pel_key}')
-        if self._params.print_eval_limit != 0:
-            pel = PrintEvaluateLayer(self, self._params.print_eval_limit)
-            real_outputs[pel_key] = tf.identity(
-                pel((real_outputs[pel_key], real_inputs, real_outputs, real_targets, real_meta)),
-                name=pel_key + '_')
-
-        # loss as "output" of the network but called separately for logic
-        additional_outputs = self.model.additional_outputs(real_inputs, real_outputs)
-        extended_outputs = {**real_outputs, **self.model.additional_outputs(real_inputs, real_outputs)}
-        extended_losses = self.model.extended_loss(inputs_targets, extended_outputs)
-        simple_losses = self.model.loss()
-        extended_metrics = self.model.extended_metric(inputs_targets, extended_outputs)
-        simple_metrics = self.model.metric()
-        outputs = {
-            **real_outputs, **extended_losses, **extended_metrics, **additional_outputs,
-            **{k: extended_outputs[v.output] for k, v in simple_metrics.items()},
-            **{k: extended_outputs[v.output] for k, v in simple_losses.items()}
-        }
-        tensorboard_outputs = self.model.tensorboard_handler.setup(real_inputs, real_outputs)
-
-        # Store the information about the node names to wrap the dataset for (see fit())
-        self._keras_model_data = KerasModelData(
-            list(extended_losses.keys()),
-            list(extended_metrics.keys()),
-            list(tensorboard_outputs.keys()),
-        )
-
-        # create the model (and a second one for exporting)
         logger.info('Building training keras model')
-        self._keras_train_model = keras.Model(inputs=inputs_targets, outputs=outputs)
+        self._keras_train_model = create_training_graph(self, self.graph.model, self.graph)
         logger.info('Attempting to set no train scope')
         self._set_no_train_scope(no_train_scope)  # exclude layers from training
+
         logger.info('Building prediction/export keras model (for export and decoding)')
-        self._export_graphs = self.model.export_graphs(real_inputs, pred_outputs, real_targets)
+        pred_outputs = self.graph.predict(real_inputs)
+        self._export_graphs = self.graph.model.export_graphs(real_inputs, pred_outputs, real_targets)
         self._keras_predict_model = self._export_graphs['default']
 
-        # compile the model but with a dummy loss that just returns the 'output' loss
-        # the same goes for the metric
-        def wrap_loss(_, p):
-            return p
-
         logger.info('Compiling training model including optimization')
-        loss_weights = self.model.loss_weights()
-        loss_names = list(extended_losses.keys()) + list(simple_losses.keys())
-        if loss_weights is not None:
-            for k in loss_weights.keys():
-                if k not in loss_names:
-                    raise KeyError(
-                        f'Loss weight {k} specified but not used in losses (available {loss_names}).')
-
-        # Compile the actual model
-        # - the loss comprises the actual (joined) losses of the model
-        # - the weighted metrics comprises the actual (joined) metrics of the model
-        # - the "metrics" are abused for additional tensorboard output (NOT ACTUAL METRICS)
-        #   The additional outputs (as defined in the model) will be treated as a metric so that they are written to
-        #   the logs. Callbacks will extract these "metrics" and pass them to the Tensorboard-handler
-        self._keras_train_model.compile(
-            optimizer=optimizer,
-            loss={
-                **{k: wrap_loss for k, _ in extended_losses.items()},
-                **{k: v.loss for k, v in simple_losses.items()},
-            },
-            loss_weights=self.model.loss_weights(),
-            metrics={
-                k: OutputHolderMetricWrapper(v.shape, v.dtype, self._params.tensorboard_logger_history_size, name=k) for
-                k, v in tensorboard_outputs.items()
-            },
-            weighted_metrics={
-                **{k: MeanMetricWrapper(lambda t, p: p, name=k) for k, _ in extended_metrics.items()},
-                **{k: v.metric for k, v in simple_metrics.items()}
-            },
-            run_eagerly=run_eagerly,
-        )
+        self._keras_train_model.compile(optimizer=optimizer, run_eagerly=run_eagerly)
         logger.info('Compiling prediction model graph')
-        self._keras_predict_model.compile(run_eagerly=True)
+        self._keras_predict_model.compile(run_eagerly=run_eagerly)
+
         logger.info('Models successfully constructed')
 
-        # check if loading/saving of model works (before actual training)
-        if not skip_model_load_test:
+        # check if loading/saving of model works (before actual training, but only in graph mode)
+        if not skip_model_load_test and not run_eagerly:
             logger.info('Checking if model can be saved')
             with tempfile.TemporaryDirectory() as tmp:
                 self._keras_predict_model.save(tmp)
                 logger.info('Prediction model successfully saved. Attempting to load it')
-                keras.models.load_model(tmp)
+                keras.models.load_model(tmp, custom_objects=self.model.all_custom_objects())
             logger.info('Model can be successfully loaded')
 
     def _wrap_data(self, dataset: Optional[tf.data.Dataset], steps_per_epoch: int, is_debug_data: bool = False) -> \
@@ -703,24 +610,8 @@ class ScenarioBase(Generic[TData, TModel, TScenarioParams, TTrainerPipelineParam
                 # No train model exists, this happens on model debug
                 step_epoch = {'step': zeros,
                               'epoch': zeros}
-            wrapped_inputs = {**inputs, **targets, **meta, **step_epoch}
-            wrapped_targets = {**{l: zeros for l in
-                                  self._keras_model_data.extended_loss_names +
-                                  self._keras_model_data.extended_metric_names +
-                                  self._keras_model_data.tensorboard_output_names
-                                  },
-                               **{k: targets[v.target] for k, v in self.model.metric().items() if v.target in targets},
-                               **{k: targets[v.target] for k, v in self.model.loss().items() if v.target in targets},
-                               }
-            if is_debug_data:
-                wrapped_weights = None
-            else:
-                wrapped_weights = self.model.sample_weights(inputs, targets)
-                for k in wrapped_weights.keys():
-                    if k not in wrapped_targets.keys():
-                        raise KeyError(f'Sample weight {k} given but not found in targets (metric). '
-                                       f'Available: {list(wrapped_targets.keys())}')
-            return wrapped_inputs, wrapped_targets, wrapped_weights
+            wrapped_targets = {**targets, **step_epoch}
+            return (inputs, wrapped_targets, meta), {}
 
         return dataset.map(regroup)
 
@@ -829,6 +720,7 @@ def import_scenario(module_name: str) -> Type['ScenarioBase']:
     - module containing one class inheriting ScenarioBase, e.g.: tfaip.scenarios.tutorial.min.scenario
     - module containing containing a scenario module that contains one class inheriting ScenarioBase, e.g.: tfaip.scenarios.tutorial.min
     """
+
     def import_module(module_path_or_name: str):
         import sys
         import os

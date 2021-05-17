@@ -61,8 +61,10 @@ class TutorialDataGenerator(DataGenerator[TutorialDataGeneratorParams]):
 
 @pai_dataclass
 @dataclass
-class TutorialTrainerGeneratorParams(TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]):
-    train_val: TutorialDataGeneratorParams = field(default_factory=TutorialDataGeneratorParams, metadata=pai_meta(mode='flat'))
+class TutorialTrainerGeneratorParams(
+    TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]):
+    train_val: TutorialDataGeneratorParams = field(default_factory=TutorialDataGeneratorParams,
+                                                   metadata=pai_meta(mode='flat'))
 
     def train_gen(self) -> TutorialDataGeneratorParams:
         return self.train_val
@@ -75,7 +77,15 @@ def to_samples(samples):
     return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
-class TutorialData(DataBase[DataBaseParams]):
+@pai_dataclass
+@dataclass
+class TutorialDataParams(DataBaseParams):
+    @staticmethod
+    def cls() -> Type['DataBase']:
+        return TutorialData
+
+
+class TutorialData(DataBase[TutorialDataParams]):
     def _input_layer_specs(self):
         # Shape and type of the input data for the graph
         return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}

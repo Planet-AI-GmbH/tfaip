@@ -35,7 +35,7 @@ class TestTemplateScenario(unittest.TestCase):
         trainer_params = TemplateScenario.default_trainer_params()
         # (optionally) disable parallel processing to simplify debugging
         trainer_params.scenario.data.pre_proc.run_parallel = False
-        data = TemplateData(trainer_params.scenario.data)
+        data = trainer_params.scenario.data.create()
 
         # First check if generate_input_samples is working which will return single pre-processed samples
         with trainer_params.gen.train_data(data) as rd:

@@ -80,7 +80,7 @@ class TestTrainingScript(unittest.TestCase):
             trainer_params = json.load(open(os.path.join(d, 'trainer_params.json'), 'r'))
             trainer_params['epochs'] = 2
             json.dump(trainer_params, open(os.path.join(d, 'trainer_params.json'), 'w'))
-            check_call(['tfaip-resume-training', d])
+            call_in_root(['tfaip-resume-training', d])
 
     def test_train_from_params_tutorial(self):
         with tempfile.TemporaryDirectory() as d:

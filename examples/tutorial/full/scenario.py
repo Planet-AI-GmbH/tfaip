@@ -21,24 +21,23 @@ from typing import Type, Dict
 import numpy as np
 from paiargparse import pai_dataclass
 
-from tfaip import DataBaseParams
-from tfaip import Sample
-from tfaip.imports import EvaluatorBase, ScenarioBase, ScenarioBaseParams, MultiModelPredictor
-from examples.tutorial.full.data.data import TutorialData
+from examples.tutorial.full.data.data import TutorialDataParams
 from examples.tutorial.full.data.prediction_data_generation import TutorialPredictionGeneratorParams
 from examples.tutorial.full.data.training_data_generation import TutorialTrainerGeneratorParams
-from examples.tutorial.full.model import TutorialModel, TutorialModelParams
+from examples.tutorial.full.model import TutorialModelParams
 from examples.tutorial.full.predictor import TutorialMultiModelPredictor
+from tfaip import Sample
+from tfaip.imports import EvaluatorBase, ScenarioBase, ScenarioBaseParams, MultiModelPredictor
 from tfaip.util.typing import AnyNumpy
 
 
 @pai_dataclass
 @dataclass
-class TutorialScenarioParams(ScenarioBaseParams[DataBaseParams, TutorialModelParams]):
+class TutorialScenarioParams(ScenarioBaseParams[TutorialDataParams, TutorialModelParams]):
     pass
 
 
-class TutorialScenario(ScenarioBase[TutorialData, TutorialModel, TutorialScenarioParams, TutorialTrainerGeneratorParams]):
+class TutorialScenario(ScenarioBase[TutorialScenarioParams, TutorialTrainerGeneratorParams]):
     @classmethod
     def predict_generator_params_cls(cls):
         return TutorialPredictionGeneratorParams
@@ -64,6 +63,6 @@ class TutorialScenario(ScenarioBase[TutorialData, TutorialModel, TutorialScenari
                 self.true_count += np.sum(sample.targets['gt'] == sample.outputs['class'])
 
             def result(self) -> Dict[str, AnyNumpy]:
-                return {'eval_acc': self.true_count / self.total_count}
+                return {'eval_acc': self.true_count / self.total_count if self.total_count else 0}
 
         return MNISTEvaluator

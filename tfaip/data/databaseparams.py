@@ -18,7 +18,7 @@
 """Definition of DataBaseParams, DataPipelineParams, and DataGeneratorParams"""
 import logging
 import os
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Type, List, Optional
 
@@ -30,6 +30,7 @@ from tfaip.data.pipeline.processor.params import SequentialProcessorPipelinePara
 
 if TYPE_CHECKING:
     from tfaip.data.pipeline.datagenerator import DataGenerator
+    from tfaip.data.data import DataBase
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +97,20 @@ class DataPipelineParams:
 
 @pai_dataclass
 @dataclass
-class DataBaseParams:
+class DataBaseParams(ABC):
     """
     Parameters that define the overall setup of the data pipelines (pre_proc and post_proc)
 
     Parameters of this class will be shared among all DataProcessors.
     """
+
+    @staticmethod
+    @abstractmethod
+    def cls() -> Type['DataBase']:
+        raise NotImplementedError
+
+    def create(self) -> 'DataBase':
+        return self.cls()(params=self)
 
     # Store pre- and post-processing
     pre_proc: DataProcessorPipelineParams = field(default_factory=SequentialProcessorPipelineParams,

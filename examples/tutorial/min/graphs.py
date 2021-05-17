@@ -35,7 +35,7 @@ class TutorialGraph(GraphBase[TutorialModelParams]):
         self.ff = Dense(128, name='f_ff', activation='relu')
         self.logits = Dense(self._params.n_classes, activation=None, name='classify')
 
-    def call(self, inputs, **kwargs):
+    def build_graph(self, inputs, training=None):
         # Connect all layers and return a dict of the outputs
         rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))

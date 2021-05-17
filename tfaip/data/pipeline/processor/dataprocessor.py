@@ -49,6 +49,9 @@ class Key(str):
     GT_CLASSES = 'groundtruth_classes'
     GT_NAMES = 'groundtruth_names'
     GT_NUM = 'groundtruth_boxes_num'
+    PRED = 'pred'  # prediction which are values in [0,1] for each class-dimension. Last dimension is class dimension
+    CLASS = 'class'  # classification which is the argmax of 'pred'
+    LOGITS = 'logits'  # logits of classifications before applying softmax or sigmoid
     SEGMENTATIONS = 'segmentation'
     CLASSNAMES = 'classnames'
     COORD = 'coord'

@@ -18,10 +18,13 @@
 from dataclasses import dataclass, field
 from typing import List
 
+import numpy as np
+import tensorflow as tf
 from paiargparse import pai_dataclass, pai_meta
 from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten
 
 from examples.tutorial.full.graphs.backend import TutorialBackendParams, TutorialBackend
+from tfaip.model.tensorboardwriter import TensorboardWriter
 
 
 @pai_dataclass(alt='CNN')
@@ -41,14 +44,30 @@ class ConvGraphParams(TutorialBackendParams):
         return ConvLayers(self)
 
 
+def handle(name: str, value: np.ndarray, step: int):
+    # Create the image data as numpy array
+    b, w, h, c = value.shape
+    ax_dims = int(np.ceil(np.sqrt(c)))
+    out_conv_v = np.zeros([b, w * ax_dims, h * ax_dims, 1])
+    for i in range(c):
+        x = i % ax_dims
+        y = i // ax_dims
+        out_conv_v[:, x * w:(x + 1) * w, y * h:(y + 1) * h, 0] = value[:, :, :, i]
+
+    # Write the image (use 'name_for_tb' and step)
+    tf.summary.image(name, out_conv_v, step=step)
+
+
 class ConvLayers(TutorialBackend[ConvGraphParams]):
     def __init__(self, params: ConvGraphParams, name='conv', **kwargs):
         super(ConvLayers, self).__init__(params, name=name, **kwargs)
-        self.conv_layers = [Conv2D(filters=filters, kernel_size=(2, 2), strides=(1, 1), padding='same', activation='relu')
-                            for filters in params.filters]
+        self.conv_layers = [
+            Conv2D(filters=filters, kernel_size=(2, 2), strides=(1, 1), padding='same', activation='relu')
+            for filters in params.filters]
         self.pool_layers = [MaxPool2D(pool_size=(2, 2), strides=(2, 2)) for _ in params.filters]
         self.flatten = Flatten()
         self.dense_layers = [Dense(nodes, activation='relu') for nodes in params.dense]
+        self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype='float32', name='conv_mat')
 
     def call(self, images, **kwargs):
         conv_out = images
@@ -57,6 +76,8 @@ class ConvLayers(TutorialBackend[ConvGraphParams]):
         dense_out = self.flatten(conv_out)
         for dense in self.dense_layers:
             dense_out = dense(dense_out)
+
+        self.add_tensorboard(self.conv_mat_tb_writer, conv_out)
         return {
             'out': dense_out,
             'conv_out': conv_out,

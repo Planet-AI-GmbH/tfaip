@@ -20,7 +20,6 @@ import unittest
 from tensorflow.python.keras.backend import clear_session
 
 from test.tutorial.test_tutorial_full import TutorialScenarioTest
-from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.data.databaseparams import DataPipelineParams
 from tfaip.trainer.optimizer.optimizers import OptimizerParams, SGDOptimizer, AdamOptimizer, AdamaxOptimizer, \
     RMSpropOptimizer, AdaBeliefOptimizer
@@ -48,7 +47,6 @@ class TestOptimizers(unittest.TestCase):
 
     def run_for_optimizer(self, optimizer: OptimizerParams):
         trainer_params = ScenarioTest.default_trainer_params()
-        store_logs_callback = StoreLogsCallback()
         trainer_params.optimizer = optimizer
         trainer = ScenarioTest.create_trainer(trainer_params)
         trainer.train()

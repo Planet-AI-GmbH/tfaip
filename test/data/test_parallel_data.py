@@ -57,6 +57,11 @@ class TestParallelData(unittest.TestCase):
     def test_run(self):
         from tfaip.imports import DataBase, DataBaseParams
 
+        class TestDataParams(DataBaseParams):
+            @staticmethod
+            def cls():
+                return TestData
+
         class TestData(DataBase):
             def _input_layer_specs(self):
                 import tensorflow as tf
@@ -66,7 +71,7 @@ class TestParallelData(unittest.TestCase):
                 import tensorflow as tf
                 return {"targets": tf.TensorSpec(shape=[1], dtype=tf.int32)}
 
-        data = TestData(DataBaseParams())
+        data = TestDataParams().create()
         with data.create_pipeline(DataPipelineParams(num_processes=8), DGParams()) as rd:
             for i, d in enumerate(zip(rd.input_dataset().as_numpy_iterator(), range(100))):
                 print(i, d)

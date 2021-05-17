@@ -106,17 +106,24 @@ class ReplaceDefaultDataClassFieldsMeta(CollectGenericTypes):
     def __new__(mcs, *args, field_names: List[str], **kwargs):
         # Set default types for TrainerPipelineParams
         c = super().__new__(mcs, *args, **kwargs)
-        types = [ReplaceDefaultDataClassFieldsMeta.generic_types(c.__orig_bases__[0], i) for i in range(2)]
-        fields = []
+
+        # store mapping from field name to typevar id by obtaining the type of the field
+        c.__generic_field_name_to_typevar__ = {}
+
+        # collect all from super classes
+        for super_cls in args[1]:
+            if hasattr(super_cls, '__generic_field_name_to_typevar__'):
+                c.__generic_field_name_to_typevar__.update(super_cls.__generic_field_name_to_typevar__ )
+
         if hasattr(c, '__dataclass_fields__'):
-            for t, name in zip(types, field_names):
-                if name in c.__dataclass_fields__:
-                    c.__dataclass_fields__[name] = copy(c.__dataclass_fields__[name])
-                    fields.append(c.__dataclass_fields__[name])
-                else:
-                    fields.append(t)
-            for field, t in zip(fields, types):
-                field.default_factory = t
+            # track non yet tracked fields
+            for name, field in c.__dataclass_fields__.items():
+                if name in field_names:
+                    if name not in c.__generic_field_name_to_typevar__:
+                        c.__generic_field_name_to_typevar__[name] = field.type.__name__
+
+                    # replace factory
+                    field.default_factory = c.__generic_types__[c.__generic_field_name_to_typevar__[name]]
 
         return c
 

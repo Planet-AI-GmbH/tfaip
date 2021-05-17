@@ -18,10 +18,10 @@
 """Definition of a ListFileScenario"""
 from tfaip.scenario.listfile.listfilelav import ListFileLAV
 from tfaip.scenario.listfile.params import ListFileTrainerPipelineParams
-from tfaip.scenario.scenariobase import ScenarioBase, TData, TModel, TScenarioParams
+from tfaip.scenario.scenariobase import ScenarioBase, TScenarioParams
 
 
-class ListFileScenario(ScenarioBase[TData, TModel, TScenarioParams, ListFileTrainerPipelineParams]):
+class ListFileScenario(ScenarioBase[TScenarioParams, ListFileTrainerPipelineParams]):
     """
     Base-Class for a Scenario working with list files.
     A list file is a simple text file where each line is the path to a sample.

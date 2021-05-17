@@ -16,6 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Definition of the ModelBaseParams"""
+from abc import abstractmethod
 from dataclasses import dataclass
 
 from paiargparse import pai_dataclass
@@ -24,5 +25,17 @@ from paiargparse import pai_dataclass
 @pai_dataclass
 @dataclass
 class ModelBaseParams:
-    pass
+    @staticmethod
+    @abstractmethod
+    def cls():
+        raise NotImplementedError
 
+    def create(self, **kwargs):
+        return self.cls()(params=self, **kwargs)
+
+    @abstractmethod
+    def graph_cls(self):
+        raise NotImplementedError
+
+    def create_graph(self, **kwargs):
+        return self.graph_cls()(params=self, **kwargs)

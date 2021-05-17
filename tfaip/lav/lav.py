@@ -16,24 +16,30 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Implementation of LAV"""
-import json
 import logging
 import os
+import time
 from abc import ABC
+from queue import Queue
+from threading import Thread
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Optional, Iterable
+import threading
 
-import numpy as np
 import tensorflow.keras as keras
+from tensorflow.python.keras.callbacks import Callback, ProgbarLogger
+from tensorflow.python.keras.engine import data_adapter
+from tensorflow.python.keras.utils.tf_utils import to_numpy_or_python_type
 
-from tfaip import LAVParams, DataGeneratorParams, PredictorParams
+from tfaip import LAVParams, DataGeneratorParams
 from tfaip import Sample
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.callbacks.lav_callback import LAVCallback
-from tfaip.predict.predictor import Predictor
-from tfaip.predict.predictorbase import PredictorBenchmarkResults
+from tfaip.model.graphbase import create_lav_graph
+from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback, BenchmarkResults
+from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.file.oshelper import ChDir
-from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
+from tfaip.util.shape_utils import to_unbatched_samples
 
 if TYPE_CHECKING:
     from tfaip.data.data import DataBase
@@ -76,6 +82,49 @@ class MetricsAccumulator:
         return {k: v / self.running_weight[k] for k, v in self.running_sum.items()}
 
 
+class EvaluationCallback(Callback):
+    """Callback to run the post-proc pipeline and call the evaluator
+    run post proc pipeline in a separate thread so that it is instantiated only once
+    the EvaluationCallback handles writing to post proc queue, reading the post proc data back again
+    evaluating the result and writing it to the logs
+    """
+    def __init__(self, evaluator: EvaluatorBase, runnable_data_pipeline):
+        super().__init__()
+        self._supports_tf_logs = True
+        self.evaluator = evaluator
+        self.write_queue = Queue()
+
+        def post_proc_worker():
+            def read_fn():
+                while True:
+                    sample = self.write_queue.get()
+                    if sample is None:
+                        break
+                    yield sample
+
+            for sample in runnable_data_pipeline.process_output(read_fn()):
+                evaluator.update_state(sample)
+
+        self.post_proc_runner = Thread(target=post_proc_worker, daemon=True)
+        self.post_proc_runner.start()
+
+    def on_test_batch_end(self, batch, logs=None):
+        (inputs, targets, meta), _, outputs = to_numpy_or_python_type(logs['__outputs__'])
+
+        samples = to_unbatched_samples(inputs, targets, outputs, meta)
+        for sample in samples:
+            self.write_queue.put(sample)
+
+        logs.update(self.evaluator.result())  # not up to date, since running asynchron!
+        del logs['__outputs__']
+
+    def on_test_end(self, logs=None):
+        assert logs is not None
+        self.write_queue.put(None)  # end message
+        self.post_proc_runner.join()  # wait to collect all samples
+        logs.update(self.evaluator.result())  # add the final result
+
+
 class LAV(ABC):
     """
     This is the base Class for Loading And Validation (LAV) a scenario. By default, LAV is independent of the scenario
@@ -97,156 +146,108 @@ class LAV(ABC):
                  params: LAVParams,
                  data_fn: Callable[[], 'DataBase'],
                  model_fn: Callable[[], 'ModelBase'],
-                 predictor_fn: Callable[[PredictorParams, 'DataBase'], Predictor],
                  evaluator_fn: Callable[[], EvaluatorBase],
                  ):
         assert params.model_path
         self._params = params
         self._data_fn = data_fn
-        self._predictor_fn = predictor_fn
         self._model_fn = model_fn
         self._evaluator_fn = evaluator_fn
         self.device_config = DeviceConfig(self._params.device)
         self._data: Optional['DataBase'] = None
         self._model: Optional['ModelBase'] = None
-        self.benchmark_results = PredictorBenchmarkResults()
+        self.benchmark_results = BenchmarkResults()
 
     @distribute_strategy
     def run(self,
             generator_params: Iterable[DataGeneratorParams],
-            model: keras.Model = None,
+            keras_model: keras.Model = None,
             run_eagerly=False,
             callbacks: List[LAVCallback] = None,
+            return_tensorboard_outputs=False,
             ) -> Iterable[Dict[str, float]]:
-        callbacks = callbacks if callbacks else []
+        callbacks = callbacks or []
         with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
             self._data = self._data_fn()
-        self._model = self._model_fn()
-        predictor_params = PredictorParams(self._params.device, silent=True, progress_bar=True)
-        predictor: Predictor = self._predictor_fn(predictor_params, self._data)
         evaluator: EvaluatorBase = self._evaluator_fn()
+        self._model = model = self._model_fn()
 
         for cb in callbacks:
-            cb.lav, cb.data, cb.model = self, self._data, self._model
+            cb.lav, cb.data, cb.model = self, self._data, model
 
         if run_eagerly:
             logger.warning('Running in eager mode. Use this only for debugging, since the graph of the saved model '
                            'might get changed due to "reconstruction" of the graph')
-            custom_objects = self._model.__class__.all_custom_objects()
-        else:
-            custom_objects = None
 
-        keras_model: keras.Model = model
-        if not model:
+        if not keras_model:
             keras_model = keras.models.load_model(os.path.join(self._params.model_path, 'serve'),
-                                                  compile=False, custom_objects=custom_objects)
+                                                  compile=False, custom_objects=model.all_custom_objects())
 
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model
-        real_inputs = keras_model.input
-        real_targets = self._data.create_target_as_input_layers()
-        real_meta = self._data.create_meta_as_input_layers()
-        eval_inputs = {**real_inputs, **real_targets, **real_meta}
-        sample_weights = {k + '_sample_weight': v for k, v in
-                          self._model.sample_weights(real_inputs, real_targets).items()}
-        metric_outputs = self._model.extended_metric(eval_inputs, keras_model.output)
-        simple_metrics = self._model.metric()
-        eval_model = keras.Model(eval_inputs,
-                                 [{**real_inputs, **real_targets, **sample_weights},
-                                  {**metric_outputs, **keras_model.output}, real_meta])
-        if run_eagerly:
-            eval_model._run_eagerly = True  # pylint: disable=protected-access
+        class LAVModel(keras.models.Model):
+            def __init__(self, model, prediction_graph):
+                super().__init__()
+                self.model = model
+                self.graph = prediction_graph
 
-        # I know what I am doing: already wrapped inputs and targets
-        predictor._keras_model = eval_model  # pylint: disable=protected-access
+            def call(self, inputs, training=None, mask=None):
+                inputs, targets, meta = inputs
+                outputs = self.graph.lav(inputs, targets)
+                return outputs
 
-        def predict_pipeline(pipeline):
-            with pipeline as rd:
-                def regroup(i, t, m):
-                    return {**i, **t, **m}, t
+            def test_step(self, data):
+                data = data_adapter.expand_1d(data)
+                x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
-                # todo (christoph) if input is none warning/exception
-                input_dataset = rd.input_dataset().map(regroup)
+                y_pred = self(x, training=False)
+                # Updates stateful loss metrics.
+                self.compiled_loss(
+                    y, y_pred, sample_weight, regularization_losses=self.losses)
 
-                def extract_metric(s: Sample):
-                    i, o, m = s.inputs, s.outputs, s.meta
-                    m = m or {}
-                    # Add metrics as meta information
-                    return Sample(inputs=i,
-                                  outputs={k: v for k, v in o.items() if k not in metric_outputs},
-                                  meta={**m, 'lav_metrics': {k: v for k, v in o.items() if k in metric_outputs}},
-                                  )
+                self.compiled_metrics.update_state(y, y_pred, sample_weight)
+                logs = {m.name: m.result() for m in self.metrics}
+                logs['__outputs__'] = (x, y, y_pred)
+                return logs
 
-                def ungroup(sample):
-                    inputs = {k: v for k, v in sample.inputs.items() if k in real_inputs or k in sample_weights}
-                    targets = {k: v for k, v in sample.inputs.items() if k in real_targets}
-                    return sample.new_inputs(inputs).new_targets(targets)
+            def get_config(self):
+                raise NotImplementedError
 
-                for r in tqdm_wrapper(
-                        rd.process_output(map(ungroup, map(extract_metric, predictor.predict_dataset(input_dataset)))),
-                        progress_bar=predictor_params.progress_bar,
-                        desc='LAV',
-                        total=len(rd),
-                ):
-                    yield r
+        keras_model.compile(run_eagerly=run_eagerly)
+        keras_model.run_eagerly = True
+        lav_model = LAVModel(model, create_lav_graph(model, keras_model))
+        lav_model.compile(run_eagerly=run_eagerly)
+
+        def regroup(i, t, m):
+            return (i, t, m), {}
 
         # accumulate the mean
-        metrics_accum = MetricsAccumulator()
         for params in generator_params:
             val_data = self._data.create_pipeline(self._params.pipeline, params)
             with evaluator:
-                for sample in predict_pipeline(val_data):
-                    # unpack the packed sample and create a real sample without sample weights and the packed metrics
-                    # sample weights and inputs are both mapped into sample.inputs
-                    un_batched_inputs = {k: v for k, v in sample.inputs.items() if k in real_inputs}
-                    un_batched_sample_weights = {k[:-14]: v for k, v in sample.inputs.items() if k in sample_weights}
-                    un_batched_targets = sample.targets
-                    un_batched_outputs = sample.outputs
-                    un_batched_metric_outputs = sample.meta['lav_metrics']
-                    un_batched_meta = sample.meta.copy()
-                    del sample.meta['lav_metrics']
-                    un_batched_sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs,
-                                               targets=un_batched_targets, meta=un_batched_meta)
+                with val_data as rd:
+                    extract_logs_callback = ExtractLogsCallback(test_prefix='')
+                    benchmark_callback = BenchmarkCallback()
+                    eval_callbacks = [EvaluationCallback(evaluator, rd),
+                                      extract_logs_callback, benchmark_callback]
                     if not self._params.silent:
-                        self._model.print_evaluate(un_batched_sample, self._data)
+                        eval_callbacks.append(ProgbarLogger(count_mode='steps'))
 
-                    for k, metric in simple_metrics.items():
-                        # metrics expect a batch dimension, thus wrap into a list
-                        metric.metric.update_state(
-                            np.expand_dims(un_batched_targets[metric.target], axis=0),
-                            np.expand_dims(un_batched_outputs[metric.output], axis=0),
-                            np.expand_dims(un_batched_sample_weights[k],
-                                           axis=0) if k in un_batched_sample_weights else None)
+                    r = lav_model.evaluate(
+                        rd.input_dataset().map(regroup),
+                        callbacks=eval_callbacks,
+                        return_dict=True,
+                        verbose=0 if self._params.silent else 1,
+                    )
+                    self.benchmark_results = benchmark_callback.last_test_results
+                    if return_tensorboard_outputs:
+                        r.update(extract_logs_callback.extracted_logs)
 
-                    metrics_accum.accumulate_dict_sum(un_batched_metric_outputs, un_batched_sample_weights)
-
-                    self._on_sample_end(params, un_batched_sample)
+                    self._on_lav_end(params, r)
                     for cb in callbacks:
-                        cb.on_sample_end(params, un_batched_sample)
-
-                    evaluator.update_state(
-                        Sample(outputs=un_batched_outputs, targets=un_batched_targets, meta=sample.meta))
-
-            # print the output
-            all_metric_results = {**metrics_accum.final(),
-                                  **{k: float(v.metric.result().numpy()) for k, v in simple_metrics.items() if
-                                     not self._model.tensorboard_handler.is_tensorboard_only(k, v.metric.result())},
-                                  **{k: v.metric.result().numpy() for k, v in simple_metrics.items() if
-                                     self._model.tensorboard_handler.is_tensorboard_only(k, v.metric.result())},
-                                  **evaluator.result()}
-            self._on_lav_end(params, all_metric_results)
-            for cb in callbacks:
-                cb.on_lav_end(params, all_metric_results)
-
-            if not self._params.silent:
-                # remove metrics which are for tensorboard use only
-                metrics_to_print = {k: v for k, v in all_metric_results.items() if
-                                    not self._model.tensorboard_handler.is_tensorboard_only(k, v)}
-                print(json.dumps(metrics_to_print, indent=2))
-
-            self.benchmark_results = predictor.benchmark_results
-            yield all_metric_results
+                        cb.on_lav_end(params, r)
+                    yield r
 
     def _on_sample_end(self, data_generator_params: DataGeneratorParams, sample: Sample):
         pass

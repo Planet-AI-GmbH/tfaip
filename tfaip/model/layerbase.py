@@ -27,6 +27,19 @@ from typing import Type, TypeVar, Generic
 
 from paiargparse import pai_dataclass
 from tensorflow import keras
+from tfaip.model.tensorboardwriter import TensorboardWriter
+
+
+class TFAIPLayerBase(keras.layers.Layer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tensorboard_outputs = []
+
+    def add_tensorboard(self, tb: TensorboardWriter, value):
+        if tb not in self.tensorboard_outputs:
+            self.tensorboard_outputs.append(tb)
+
+        self.add_metric(tb(None, value))
 
 
 @pai_dataclass
@@ -45,7 +58,7 @@ class LayerBaseParams(ABC):
 TLP = TypeVar('TLP', bound=LayerBaseParams)
 
 
-class LayerBase(Generic[TLP], keras.layers.Layer):
+class LayerBase(Generic[TLP], TFAIPLayerBase):
     """
     This Layer can be inherited to buildup the graph (you can however chose any method you want to).
     """

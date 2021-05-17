@@ -168,7 +168,7 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
         help='The log level for tensorflow cpp code.'
     ))
     force_eager: bool = field(default=False, metadata=pai_meta(
-        help='Activate eager execution of the graph. See also --scenario debug_graph_construction'
+        help='Activate eager execution of the graph.'
     ))
     skip_model_load_test: bool = field(default=False, metadata=pai_meta(
         help='By default, the trainer checks initially whether the prediction model can be saved and loaded. This may '

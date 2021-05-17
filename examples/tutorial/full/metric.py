@@ -15,26 +15,16 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-"""Definition of LossDefinition"""
-from typing import NamedTuple
-
-from tensorflow import keras
+import tensorflow as tf
 
 
-class LossDefinition(NamedTuple):
+class CustomMetric(tf.keras.metrics.Mean):
+    """Computes the accuracy of the prediction
+
+    y_true = [B]
+    y_pred = [B x N]
     """
-    A loss based on keras.losses.Loss, e.g., keras.losses.BinaryCrossentropy
-    Such a loss has access to one target, one output and the sample weights.
 
-    See Also:
-        - ModelBase.loss
-        - ModelBase.extended_loss
-
-    Attributes:
-        target (str): the dictionary key of the target which will be passed to metric.
-        output (str): the dictionary key of the models output
-        loss: The keras loss
-    """
-    target: str
-    output: str
-    loss: keras.losses.Loss
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        trues = tf.cast(y_true, 'int64') == tf.argmax(y_pred, axis=-1)
+        return super().update_state(tf.cast(trues, 'float32'))

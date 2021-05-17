@@ -113,6 +113,14 @@ class SimpleDataGenerator(DataGenerator[SimpleDataGeneratorParams]):
         return map(lambda s: Sample(inputs=s, targets=s), self.params.numbers_to_generate)
 
 
+@pai_dataclass
+@dataclass
+class DataParams(DataBaseParams):
+    @staticmethod
+    def cls() -> Type['DataBase']:
+        return Data
+
+
 class Data(DataBase):
     def _input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         return {"n": tf.TensorSpec([1], dtype='int32', name='n')}
@@ -131,7 +139,7 @@ class TestDataPipeline(unittest.TestCase):
         target_numbers = [n * 3 + 1 for n in target_numbers]
         target_numbers = [n for n in target_numbers if n % 2 == 1]
 
-        data_params = DataBaseParams(
+        data_params = DataParams(
             pre_proc=SequentialProcessorPipelineParams(
                 run_parallel=False,
                 num_threads=3,
@@ -145,7 +153,7 @@ class TestDataPipeline(unittest.TestCase):
                 ]
             )
         )
-        data = Data(data_params)
+        data = data_params.create()
         with data.create_pipeline(DataPipelineParams(mode=PipelineMode.TRAINING),
                                   SimpleDataGeneratorParams(numbers_to_generate=numbers)) as pipeline:
             out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
@@ -160,7 +168,7 @@ class TestDataPipeline(unittest.TestCase):
         target_numbers = [n * 2 + 1 for n in target_numbers]
         target_numbers = [n for n in target_numbers if n % 2 == 1]
 
-        data_params = DataBaseParams(
+        data_params = DataParams(
             pre_proc=ComposedProcessorPipelineParams(pipelines=[
                 SequentialProcessorPipelineParams(
                     run_parallel=False,
@@ -191,7 +199,7 @@ class TestDataPipeline(unittest.TestCase):
                 ),
             ])
         )
-        data = Data(data_params)
+        data = data_params.create()
         with data.create_pipeline(DataPipelineParams(mode=PipelineMode.TRAINING),
                                   SimpleDataGeneratorParams(numbers_to_generate=numbers)) as pipeline:
             out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]

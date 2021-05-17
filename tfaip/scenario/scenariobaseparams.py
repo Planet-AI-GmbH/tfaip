@@ -52,9 +52,16 @@ class ScenarioBaseParams(Generic[TDataParams, TModelParams], ABC, metaclass=Scen
 
     NOTE: add @pai_dataclass and @dataclass annotations to inherited class
     """
-    debug_graph_construction: bool = field(default=False, metadata=pai_meta(
-        help='Build the graph in pure eager mode to debug the graph construction on real data'
-    ))
+    @classmethod
+    def data_cls(cls) -> Type[TDataParams]:
+        """Returns the class of the data params"""
+        return cls.__generic_types__[TDataParams.__name__]
+
+    @classmethod
+    def model_cls(cls) -> Type[TModelParams]:
+        """Returns the class of the model params"""
+        return cls.__generic_types__[TModelParams.__name__]
+
     debug_graph_n_examples: int = field(default=1, metadata=pai_meta(
         help='number of examples to take from the validation set for debugging, -1 = all'
     ))

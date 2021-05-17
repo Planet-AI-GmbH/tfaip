@@ -19,10 +19,11 @@ import unittest
 
 from tensorflow.keras.backend import clear_session
 
+from examples.tutorial.full.data.data import TutorialData
+from examples.tutorial.full.graphs.cnn import ConvGraphParams
+from examples.tutorial.full.scenario import TutorialScenario
 from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
 from tfaip.data.databaseparams import DataPipelineParams
-from examples.tutorial.full.data.data import TutorialData
-from examples.tutorial.full.scenario import TutorialScenario
 
 
 class TutorialScenarioTest(TutorialScenario):
@@ -32,6 +33,14 @@ class TutorialScenarioTest(TutorialScenario):
         p.gen.setup.train = DataPipelineParams(batch_size=1)
         p.gen.setup.val = DataPipelineParams(limit=5, batch_size=1)
         p.scenario.data.pre_proc.run_parallel = False
+        return p
+
+
+class TutorialWithConvScenarioTest(TutorialScenarioTest):
+    @classmethod
+    def default_trainer_params(cls):
+        p = super().default_trainer_params()
+        p.scenario.model.graph = ConvGraphParams()
         return p
 
 
@@ -66,24 +75,22 @@ class TestTutorialData(unittest.TestCase):
 
 
 class TestTutorialTrain(unittest.TestCase):
+    scenario = TutorialWithConvScenarioTest
+
     def tearDown(self) -> None:
         clear_session()
 
     def test_single_train_iter(self):
-        single_train_iter(self, TutorialScenarioTest)
-        clear_session()
+        single_train_iter(self, self.scenario, debug=False)
 
     def test_resume_training(self):
-        resume_training(self, TutorialScenarioTest)
-        clear_session()
+        resume_training(self, self.scenario)
 
     def test_lav(self):
-        lav_test_case(self, TutorialScenarioTest)
-        clear_session()
+        lav_test_case(self, self.scenario, debug=False)
 
     def test_warmstart(self):
-        warmstart_training_test_case(self, TutorialScenarioTest)
-        clear_session()
+        warmstart_training_test_case(self, self.scenario)
 
 
 if __name__ == '__main__':

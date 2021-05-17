@@ -40,6 +40,7 @@ class EMACallback(Callback):
         # (useful for exporting best, but not checkpointing)
         super().__init__()
         self.optimizer = optimizer
+        self._supports_tf_logs = True
 
     def on_test_begin(self, logs=None):
         self.optimizer.to_avg(self.model.variables)

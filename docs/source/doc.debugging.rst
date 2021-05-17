@@ -59,17 +59,13 @@ It is recommended to use this flag if any error occurs in the graph during const
 Loss
 ~~~~
 
-If the eager mode is enabled, debugging into the loss (usually the function of the Lambda layer) is possible.
-Use this to verify the loss computation.
-Note however, that :ref:`keras losses<doc.model:keras loss>` can not be debugged.
+Losses can be fully debugged in eager mode.
 
 Metric
 ~~~~~~
 
-Unfortunately, :ref:`keras metrics<doc.model:keras metric>` can never be debugged.
-Prints and logging are the mean of choice in this case.
-:ref:`Extended metrics<doc.model:extended metric>` can however be debugged similar to the extended loss.
-Naturally, metrics defined in the :ref:`Evaluator<doc.scenario:evaluator>` can always be debugged since they run in pure Python.
+Metrics of the model can be fully debugged in eager mode.
+Also metrics defined in the :ref:`Evaluator<doc.scenario:evaluator>` can always be debugged since they run in pure Python.
 
 Profiling
 ---------

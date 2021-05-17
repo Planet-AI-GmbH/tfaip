@@ -1,7 +1,7 @@
 Model
 =====
 
-The model glues together several parts that define the setup of the neural network, e.g. the :ref:`Graph<doc.model:Graph-Construction>`, the :ref:`loss<doc.model:Loss>`, or the :ref:`metrics<doc.model:Metric>`.
+The model glues together several parts that define the setup of the neural network, e.g. the :ref:`loss<doc.model:Loss>` or the :ref:`metrics<doc.model:Metric>`.
 
 The implementation of the model requires to override the base class :ref:`ModelBase<tfaip.model:ModelBase>`
 and its parameters :ref:`ModelBaseParams<tfaip.model:ModelBaseParams>` (see the following example of the tutorial):
@@ -10,59 +10,51 @@ and its parameters :ref:`ModelBaseParams<tfaip.model:ModelBaseParams>` (see the 
 
     @pai_dataclass
     @dataclass
-    class ModelParams(ModelBaseParams):
+    class TutorialModelParams(ModelBaseParams):
         n_classes: int = field(default=10, metadata=pai_meta(
             help="The number of classes (depends on the selected dataset)"
         ))
 
+        @staticmethod
+        def cls():
+            return TutorialModel
 
-    class Model(ModelBase[ModelParams]):
+        def graph_cls(self):
+            from examples.tutorial.min.graphs import TutorialGraph
+            return TutorialGraph
+
+    class TutorialModel(ModelBase[TutorialModelParams]):
         pass
 
-Graph-Construction
-------------------
+Parameter Overrides
+-------------------
 
-Override the following to define the :ref:`graph<doc.graph:Graph>`:
-
-.. code-block:: python
-
-    def create_graph(self, params: ModelParams):
-        return Graph(params)
+The implementation of the ``ModelBaseParams`` require to override ``cls()`` and ``graph_cls`` to return the class type of the actual model and :ref:`graph<doc.graph:Graph>`.
 
 Loss
 ----
 
 The loss function defines the optimization target of the model.
-There are two ways to define a loss: loss using a ``keras.losses.Loss`` (see :ref:`Keras Loss<doc.model:keras loss>`), or a loss using a Tensor as output (see :ref:`extended-loss<doc.model:extended loss>`).
+There are two ways to define a loss: loss using a ``keras.losses.Loss``, or a loss using a Tensor as output.
 Multiple losses can be :ref:`weighted<doc.model:loss weight>`.
 The output-values of each loss (and the weighted loss) will be displayed in the console and in the :ref:`Tensorboard<doc.model:tensorboard>`.
 
-Keras Loss
-~~~~~~~~~~
+Overwrite ``_loss`` and return a dictionary of losses where the key is the (display) label of the metric and the value is the Tensor-valued loss.
 
-A Keras loss is the simplest method to define a loss.
-Overwrite ``_loss`` and return a dictionary of losses each being a ``LossDefinition`` tuple of ``target``, ``output``, and ``keras.Loss``.
-
-.. code-block:: python
-
-    def _loss(self) -> Dict[str, LossDefinition]:
-        return {'keras_loss': LossDefinition('gt', 'logits', tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True))}
-
-The drawback of this approach is that only one target and one output can be accessed to compute the loss.
-However, this is satisfied in most cases.
-
-Extended Loss
-~~~~~~~~~~~~~
-
-The return value of the loss is a Dictionary of tensors of shape batch-size.
-Since all inputs, targets, and outputs can be accessed, arbitrary losses can be defined.
+To use a ``keras.losses.Loss``, instantiate the loss in the ``__init__``-function and call it in ``_loss``.
+Alternatively, return any scalar-valued Tensor.
 
 .. code-block:: python
 
-    def _extended_loss(self, inputs_targets, outputs) -> Dict[str, AnyTensor]:
-        return {'extended_loss': tf.keras.losses.sparse_categorical_crossentropy(inputs_targets['gt'], outputs['logits'], from_logits=True)}
+    def __init(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scc_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True, name='keras_loss')
 
-``inputs_targets`` is the joined dictionary of the inputs and targets coming from the dataset, ``outputs`` hold the outputs of the network.
+    def _loss(self, inputs, targets, outputs) -> Dict[str, AnyTensor]:
+         return {
+            'keras_loss': self.scc_loss(targets['gt'], outputs['logits']),  # either call a keras.Loss
+            'raw_loss': tf.keras.losses.sparse_categorical_crossentropy(targets['gt'], outputs['logits'], from_logits=True),  # or add a raw loss
+        }
 
 Loss Weight
 ~~~~~~~~~~~
@@ -80,59 +72,23 @@ Metric
 ------
 
 Similar to the loss, a model defines its metrics.
-Similar to the loss, there are multiple (here three) different approaches with an increasing flexibility.
 The output-values of each metric will be displayed in the console and in the :ref:`Tensorboard<doc.model:Tensorboard>`.
 All metrics are computed on both the training and validation data, except the :ref:`pure Python<doc.model:pure-python metric>` one which is solely computed on the validation set.
 
-Keras Metric
-~~~~~~~~~~~~
-
-A Keras metric is the simplest method of defining a metric.
-Overwrite ``_metric`` and return a dictionary of ``MetricDefinitions`` which is a tuple of the ``target`` and ``output`` tensors which are fed in the actual ``keras.Metric``.
-Either pass a custom ``keras.Metric`` or use one out of the box, e.g.:
+Overwrite ``_metric`` and return a list of called ``keras.metric.Metric``.
+The ``name`` of the metric is used for display.
 
 .. code-block:: python
 
-    def _metric(self):
-        return {'acc': MetricDefinition("gt", "class", keras.metrics.Accuracy())}
+    def __init(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.acc_metric = keras.metrics.Accuracy(name='acc')
 
-The drawback of this metric is, that only one target and one output is used but which is the default in most cases.
-The advantage is, that keras metrics are flexible by calling ``update_state`` to arbitrarily accumulate the metric values and finally ``result`` to obtain the final value.
-You can overwrite ``_sample_weights`` to provide the ``weights`` of a metric batch as third input to ``update_state``.
+    def _metric(self, inputs, targets, outputs):
+        return [self.acc_metric(targets['gt'], outputs['class'])]
 
-Extended Metric
-~~~~~~~~~~~~~~~
-
-The definition of an extended metric is identical to the definition of the losses: simply return a dict of Tensors.
-The final metric is computed by averaging, implement ``_sample_weights`` to define the weighting factors.
-See the example in the Tutorial:
-
-.. code-block:: python
-
-    def _extended_metric(self, inputs_targets, outputs):
-        return {'acc': tf.keras.metrics.sparse_categorical_accuracy(inputs_targets['gt'], outputs['pred'])}
-
-The drawback of this metric is that you can not correctly compute any metric since the sample weights can not map any scenario (e.g. precision and recall).
-The advantage is that an extended metric has access to all ``inputs``, ``targets`` and ``outputs`` and can thus compute metrics that require multiple inputs.
-
-Multi Metric
-~~~~~~~~~~~~
-
-``MultiMetrics`` are an _optional_ extension to the standard keras metrics.
-They enable to hierarchically compute metrics that are all based on intermediate values, e.g., first compute TP, FP, FN, then compute the derived metrics precision, recall, and F1.
-To use implement a ``MultiMetric`` overwrite ``_precomputed_values`` to compute derived tensors of any shape (e.g. dicts).
-These tensors will then be passes to the attached child-metrics that are stated upon definition of the ``MultiMetric``, see e.g.:
-
-.. code-block:: python
-
-    def _multi_metric(self) -> Dict[str, MultiMetricDefinition]:
-        class MyMultiMetric(MultiMetric):
-            def _precompute_values(self, y_true, y_pred, sample_weight):
-                # Compute some intermediate values that will be used in the sub metrics
-                # Here, the Identity is returned, and applied to the default keras Accuracy metrics (see below)
-                return y_true, y_pred, sample_weight
-
-        return {'multi_metric': MultiMetricDefinition('gt', 'class', MyMultiMetric([keras.metrics.Accuracy(name='macc1'), keras.metrics.Accuracy(name='macc2')]))}
+Custom metrics must implement ``keras.metrics.Metric``.
+It is also possible to compute the actual value of the metric as Tensor beforehand and wrap it with a ``keras.metrics.Mean``.
 
 Pure-Python Metric
 ~~~~~~~~~~~~~~~~~~
@@ -178,79 +134,46 @@ Tensorboard
 During training, the output of the loss and metrics on the training and validation sets is automatically to the Tensorboard.
 The data is stored in the ``output_dir`` defined during [training](07_training.md).
 
-In some cases, additional data such as :ref:`images<doc.model:images>` or :ref:`PR-curves<doc.model:pr-curves>` shall be written to the Tensorboard.
-This is enabled by implementing a ``TensorBoardDataHandler`` that defines which outputs of the models are excluded from the command line and thus only written to teh Tensorboard and
-how the data shall be handled:
+In some cases, additional :ref:`arbitrary data<doc.model:arbitrary data>` such as images, or raw data e.g. such as :ref:`PR-curves<doc.model:pr-curves>` shall be written to the Tensorboard.
+
+Arbitrary Data
+~~~~~~~~~~~~~~
+
+To add arbitrary additional data to the Tensorboard ensure that the layer adding the data inherits ``TFAIPLayerBase`` which provides a method ``add_tensorboard`` which must be called with a ``TensorboardWriter`` and the ``value``.
+
+The following examples shows how to write the output of a conv-layer as image to the Tensorboard.
+The ``TensorboardWriter`` will receive the raw numpy data and call the provided ``func`` (here ``handle``) to process the raw data and write it to the tensorboard.
 
 .. code-block:: python
 
-    def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
-        class ExampleTBHandler(TensorBoardDataHandler):
-            # OVERRIDE
-            pass
-        return ExampleTBHandler()
+    def handle(name: str, value: np.ndarray, step: int):
+        # Create the image data as numpy array
+        b, w, h, c = value.shape
+        ax_dims = int(np.ceil(np.sqrt(c)))
+        out_conv_v = np.zeros([b, w * ax_dims, h * ax_dims, 1])
+        for i in range(c):
+            x = i % ax_dims
+            y = i // ax_dims
+            out_conv_v[:, x * w:(x + 1) * w, y * h:(y + 1) * h, 0] = value[:, :, :, i]
 
-In the following, a few examples are provided how to pass a certain type of data to the Tensorboard.
+        # Write the image (use 'name_for_tb' and step)
+        tf.summary.image(name, out_conv_v, step=step)
 
-Images
-~~~~~~
+    class Layers(TFAIPLayerBase):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.conv_layer = Conv2D(40)
+            self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype='float32', name='conv_mat')
 
-This tensorboard handler (part of the full-tutorial) shows how to write image data (last batch of validation) to the Tensorboard.
-The image is the output of the conv layers.
-
-.. code-block:: python
-
-    def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
-        class TutorialTBHandler(TensorBoardDataHandler):
-            def _outputs_for_tensorboard(self, inputs, outputs) -> Dict[str, AnyTensor]:
-                # List the outputs of the model that are used for the Tensorboard
-                # Here, access the 'conv_out'
-                return {k: v for k, v in outputs.items() if k in ['conv_out']}
-
-            def handle(self, name, name_for_tb, value, step):
-                # Override handle to state, that something other than writing a scalar must be performed
-                # for a output. Value is the output of the network as numpy array
-                if name == 'conv_out':
-                    # Create the image data as numpy array
-                    b, w, h, c = value.shape
-                    ax_dims = int(np.ceil(np.sqrt(c)))
-                    out_conv_v = np.zeros([b, w * ax_dims, h * ax_dims, 1])
-                    for i in range(c):
-                        x = i % ax_dims
-                        y = i // ax_dims
-                        out_conv_v[:,x*w:(x+1)*w,y*h:(y+1)*h, 0] = value[:,:,:,i]
-
-                    # Write the image (use 'name_for_tb' and step)
-                    tf.summary.image(name_for_tb, out_conv_v, step=step)
-                else:
-                    # The default case, write a scalar
-                    super(TutorialTBHandler, self).handle(name, name_for_tb, value, step)
-
-        return TutorialTBHandler()
+        def call(self, inputs, **kwargs):
+            conv_out = self.conv_layer(inputs)
+            self.add_tensorboard(self.conv_mat_tb_writer, conv_out)
+            return conv_out
 
 PR-curves
 ~~~~~~~~~
 
-To be continued.
-
-Additional overrides
---------------------
-
-The following is a list of other functions that can be overwritten.
-
-Additional Layers
-~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    @classmethod
-    def _additional_layers(cls) -> List[keras.layers.Layer]:
-        return []
-
-This function shall return the list of all layers that are passed to keras for reconstruction after loading an exported model.
-This is to support eager execution during :ref:`LAV<doc.evaluation:load and validate (LAV)>` or :ref:`prediction<doc.prediction:prediction>`).
-The default implementation searches all graphs (classes that inherit ``GraphBase``) in either the ``graphs.py`` file or a ``graphs``-package.
-Note, it is sufficient to list the top-most layers, usually the base graphs.
+If a metric (e.g. the PR-curve) returns binary data (already serialized Tensorboard data) it will be automatically written to the Tensorboard.
 
 Exporting additional graphs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,3 +194,15 @@ By default, this is the graph defined by all inputs and all outputs.
 Override this function to export a different or additional graphs, e.g., if you want to only export the encoder in an encoder/decoder setup.
 Return a Dict with ``label`` and ``keras.models.Model`` to export.
 
+Root-Graph-Construction
+-----------------------
+
+The root graph can be overwritten to have full flexibility when creating a graph.
+In most cases this is optional.
+
+.. code-block:: python
+
+    @staticmethod
+    def root_graph_cls() Type['RootGraph']:
+        from tfaip.model.graphbase import RootGraph
+        return RootGraph

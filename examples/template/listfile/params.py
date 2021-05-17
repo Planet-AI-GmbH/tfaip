@@ -25,14 +25,26 @@ from tfaip import ScenarioBaseParams, DataBaseParams, ModelBaseParams
 @dataclass
 class TemplateDataParams(DataBaseParams):
     # [Add global data params that can be accessed by every data processor]
-    pass
+
+    @staticmethod
+    def cls():
+        from examples.template.listfile.data import TemplateData
+        return TemplateData
 
 
 @pai_dataclass
 @dataclass
 class TemplateModelParams(ModelBaseParams):
     # [Add general model params, also including parameters that define the graph]
-    pass
+
+    @staticmethod
+    def cls():
+        from examples.template.listfile.model import TemplateModel
+        return TemplateModel
+
+    def graph_cls(self):
+        from examples.template.listfile.graphs import TemplateGraph
+        return TemplateGraph
 
 
 @pai_dataclass

@@ -26,13 +26,16 @@ from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.callbacks.lav_callback import LAVCallback
 from tfaip.predict.multimodelpredictor import MultiModelPredictor
-from tfaip.predict.predictorbase import PredictorBenchmarkResults
+from tfaip.trainer.callbacks.benchmark_callback import BenchmarkResults
 
 
 class MultiLAV(ABC):
     """
     Similar to LAV but supports multiple models and voting.
     Drawback: does not use metrics defined in model (EvaluatorBase and Voter must handle everything)
+
+    Therefore the implementation differs from the classical LAV, a MultiPredictor is created whose outputs are passed
+    to the evaluator.
     """
 
     @classmethod
@@ -50,7 +53,7 @@ class MultiLAV(ABC):
         self._predictor_fn = predictor_fn
         self._evaluator = evaluator
         self.device_config = DeviceConfig(self._params.device)
-        self.benchmark_results = PredictorBenchmarkResults()
+        self.benchmark_results = BenchmarkResults()
         self.predictor_params = predictor_params
         self.predictor_params.pipeline = self._params.pipeline
         predictor_params.silent = True
@@ -78,7 +81,7 @@ class MultiLAV(ABC):
                 targets, outputs = prediction.targets, prediction.outputs
 
                 for cb in callbacks:
-                    cb.on_sample_end(prediction)
+                    cb.on_sample_end(data_gen_params, prediction)
 
                 if not self._params.silent:
                     print(targets, outputs)

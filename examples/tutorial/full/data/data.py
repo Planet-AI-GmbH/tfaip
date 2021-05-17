@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+from dataclasses import dataclass
+
 import tensorflow as tf
+from paiargparse import pai_dataclass
 
 from examples.tutorial.full.data.processors.normalize import NormalizeProcessorParams
 from tfaip import DataBaseParams
@@ -23,7 +26,15 @@ from tfaip.data.data import DataBase
 from tfaip.data.pipeline.processor.params import SequentialProcessorPipelineParams
 
 
-class TutorialData(DataBase[DataBaseParams]):
+@pai_dataclass
+@dataclass
+class TutorialDataParams(DataBaseParams):
+    @staticmethod
+    def cls():
+        return TutorialData
+
+
+class TutorialData(DataBase[TutorialDataParams]):
     @classmethod
     def default_params(cls) -> DataBaseParams:
         params = super(TutorialData, cls).default_params()

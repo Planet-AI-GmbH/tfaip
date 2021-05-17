@@ -75,6 +75,11 @@ class MeasureTime:
         self.end = time.time()
         self.duration = self.end - self.start
 
+    def duration_till_now(self):
+        if self.duration != -1:
+            return self.duration  # already measured
+        return time.time() - self.start
+
 
 def profile(fn):
     if not ENABLE:

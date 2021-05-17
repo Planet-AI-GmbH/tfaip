@@ -127,19 +127,19 @@ class MultiModelPredictor(PredictorBase):
         # the Function will create one large joined keras Model that applies all given models in parallel
         # and thus produces a list of dictionaries as output.
         assert len(models) == len(datas), 'The number of models and DataBases must coincide'
-        models = [self._load_model(model, False) for model in models]
-        inputs = self._data.create_input_layers()
-        meta = self._data.create_meta_as_input_layers()
-        outputs = [model(inputs) for model in models]
+        models = [self._load_model(model) for model in models]
+
         for i, model in enumerate(models):
             model._name = f'{i}_{model.name}'  # Forced renaming, pylint: disable=protected-access
-        if self._params.include_targets:
-            targets = self._data.create_target_as_input_layers()
-            joined = {**inputs, **targets, **meta}
-            self._keras_model = keras.models.Model(inputs=joined, outputs=(inputs, targets, outputs, meta))
-        else:
-            joined = {**inputs, **meta}
-            self._keras_model = keras.models.Model(inputs=joined, outputs=(inputs, outputs, meta))
+
+        class JoinedModel(keras.Model):
+            def call(self, inputs, training=None, mask=None):
+                return [model(inputs) for model in models]
+
+            def get_config(self):
+                raise NotImplementedError
+
+        self._keras_model = JoinedModel()
         self._datas = datas
 
     @property

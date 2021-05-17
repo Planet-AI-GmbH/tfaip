@@ -21,7 +21,6 @@ import unittest
 from tensorflow.keras.backend import clear_session
 
 from test.tutorial.test_tutorial_full import TutorialScenarioTest
-from test.util.store_logs_callback import StoreLogsCallback
 from tfaip.data.databaseparams import DataPipelineParams
 
 
@@ -52,12 +51,10 @@ class TestMultipleValLists(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             # Train with ema and without ema with same seeds
             # train loss must be equals, but with ema the validation outcomes must be different
-            store_logs_callback = StoreLogsCallback()
             trainer_params = ScenarioTest.default_trainer_params()
             trainer_params.output_dir = d
             trainer = ScenarioTest.create_trainer(trainer_params)
-            trainer.train(callbacks=[store_logs_callback])
-            train_logs = store_logs_callback.logs
+            train_logs = trainer.train()
             # Tutorial yields two LAV datasets (test and train)
             for i in range(2):
-                self.assertAlmostEqual(train_logs[f'lav_l{i}_acc'], train_logs[f'lav_l{i}_simple_acc'])
+                self.assertAlmostEqual(train_logs[f'lav_l{i}_acc'], train_logs[f'lav_l{i}_eval_acc'])

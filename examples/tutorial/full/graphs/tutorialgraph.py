@@ -24,18 +24,13 @@ from tfaip.model.graphbase import GraphBase
 
 
 class TutorialGraph(GraphBase, ABC):
-    @classmethod
-    def params_cls(cls):
-        from examples.tutorial.full.model import TutorialModelParams
-        return TutorialModelParams
-
     def __init__(self, params, **kwargs):
         super(TutorialGraph, self).__init__(params, **kwargs)
         self.acc = keras.metrics.Accuracy(name='internal_acc')
         self.backend = params.graph.cls()
         self.logits = keras.layers.Dense(self._params.n_classes, activation=None, name='classify')
 
-    def call(self, inputs, **kwargs):
+    def build_graph(self, inputs, training=None):
         # Optionally add a training attribute to check if the graph is in training or validation mode
         # To design a different behaviour of the prediction graph, check if GT is available in the inputs
         # call function that is shared by all other graphs

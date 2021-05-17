@@ -15,15 +15,20 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from tensorflow.keras.callbacks import Callback
+import tensorflow as tf
 
 
-class StoreLogsCallback(Callback):
-    def __init__(self):
-        super(StoreLogsCallback, self).__init__()
-        self.logs = {}
+class Count(tf.keras.metrics.Metric):
+    """Metric which counts the number of examples seen"""
 
-    def on_epoch_end(self, epoch, logs=None):
-        self.logs = logs
+    def __init__(self, name='count', dtype=tf.int64, **kwargs):
+        super().__init__(name, dtype, **kwargs)
+        self.count = self.add_weight(name, initializer='zeros')
 
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        first_tensor = tf.nest.flatten(y_true)[0]
+        batch_size = tf.shape(first_tensor)[0]
+        self.count.assign_add(tf.cast(batch_size, dtype=self.dtype))
 
+    def result(self):
+        return self.count

@@ -16,6 +16,8 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Definition of the ExtractLogsCallback"""
+from typing import Optional
+
 import tensorflow.keras.callbacks as cb
 
 from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
@@ -32,11 +34,16 @@ class ExtractLogsCallback(cb.Callback):
     Thereto, all logs are extracted and stored in a separated data structure which is cleared on the begin of the
     training. The TensorBoardCallback has then access to the extracted logs.
     """
-    def __init__(self, tensorboard_data_handler: TensorBoardDataHandler):
+    def __init__(self, test_prefix='val_'):
         super().__init__()
         self._supports_tf_logs = True
-        self.tensorboard_data_handler = tensorboard_data_handler
+        self.tensorboard_data_handler: Optional[TensorBoardDataHandler] = None
         self.extracted_logs = {}
+        self.test_prefix = test_prefix
+
+    def set_model(self, model):
+        super().set_model(model)
+        self.tensorboard_data_handler = TensorBoardDataHandler(self.model)
 
     def on_train_begin(self, logs=None):
         self.extracted_logs = {}
@@ -55,12 +62,16 @@ class ExtractLogsCallback(cb.Callback):
 
     def on_test_batch_end(self, batch, logs=None):
         # extract the logs, but add val_ as prefix (as common)
-        self.extract(logs, prefix='val_')
+        self.extract(logs, prefix=self.test_prefix)
+
+    def on_test_end(self, logs=None):
+        # extract the logs, but add val_ as prefix (as common)
+        self.extract(logs, prefix=self.test_prefix)
 
     def extract(self, logs, prefix=''):
         if logs is None:
             return
         for k in list(logs.keys()):
-            if self.tensorboard_data_handler.is_tensorboard_only(k,logs[k]):
-                self.extracted_logs[prefix + k] = logs[k].numpy()
+            if self.tensorboard_data_handler.is_tensorboard_only(k, logs[k]):
+                self.extracted_logs[prefix + k] = logs[k].numpy() if hasattr(logs[k], 'numpy') else logs[k]
                 del logs[k]

@@ -15,14 +15,14 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-import os
 import sys
-import tfaip.util.logging  # do not delete
+import os
+
+from tfaip.util.testing import setup_test_init
+
+setup_test_init()
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 # add root as python path
 sys.path.append(os.path.abspath(os.path.join(this_dir, '..')))
-
-if 'CUDA_VISIBLE_DEVICES' not in os.environ:
-    os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Disable gpu usage

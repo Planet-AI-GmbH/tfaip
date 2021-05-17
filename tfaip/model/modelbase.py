@@ -17,7 +17,7 @@
 # ==============================================================================
 """Implementation of the ModelBase"""
 import logging
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from typing import Type, Dict, Any, Tuple, Optional, List, TYPE_CHECKING, TypeVar, Generic
 
 import tensorflow as tf
@@ -26,14 +26,13 @@ from typeguard import typechecked
 from tfaip import ModelBaseParams
 from tfaip import Sample
 from tfaip.data.data import DataBase
-from tfaip.model.losses.definitions import LossDefinition
-from tfaip.model.metric.definitions import MetricDefinition
+from tfaip.model.metric.count import Count
 from tfaip.model.metric.multi import MultiMetricDefinition
+from tfaip.model.tensorboardwriter import TensorboardWriter
 from tfaip.util.tftyping import AnyTensor
 
 if TYPE_CHECKING:
-    from tfaip.model.graphbase import GraphBase
-    from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
+    from tfaip.model.graphbase import RootGraph
 
 logger = logging.getLogger(__name__)
 
@@ -53,48 +52,23 @@ class ModelBase(Generic[TMP], ABC):
         return arg
 
     @classmethod
-    def all_custom_objects(cls) -> Dict[str, Any]:
-        general_layers = {}
-        for c in cls._additional_layers():
-            name = c.__name__
-            if name in general_layers:
-                logger.warning(f'Class names must be unique, but class with name "{name}". Consider to rename it!')
-            general_layers[name] = c
-
-        return general_layers
-
-    @classmethod
-    @typechecked
-    def additional_layers(cls) -> List[Type[tf.keras.layers.Layer]]:
+    def all_custom_objects(cls) -> Dict[str, Type[tf.keras.layers.Layer]]:
+        """Custom objects required to instantiate saved keras models
         """
-        List all custom layers of the model. This is required to enable eager mode in LAV.
-        (See e.g. Tutorial for an example)
+        root_graph = cls.root_graph_cls()
+        return {
+            root_graph.__name__: root_graph,
+            'TensorboardWriter': TensorboardWriter,
+        }
 
-        Returns:
-            List of all layers
-        """
-        return cls._additional_layers()
-
-    @classmethod
-    def _additional_layers(cls) -> List[Type[tf.keras.layers.Layer]]:
-        from tfaip.model.util.module import import_graphs  # pylint: disable=import-outside-toplevel
-        try:
-            return import_graphs(cls.__module__)
-        except ModuleNotFoundError:
-            logger.error('Could not find additional layers automatically. Either create a graphs.py file or graphs '
-                         'package (directory) where GraphBase implementations are searched, or override '
-                         '_additional_layers in your Model')
-            raise
-
-    def __init__(self, params: TMP, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, params: TMP):
         self._params: TMP = params
-        self._graph = None
-        self._tensorboard_handler = self._create_tensorboard_handler()
+        self._count_metric = Count()
 
-    def setup(self):
-        if not self._graph:
-            self._graph = self.create_graph(self._params)
+    @staticmethod
+    def root_graph_cls() -> Type['RootGraph']:
+        from tfaip.model.graphbase import RootGraph
+        return RootGraph
 
     @property
     def params(self) -> TMP:
@@ -104,7 +78,7 @@ class ModelBase(Generic[TMP], ABC):
     def best_logging_settings(self) -> Tuple[str, str]:
         """
         Which metric/loss shall be logged, and if the minimum or maximum of this value is better. E. G.:
-        "min", "CER" or "max", "ACC" or "min", "loss"
+        "min", "CER" or "max", "ACC" or "min", "loss/mean_epoch"
         The metric must match the name of the logger
         :return: str, str
         """
@@ -112,78 +86,31 @@ class ModelBase(Generic[TMP], ABC):
 
     def _best_logging_settings(self) -> Tuple[str, str]:
         # Override this function
-        return 'min', 'loss'
+        return 'min', 'loss/mean_epoch'
 
     @typechecked
-    def build(self, inputs_targets: Dict[str, AnyTensor]) -> Dict[str, AnyTensor]:
+    def metric(self, inputs, targets, outputs) -> List[AnyTensor]:
+        """ The metrics of the model
+
+        Override _metric in a custom implementation.
+
+        Instantiate keras metrics in a Models init function and return the called metric here.
         """
-        Override _build for custom implementation. Do this with caution
-        :param inputs_targets: Dictionary of both the inputs and the targets
-        :return: The outputs of the model
-        """
-        self.setup()
-        return self._graph(inputs_targets)
-
-    @abstractmethod
-    def create_graph(self, params: TMP) -> 'GraphBase':
-        raise NotImplementedError
-
-    @typechecked()
-    def additional_outputs(self, inputs: Dict[str, AnyTensor], outputs: Dict[str, AnyTensor]) -> Dict[str, AnyTensor]:
-        return self._additional_outputs(inputs, outputs)
-
-    def _additional_outputs(self, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
-        # Override this function
-        del inputs  # Not required in the default implementation
-        del outputs  # Not required in the default implementation
-        return {}
-
-    @typechecked
-    def extended_metric(self,
-                        inputs_targets: Dict[str, AnyTensor],
-                        outputs: Dict[str, AnyTensor]
-                        ) -> Dict[str, AnyTensor]:
-        """
-        use lambda layers, you can not use self.<variables> directly, it will result in pickle-error
-        Override _extended_metric for custom implementation.
-        :param inputs_targets: A dictionary containing both the inputs and the targets of the model
-        :param outputs: A dictionary providing the outputs of the graph
-        :return: A dictionary of metric values
-        """
-        # wrap the metric into a layer, this is required since the outputs of _extended_metric can be simple Tensors
-        # but everything pure tensorflow backend call must be wrapped into a layer
-        return _LambdaLayerNoConfig(self._extended_metric)((inputs_targets, outputs))
-
-    def _extended_metric(self, inputs_targets: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]
-                         ) -> Dict[str, tf.Tensor]:
-        # Override this function
-        del inputs_targets  # Not required in the default implementation
-        del outputs  # Not required in the default implementation
-        return {}
-
-    @typechecked
-    def metric(self) -> Dict[str, MetricDefinition]:
-        """Override _metric in a custom implementation. Standard metrics allow for one input and one target only, and also
-        have access to the sample weights.
-
-        :return: A Dictionary of MetricDefinition
-        """
-        metrics = self._metric()
-        # convert multi metrics to simple metrics
-        for k, v in self._multi_metric().items():
-            for c in v.metric.children:
-                metrics[c.name] = MetricDefinition(v.target, v.output, c)
-            metrics[k] = MetricDefinition(v.target, v.output, v.metric)
-
+        metrics = self._metric(inputs, targets, outputs)
         return metrics
 
-    def _metric(self) -> Dict[str, MetricDefinition]:
-        # Override this function
-        return {}
+    def _target_output_metric(self) -> List[Tuple[str, str, tf.keras.metrics.Metric]]:
+        """Deprecated
+        """
+        return []
 
-    def _multi_metric(self) -> Dict[str, MultiMetricDefinition]:
+    def _metric(self, inputs, targets, outputs) -> List[AnyTensor]:
         # Override this function
-        return {}
+        return []
+
+    def _multi_metric(self) -> List[MultiMetricDefinition]:
+        # Override this function
+        return []
 
     @typechecked
     def sample_weights(self, inputs: Dict[str, AnyTensor], targets: Dict[str, AnyTensor]) -> Dict[str, Any]:
@@ -195,6 +122,8 @@ class ModelBase(Generic[TMP], ABC):
         :param targets:   The outputs of the model
         :return: Dictionary of the weights
         """
+        logger.warning('Sample weights are deprecated and should not be called anymore.'
+                       'Sample weights are still required for deprecated multi metrics, though.')
         return self._sample_weights(inputs, targets)
 
     def _sample_weights(self, inputs: Dict[str, tf.Tensor], targets: Dict[str, tf.Tensor]) -> Dict[str, Any]:
@@ -204,58 +133,17 @@ class ModelBase(Generic[TMP], ABC):
         return {}
 
     @typechecked
-    def extended_loss(self, inputs_targets: Dict[str, AnyTensor], outputs: Dict[str, AnyTensor]
-                      ) -> Dict[str, AnyTensor]:
-        """
-        A dictionary of all losses of the model that will be averaged if there are multiple.
-        Only override _extended_loss for the custom implementation
+    def loss(self, inputs, targets, outputs) -> Dict[str, AnyTensor]:
+        """Returns a list of losses
 
-        :param inputs_targets:  Inputs and targets of the model
-        :param outputs:  Outputs of the model
-        :return:  Dictionary of the loss
+        The losses will be collected by weighting with the loss_weights that default to 1
         """
-        # wrap the loss into a layer, this is required since the outputs of _extended_loss can be simple Tensors
-        # but everything pure tensorflow backend call must be wrapped into a layer
-        return _LambdaLayerNoConfig(self._extended_loss)((inputs_targets, outputs))
+        return self._loss(inputs, targets, outputs)
 
-    def _extended_loss(self, inputs_targets: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]
-                       ) -> Dict[str, AnyTensor]:
-        """
-        Override to implement a loss as a Tensor output
-
-        See Also:
-            _loss
-        """
-        del inputs_targets  # Not required in the default implementation
-        del outputs  # Not required in the default implementation
-        return {}
-
-    @typechecked
-    def loss(self) -> Dict[str, LossDefinition]:
-        """
-        Losses based on keras.losses. Implement _loss
-        Returns:
-            A dict of the loss name and a LossDefinition
-        See Also:
-            extended_loss
-        """
-        losses = self._loss()
-        if 'loss' in losses:
-            name = 'loss_loss'
-            while name in losses:
-                name = name + '_loss'
-            logger.warning('Cannot use "loss" as loss name because it is a reserved name by keras.'
-                           f'Automatically renaming to "{name}" but you should consider to rename it.')
-            losses[name] = losses['loss']
-            del losses['loss']
-
-        for k, loss in losses.items():
-            loss.loss.name = k
-        return losses
-
-    def _loss(self) -> Dict[str, LossDefinition]:
+    @abstractmethod
+    def _loss(self, inputs, targets, outputs) -> Dict[str, AnyTensor]:
         # Implement this
-        return {}
+        raise NotImplementedError
 
     @typechecked
     def loss_weights(self) -> Optional[Dict[str, float]]:
@@ -304,36 +192,57 @@ class ModelBase(Generic[TMP], ABC):
         del targets  # not required in the default implementation
         return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
 
-    @property
-    def tensorboard_handler(self):
-        return self._tensorboard_handler
+    def add_all_losses(self, model, inputs, targets, outputs):
+        loss_weights = self.loss_weights() or {}
+        total_loss = 0
+        for name, loss in self.loss(inputs, targets, outputs).items():
+            loss_weight = loss_weights.get(name, 1)
+            loss_v = tf.reduce_mean(loss)
+            extra_loss = loss_v * loss_weight
+            total_loss += extra_loss
+            model.add_metric(loss_v, name=name)
 
-    def _create_tensorboard_handler(self) -> 'TensorBoardDataHandler':
-        # Override this function
-        from tfaip.trainer.callbacks.tensor_board_data_handler import \
-            TensorBoardDataHandler  # pylint: disable=import-outside-toplevel
-        return TensorBoardDataHandler()
+        model.add_loss(total_loss)
+        model.add_metric(total_loss, name='loss/mean_epoch')
+
+    def add_all_metrics(self, model, inputs, targets, outputs):
+        for metric_v in self.metric(inputs, targets, outputs):
+            model.add_metric(metric_v)
+
+        # add counter metric
+        model.add_metric(self._count_metric(inputs, targets))
+
+        # convert multi metrics to simple metrics
+        if len(model.multi_metrics) > 0:
+            sample_weights = self.sample_weights(inputs, targets)
+            for v in model.multi_metrics:
+                for c in v.metric.children:
+                    model.add_metric(c(targets[v.target], outputs[v.output], sample_weights.get(c.name, None)))
+                model.add_metric(v.metric(targets[v.target], outputs[v.output], sample_weights.get(v.metric.name, None)))
+
+        if len(model.target_output_metrics) > 0:
+            sample_weights = self.sample_weights(inputs, targets)
+            for t, o, m in model.target_output_metrics:
+                model.add_metric(m(targets[t], outputs[o], sample_weights.get(m.name, None)))
+
+    def post_proc_targets(self, inputs, targets, outputs):
+        return targets
+
+    def wrap_model_with_loss_and_metric(self, model, inputs, targets, outputs, with_losses=True, with_metrics=True):
+        post_proc_targets = self.post_proc_targets(inputs, targets, outputs)
+        if with_losses:
+            self.add_all_losses(model, inputs, post_proc_targets, outputs)
+        if with_metrics:
+            self.add_all_metrics(model, inputs, post_proc_targets, outputs)
 
 
-class _LambdaLayerNoConfig(tf.keras.layers.Layer):
-    """Implementation of a lambda layer that can be serialized by keras
-
-    The class can however not be deserialized. So only use it during training.
-    """
+class TFAIPKerasModel(tf.keras.models.Model):
+    def call(self, inputs, training=None, mask=None):
+        return super().call(inputs, training=training, mask=mask)
 
     def get_config(self):
-        p = super().get_config()
-        p['fn'] = None  # this layer cannot be instantiated
-        return p
+        return super().get_config()
 
-    def __init__(self, fn, **kwargs):
-        super().__init__(**kwargs)
-        self.fn = fn
-        if fn is None:
-            raise ValueError('Parameter model is None. If this error occurs during loading a model, it means that '
-                             'the Training Graph was loaded or this layer was used in the Prediction graph. '
-                             'This is not supported.')
-
-    def call(self, *args, **kwargs):
-        del kwargs  # not used here
-        return self.fn(*args[0])
+    def __init__(self, inputs, outputs, **kwargs):
+        # Only allow functional API
+        super().__init__(inputs, outputs, **kwargs)

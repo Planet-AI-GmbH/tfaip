@@ -18,7 +18,7 @@
 """Definition of the PrintEvaluateLayer"""
 import json
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, NamedTuple, Any
 
 import tensorflow as tf
 
@@ -29,6 +29,13 @@ if TYPE_CHECKING:
     from tfaip.scenario.scenariobase import ScenarioBase
 
 logger = logging.getLogger(__name__)
+
+
+class PrintEvaluateLayerInput(NamedTuple):
+    inputs: Any
+    outputs: Any
+    targets: Any
+    meta: Any
 
 
 class PrintEvaluateLayer(tf.keras.layers.Layer):
@@ -65,22 +72,22 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         # Counter (self._still_allowed) counts how many outputs still to process during training=False
         # during training: counter is reset to self.limit
         # during prediction: call print on batch, and reduce counter by batch size
+        assert isinstance(inputs, PrintEvaluateLayerInput)
 
-        v = inputs[0]   # This is the output of the operation as 'identity'
         if self.scenario is None:
             # No scenario set. This should usually not be the case, only when loading a training Graph
             # Instead recreate full graph.
-            return v
+            return tf.constant(0)
 
         def print_op():
             # Only print if we didnt reach the limit
-            batch_size = tf.shape(v)[0]
+            batch_size = tf.shape(tf.nest.flatten(inputs)[0])[0]
 
             def real_print():
                 # tf function requires a list as input, hack is to pack everything into a list and storing the key
                 # names, and unpacking in the actual print function
                 # also the "training" state must be packed...
-                return tf.py_function(self.run_print, pack(inputs[1:]), Tout=[], name='print')
+                return tf.py_function(self.run_print, pack(inputs), Tout=[], name='print')
             a = tf.cond(tf.greater(self._still_allowed, 0), real_print, tf.no_op)
             with tf.control_dependencies([a]):
                 b = self._still_allowed.assign_sub(batch_size)
@@ -96,7 +103,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
             op = tf.cond(tf.convert_to_tensor(training), reset_op, print_op)
 
         with tf.control_dependencies([op]):
-            return v
+            return tf.constant(0)  # return a constant (0) since the output of the PEL is used as a dummy loss
 
     def call(self, inputs, training=None):
         if training is None:
