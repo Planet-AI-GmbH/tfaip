@@ -23,7 +23,7 @@ from typing import Iterable, List, TypeVar, Generic
 from tfaip import DataGeneratorParams
 from tfaip import PipelineMode, Sample
 
-T = TypeVar('T', bound=DataGeneratorParams)
+T = TypeVar("T", bound=DataGeneratorParams)
 
 
 class DataGenerator(Generic[T], ABC):

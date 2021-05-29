@@ -31,13 +31,13 @@ logging.basicConfig(level=logging.DEBUG)
 def main():
     parser = ArgumentParser()
 
-    parser.add_argument('output_dir', type=str, help='path to the checkpoint dir to resume from')
+    parser.add_argument("output_dir", type=str, help="path to the checkpoint dir to resume from")
 
     args = parser.parse_args()
 
-    with open(os.path.join(args.output_dir, 'trainer_params.json')) as f:
+    with open(os.path.join(args.output_dir, "trainer_params.json")) as f:
         d = json.load(f)
-        d.get('device', {})['gpus'] = []
+        d.get("device", {})["gpus"] = []
 
     trainer = Trainer.restore_trainer(d)
     scenario = trainer.scenario
@@ -54,7 +54,7 @@ def main():
         print(f"Converting {path}")
         if os.path.exists(path):
             warmstart_params = WarmStartParams(
-                model=os.path.join(path, 'serve'),
+                model=os.path.join(path, "serve"),
                 rename_targets=[f"BLSTM_{i}->BLSTM{i + 1}" for i in range(3)],
             )
             warmstarter = WarmStarter(warmstart_params)
@@ -64,9 +64,9 @@ def main():
         else:
             print(f"{path} not found. Skipping")
 
-    for p in ['best', 'export']:
+    for p in ["best", "export"]:
         store(os.path.join(args.output_dir, p))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

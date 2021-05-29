@@ -72,7 +72,7 @@ class PredictorBase(ABC):
     def params_cls(cls) -> Type[PredictorParams]:
         return PredictorParams
 
-    def __init__(self, params: PredictorParams, data: 'DataBase'):
+    def __init__(self, params: PredictorParams, data: "DataBase"):
         post_init(params)
         self._params = params
         self._params.pipeline.mode = PipelineMode.PREDICTION
@@ -143,7 +143,8 @@ class PredictorBase(ABC):
                 size = len(inputs)
             except TypeError:
                 logger.warning(
-                    'Size not specified. Converting inputs to list to obtain size. Or implement size on inputs')
+                    "Size not specified. Converting inputs to list to obtain size. Or implement size on inputs"
+                )
                 inputs = list(inputs)
             size = len(inputs)
 
@@ -183,10 +184,10 @@ class PredictorBase(ABC):
         """
         with pipeline as rd:
             for sample in tqdm_wrapper(
-                    rd.process_output(self.predict_dataset(rd.input_dataset())),
-                    progress_bar=self._params.progress_bar,
-                    desc='Prediction',
-                    total=len(rd),
+                rd.process_output(self.predict_dataset(rd.input_dataset())),
+                progress_bar=self._params.progress_bar,
+                desc="Prediction",
+                total=len(rd),
             ):
                 if not self._params.silent:
                     self._print_prediction(sample, logger.info)
@@ -210,7 +211,7 @@ class PredictorBase(ABC):
             - predict_raw
         """
         if self._keras_model is None:
-            raise ValueError('No model set. Call predictor.set_model(model)')
+            raise ValueError("No model set. Call predictor.set_model(model)")
 
         keras_model = self._keras_model
 
@@ -235,9 +236,9 @@ class PredictorBase(ABC):
         wrapped_model.compile(run_eagerly=True)
 
         if self._params.include_targets:
-            dataset = dataset.map(lambda i, t, m: ((i, t, m), ))
+            dataset = dataset.map(lambda i, t, m: ((i, t, m),))
         else:
-            dataset = dataset.map(lambda i, m: ((i, m), ))
+            dataset = dataset.map(lambda i, m: ((i, m),))
 
         with MeasureTime() as total_time:
             # The following code is copied from keras.model.Model.predict
@@ -263,7 +264,7 @@ class PredictorBase(ABC):
                                 try:
                                     batch_size = tf.nest.flatten(inputs)[0].shape[0]
                                 except StopIteration as e:
-                                    raise ValueError(f'Empty inputs {inputs}. This should never occur!') from e
+                                    raise ValueError(f"Empty inputs {inputs}. This should never occur!") from e
                                 for sample in self._unwrap_batch(inputs, targets, outputs, meta):
                                     self._on_sample_end(sample)
                                     yield sample

@@ -20,13 +20,14 @@ import tensorflow.keras.callbacks as cb
 
 
 class TensorflowFix(cb.Callback):
-    """ Fix for a weired Tensorflow bug. Remove this if the Issue is closed or Fixed...
+    """Fix for a weired Tensorflow bug. Remove this if the Issue is closed or Fixed...
 
     See https://github.com/tensorflow/tensorflow/issues/42872
     """
+
     def __init__(self):
         super().__init__()
-        self._supports_tf_logs = True       # Any Callback before LAV callback must act on raw tf logs only
+        self._supports_tf_logs = True  # Any Callback before LAV callback must act on raw tf logs only
         self._backup_loss = None
 
     def on_train_begin(self, logs=None):

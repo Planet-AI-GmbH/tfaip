@@ -16,7 +16,12 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Imports of all Optimizers and definition of the DEFAULT_OPTIMIZERS"""
-from tfaip.trainer.optimizer.optimizers import AdamOptimizer, AdamaxOptimizer, RMSpropOptimizer, SGDOptimizer, \
-    AdaBeliefOptimizer
+from tfaip.trainer.optimizer.optimizers import (
+    AdamOptimizer,
+    AdamaxOptimizer,
+    RMSpropOptimizer,
+    SGDOptimizer,
+    AdaBeliefOptimizer,
+)
 
 DEFAULT_OPTIMIZERS = [AdamOptimizer, AdamaxOptimizer, RMSpropOptimizer, SGDOptimizer, AdaBeliefOptimizer]

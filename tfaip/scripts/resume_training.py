@@ -31,15 +31,16 @@ class ScenarioSelectionAction(Action):
         trainer_params, scenario = Trainer.parse_trainer_params(output_dir)
 
         # parse additional args
-        parser.add_root_argument('trainer', trainer_params.__class__, default=trainer_params)
+        parser.add_root_argument("trainer", trainer_params.__class__, default=trainer_params)
         setattr(namespace, self.dest, values)
-        setattr(namespace, 'scenario_cls', scenario)
+        setattr(namespace, "scenario_cls", scenario)
 
 
 def main(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('output_dir', type=str, help='path to the checkpoint dir to resume from',
-                        action=ScenarioSelectionAction)
+    parser.add_argument(
+        "output_dir", type=str, help="path to the checkpoint dir to resume from", action=ScenarioSelectionAction
+    )
     args = parser.parse_args(args=args)
 
     with WriteToLogFile(args.trainer.output_dir, append=True):
@@ -52,5 +53,5 @@ def main(args=None):
         trainer.train()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

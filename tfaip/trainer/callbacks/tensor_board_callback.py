@@ -34,20 +34,19 @@ logger = logging.getLogger(__name__)
 
 
 class TensorBoardCallback(TensorBoard):
-    """ Custom implementation fo the TensorBoard-Callback of keras to provide additional functionality:
+    """Custom implementation fo the TensorBoard-Callback of keras to provide additional functionality:
 
     - Logging of LAV (custom LAV writer)
     - Adding of the learning rate
     - Applying a TensorBoardDataHandler on every log output to handle custom tensorboard data (e.g. PR-Curves or images)
     """
 
-    def __init__(self, log_dir, steps_per_epoch,
-                 extracted_logs_cb: 'ExtractLogsCallback',
-                 reset=False, profile=0,
-                 **kwargs):
+    def __init__(
+        self, log_dir, steps_per_epoch, extracted_logs_cb: "ExtractLogsCallback", reset=False, profile=0, **kwargs
+    ):
         if reset:
             logger.info(f'Removing old event files from "{log_dir}"')
-            for f in glob.glob(os.path.join(log_dir, '*', 'events.out.tfevents*')):
+            for f in glob.glob(os.path.join(log_dir, "*", "events.out.tfevents*")):
                 logger.debug(f"Removing old event '{f}'")
                 os.remove(f)
 
@@ -55,12 +54,12 @@ class TensorBoardCallback(TensorBoard):
         self.steps_per_epoch = steps_per_epoch
         self.extracted_logs_cb = extracted_logs_cb
 
-        self._lav_dir = os.path.join(log_dir, 'lav')
+        self._lav_dir = os.path.join(log_dir, "lav")
 
     def _lav_writer(self, idx):
-        label = f'lav_l{idx}'
+        label = f"lav_l{idx}"
         if label not in self._writers:
-            lav_dir = f'{self._lav_dir}_l{idx}'
+            lav_dir = f"{self._lav_dir}_l{idx}"
             os.makedirs(lav_dir, exist_ok=True)
             self._writers[label] = summary_ops_v2.create_file_writer_v2(lav_dir)
         return self._writers[label]
@@ -71,7 +70,7 @@ class TensorBoardCallback(TensorBoard):
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
-        logs.update({'lr': K.eval(self.model.optimizer.lr(epoch * self.steps_per_epoch))})
+        logs.update({"lr": K.eval(self.model.optimizer.lr(epoch * self.steps_per_epoch))})
         super().on_epoch_end(epoch, logs)
 
     def _log_epoch_metrics(self, epoch, logs):
@@ -82,20 +81,20 @@ class TensorBoardCallback(TensorBoard):
         if self.extracted_logs_cb:
             logs.update(self.extracted_logs_cb.extracted_logs)
 
-        train_logs = {k: v for k, v in logs.items() if not k.startswith('val_') and not k.startswith('lav_')}
-        val_logs = {k: v for k, v in logs.items() if k.startswith('val_')}
-        lav_logs = {k: v for k, v in logs.items() if k.startswith('lav_')}
+        train_logs = {k: v for k, v in logs.items() if not k.startswith("val_") and not k.startswith("lav_")}
+        val_logs = {k: v for k, v in logs.items() if k.startswith("val_")}
+        lav_logs = {k: v for k, v in logs.items() if k.startswith("lav_")}
 
         with summary_ops_v2.always_record_summaries():  # pylint: disable=not-context-manager
             if train_logs:
                 with self._train_writer.as_default():
                     for name, value in train_logs.items():
-                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, "epoch_" + name, value, step=epoch)
             if val_logs:
                 with self._val_writer.as_default():
                     for name, value in val_logs.items():
                         name = name[4:]  # Remove 'val_' prefix.
-                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                        self.extracted_logs_cb.tensorboard_data_handler.handle(name, "epoch_" + name, value, step=epoch)
 
             # lav logs, include lav list idx
             if lav_logs:
@@ -103,9 +102,9 @@ class TensorBoardCallback(TensorBoard):
                 for k, v in lav_logs.items():
                     k = k[4:]  # Remove 'lav_' prefix
                     k = k[1:]  # Remove 'l' prefix
-                    d = k.find('_')
+                    d = k.find("_")
                     lav_idx = k[:d]
-                    k = k[d + 1:]  # Remove 'digit + _'
+                    k = k[d + 1 :]  # Remove 'digit + _'
                     if lav_idx not in lavs:
                         lavs[lav_idx] = {}
                     lavs[lav_idx][k] = v
@@ -113,4 +112,6 @@ class TensorBoardCallback(TensorBoard):
                 for idx, v in lavs.items():
                     with self._lav_writer(idx).as_default():
                         for name, value in v.items():
-                            self.extracted_logs_cb.tensorboard_data_handler.handle(name, 'epoch_' + name, value, step=epoch)
+                            self.extracted_logs_cb.tensorboard_data_handler.handle(
+                                name, "epoch_" + name, value, step=epoch
+                            )

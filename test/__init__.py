@@ -25,4 +25,4 @@ setup_test_init()
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 # add root as python path
-sys.path.append(os.path.abspath(os.path.join(this_dir, '..')))
+sys.path.append(os.path.abspath(os.path.join(this_dir, "..")))

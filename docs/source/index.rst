@@ -17,6 +17,7 @@ Templates show the most common functions that must be implemented (search for ``
     Parameters <doc.parameters>
     Scenario <doc.scenario>
     Data <doc.data>
+    Data Pipeline <doc.data.pipeline>
     Model <doc.model>
     Graph <doc.graph>
     Training <doc.training>

@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 class EMACallback(Callback):
-    """ The EMACallback swaps the weights of the model with EMA or non EMA which is required for validation and export.
+    """The EMACallback swaps the weights of the model with EMA or non EMA which is required for validation and export.
 
     For example, at the begin of testing the EMA weights are loaded, and at the end the original weigs are restored.
     Similarly, at the end of a epoch the EMA weights are loaded to export the prediction model, and at the end of
     each epoch the weights are reset to the actual weights.
     """
+
     @typechecked
     def __init__(self, optimizer: WeightsMovingAverage):
         # any callback after this one will have ema weights on epoch end

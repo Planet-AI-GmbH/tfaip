@@ -27,8 +27,12 @@ from tfaip.data.data import DataBase
 from tfaip.data.databaseparams import DataPipelineParams
 from tfaip import Sample, PipelineMode
 from tfaip.data.pipeline.datagenerator import DataGenerator
-from tfaip.data.pipeline.processor.dataprocessor import DataProcessorParams, MappingDataProcessor, DataProcessorBase, \
-    GeneratingDataProcessor
+from tfaip.data.pipeline.processor.dataprocessor import (
+    DataProcessorParams,
+    MappingDataProcessor,
+    DataProcessorBase,
+    GeneratingDataProcessor,
+)
 from tfaip.data.pipeline.processor.params import SequentialProcessorPipelineParams, ComposedProcessorPipelineParams
 
 
@@ -38,7 +42,7 @@ class AddProcessorParams(DataProcessorParams):
     v: int = 1
 
     @staticmethod
-    def cls() -> Type['DataProcessorBase']:
+    def cls() -> Type["DataProcessorBase"]:
         return AddProcessor
 
 
@@ -54,7 +58,7 @@ class RepeatSampleProcessorParams(DataProcessorParams):
     add_per_step: int = 7
 
     @staticmethod
-    def cls() -> Type['DataProcessorBase']:
+    def cls() -> Type["DataProcessorBase"]:
         return RepeatSampleProcessor
 
 
@@ -87,7 +91,7 @@ class MultiplyProcessorParams(DataProcessorParams):
     f: int = 1
 
     @staticmethod
-    def cls() -> Type['DataProcessorBase']:
+    def cls() -> Type["DataProcessorBase"]:
         return MultiplyProcessor
 
 
@@ -101,7 +105,7 @@ class SimpleDataGeneratorParams(DataGeneratorParams):
     numbers_to_generate: List[int] = field(default_factory=list)
 
     @staticmethod
-    def cls() -> Type['DataGenerator']:
+    def cls() -> Type["DataGenerator"]:
         return SimpleDataGenerator
 
 
@@ -117,13 +121,13 @@ class SimpleDataGenerator(DataGenerator[SimpleDataGeneratorParams]):
 @dataclass
 class DataParams(DataBaseParams):
     @staticmethod
-    def cls() -> Type['DataBase']:
+    def cls() -> Type["DataBase"]:
         return Data
 
 
 class Data(DataBase):
     def _input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
-        return {"n": tf.TensorSpec([1], dtype='int32', name='n')}
+        return {"n": tf.TensorSpec([1], dtype="int32", name="n")}
 
     def _target_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         return {}
@@ -150,12 +154,13 @@ class TestDataPipeline(unittest.TestCase):
                     MultiplyProcessorParams(f=3),
                     AddProcessorParams(v=1),
                     DropIfEvenProcessorParams(),
-                ]
+                ],
             )
         )
         data = data_params.create()
-        with data.create_pipeline(DataPipelineParams(mode=PipelineMode.TRAINING),
-                                  SimpleDataGeneratorParams(numbers_to_generate=numbers)) as pipeline:
+        with data.create_pipeline(
+            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+        ) as pipeline:
             out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
             self.assertListEqual(target_numbers, out)
 
@@ -169,38 +174,41 @@ class TestDataPipeline(unittest.TestCase):
         target_numbers = [n for n in target_numbers if n % 2 == 1]
 
         data_params = DataParams(
-            pre_proc=ComposedProcessorPipelineParams(pipelines=[
-                SequentialProcessorPipelineParams(
-                    run_parallel=False,
-                    num_threads=3,
-                    processors=[
-                        AddProcessorParams(v=1),
-                        AddProcessorParams(v=3),
-                    ],
-                ),
-                SequentialProcessorPipelineParams(
-                    num_threads=1,  # Deterministic
-                    processors=[
-                        RepeatSampleProcessorParams(f=2, add_per_step=7),
-                    ]
-                ),
-                SequentialProcessorPipelineParams(
-                    run_parallel=True,
-                    processors=[
-                        MultiplyProcessorParams(f=2),
-                        AddProcessorParams(v=1),
-                    ]
-                ),
-                SequentialProcessorPipelineParams(
-                    num_threads=1,  # Deterministic
-                    processors=[
-                        DropIfEvenProcessorParams(),
-                    ]
-                ),
-            ])
+            pre_proc=ComposedProcessorPipelineParams(
+                pipelines=[
+                    SequentialProcessorPipelineParams(
+                        run_parallel=False,
+                        num_threads=3,
+                        processors=[
+                            AddProcessorParams(v=1),
+                            AddProcessorParams(v=3),
+                        ],
+                    ),
+                    SequentialProcessorPipelineParams(
+                        num_threads=1,  # Deterministic
+                        processors=[
+                            RepeatSampleProcessorParams(f=2, add_per_step=7),
+                        ],
+                    ),
+                    SequentialProcessorPipelineParams(
+                        run_parallel=True,
+                        processors=[
+                            MultiplyProcessorParams(f=2),
+                            AddProcessorParams(v=1),
+                        ],
+                    ),
+                    SequentialProcessorPipelineParams(
+                        num_threads=1,  # Deterministic
+                        processors=[
+                            DropIfEvenProcessorParams(),
+                        ],
+                    ),
+                ]
+            )
         )
         data = data_params.create()
-        with data.create_pipeline(DataPipelineParams(mode=PipelineMode.TRAINING),
-                                  SimpleDataGeneratorParams(numbers_to_generate=numbers)) as pipeline:
+        with data.create_pipeline(
+            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+        ) as pipeline:
             out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
             self.assertListEqual(target_numbers, out)

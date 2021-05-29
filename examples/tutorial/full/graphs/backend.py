@@ -28,7 +28,7 @@ from tfaip.model.layerbase import TFAIPLayerBase
 @dataclass
 class TutorialBackendParams(ABC):
     @abstractmethod
-    def cls(self) -> 'TutorialBackend':
+    def cls(self) -> "TutorialBackend":
         raise NotImplementedError
 
 

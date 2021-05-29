@@ -32,33 +32,38 @@ if TYPE_CHECKING:
 @dataclass
 class OptimizerParams(ABC):
     """General parameters of a Optimizer"""
+
     @abstractmethod
-    def create(self) -> Tuple[Type['tf.keras.optimizers.Optimizer'], Dict[str, Any]]:
+    def create(self) -> Tuple[Type["tf.keras.optimizers.Optimizer"], Dict[str, Any]]:
         raise NotImplementedError
 
-    clip_norm: Optional[float] = field(default=None, metadata=pai_meta(
-        help='float or None. If set, clips gradients to a maximum norm.'
-    ))
-    clip_value: Optional[float] = field(default=None, metadata=pai_meta(
-        help='float or None. If set, clips gradients to a maximum value.'
-    ))
-    global_clip_norm: Optional[float] = field(default=None, metadata=pai_meta(
-        help='float or None. If set, the gradient of all weights is clipped so that '
-             'their global norm is no higher than this value.'
-    ))
+    clip_norm: Optional[float] = field(
+        default=None, metadata=pai_meta(help="float or None. If set, clips gradients to a maximum norm.")
+    )
+    clip_value: Optional[float] = field(
+        default=None, metadata=pai_meta(help="float or None. If set, clips gradients to a maximum value.")
+    )
+    global_clip_norm: Optional[float] = field(
+        default=None,
+        metadata=pai_meta(
+            help="float or None. If set, the gradient of all weights is clipped so that "
+            "their global norm is no higher than this value."
+        ),
+    )
 
     def _clip_grad_args(self):
         return {
-            'clipnorm': self.clip_norm,
-            'clipvalue': self.clip_value,
-            'global_clipnorm': self.global_clip_norm,
+            "clipnorm": self.clip_norm,
+            "clipvalue": self.clip_value,
+            "global_clipnorm": self.global_clip_norm,
         }
 
 
-@pai_dataclass(alt='SGD')
+@pai_dataclass(alt="SGD")
 @dataclass
 class SGDOptimizer(OptimizerParams):
     """The Stochastic Gradient Optimizer"""
+
     momentum: float = 0.0
     nesterov: bool = False
     weight_decay: float = 0.0
@@ -66,25 +71,27 @@ class SGDOptimizer(OptimizerParams):
     def create(self):
         import tensorflow_addons as tfa  # pylint: disable = import-outside-toplevel
         import tensorflow as tf  # pylint: disable = import-outside-toplevel
+
         if self.weight_decay > 0:
             return tfa.optimizers.SGDW, {
-                'weight_decay': self.weight_decay,
-                'momentum': self.momentum,
-                'nesterov': self.nesterov,
+                "weight_decay": self.weight_decay,
+                "momentum": self.momentum,
+                "nesterov": self.nesterov,
                 **self._clip_grad_args(),
             }
         else:
             return tf.keras.optimizers.SGD, {
-                'momentum': self.momentum,
-                'nesterov': self.nesterov,
+                "momentum": self.momentum,
+                "nesterov": self.nesterov,
                 **self._clip_grad_args(),
             }
 
 
-@pai_dataclass(alt='Adam')
+@pai_dataclass(alt="Adam")
 @dataclass
 class AdamOptimizer(OptimizerParams):
     """The Adam optimizer"""
+
     beta_1: float = 0.9
     beta_2: float = 0.999
     epsilon: float = 1e-7
@@ -93,41 +100,45 @@ class AdamOptimizer(OptimizerParams):
     def create(self):
         import tensorflow_addons as tfa  # pylint: disable = import-outside-toplevel
         import tensorflow as tf  # pylint: disable = import-outside-toplevel
+
         if self.weight_decay > 0:
             return tfa.optimizers.AdamW, {
-                'weight_decay': self.weight_decay,
-                'beta_1': self.beta_1,
-                'beta_2': self.beta_2,
-                'epsilon': self.epsilon,
+                "weight_decay": self.weight_decay,
+                "beta_1": self.beta_1,
+                "beta_2": self.beta_2,
+                "epsilon": self.epsilon,
                 **self._clip_grad_args(),
             }
         else:
             return tf.keras.optimizers.Adam, {
-                'beta_1': self.beta_1,
-                'beta_2': self.beta_2,
-                'epsilon': self.epsilon,
+                "beta_1": self.beta_1,
+                "beta_2": self.beta_2,
+                "epsilon": self.epsilon,
                 **self._clip_grad_args(),
             }
 
 
-@pai_dataclass(alt='Adamax')
+@pai_dataclass(alt="Adamax")
 @dataclass
 class AdamaxOptimizer(AdamOptimizer):
     """The Adamax Optimizer"""
+
     def create(self):
         import tensorflow as tf  # pylint: disable = import-outside-toplevel
+
         return tf.keras.optimizers.Adamax, {
-            'beta_1': self.beta_1,
-            'beta_2': self.beta_2,
-            'epsilon': self.epsilon,
+            "beta_1": self.beta_1,
+            "beta_2": self.beta_2,
+            "epsilon": self.epsilon,
             **self._clip_grad_args(),
         }
 
 
-@pai_dataclass(alt='RMSprop')
+@pai_dataclass(alt="RMSprop")
 @dataclass
 class RMSpropOptimizer(OptimizerParams):
     """The RMSprop Optimizer"""
+
     momentum: float = 0.0
     epsilon: float = 1e-7
     rho: float = 0.0
@@ -135,19 +146,21 @@ class RMSpropOptimizer(OptimizerParams):
 
     def create(self):
         import tensorflow as tf  # pylint: disable = import-outside-toplevel
+
         return tf.keras.optimizers.RMSprop, {
-            'momentum': self.momentum,
-            'rho': self.rho,
-            'centered': self.centered,
-            'epsilon': self.epsilon,
+            "momentum": self.momentum,
+            "rho": self.rho,
+            "centered": self.centered,
+            "epsilon": self.epsilon,
             **self._clip_grad_args(),
         }
 
 
-@pai_dataclass(alt='AdaBelief')
+@pai_dataclass(alt="AdaBelief")
 @dataclass
 class AdaBeliefOptimizer(OptimizerParams):
     """The AdaBeliefOptimizer"""
+
     beta_1: float = 0.9
     beta_2: float = 0.999
     epsilon: float = 1e-14
@@ -161,16 +174,17 @@ class AdaBeliefOptimizer(OptimizerParams):
 
     def create(self):
         from adabelief_tf import AdaBeliefOptimizer as ABOpt  # pylint: disable = import-outside-toplevel
+
         return ABOpt, {
-            'beta_1': self.beta_1,
-            'beta_2': self.beta_2,
-            'epsilon': self.epsilon,
-            'weight_decay': self.weight_decay,
-            'rectify': self.rectify,
-            'amsgrad': self.amsgrad,
-            'sma_threshold': self.sma_threshold,
-            'total_steps': self.total_steps,
-            'warmup_proportion': self.warmup_proportion,
-            'min_lr': self.min_lr,
+            "beta_1": self.beta_1,
+            "beta_2": self.beta_2,
+            "epsilon": self.epsilon,
+            "weight_decay": self.weight_decay,
+            "rectify": self.rectify,
+            "amsgrad": self.amsgrad,
+            "sma_threshold": self.sma_threshold,
+            "total_steps": self.total_steps,
+            "warmup_proportion": self.warmup_proportion,
+            "min_lr": self.min_lr,
             **self._clip_grad_args(),
         }

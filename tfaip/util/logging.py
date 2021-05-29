@@ -22,14 +22,14 @@ import logging
 # Initialize logging
 import sys
 
-FORMAT = '{levelname:<8s} {asctime} {name:>30.30s}: {message}'
-formatter = logging.Formatter(FORMAT, style='{')
-TFAIP_LOG_LEVEL = getattr(logging, os.environ.get('TFAIP_LOG_LEVEL', 'INFO').upper())
+FORMAT = "{levelname:<8s} {asctime} {name:>30.30s}: {message}"
+formatter = logging.Formatter(FORMAT, style="{")
+TFAIP_LOG_LEVEL = getattr(logging, os.environ.get("TFAIP_LOG_LEVEL", "INFO").upper())
 this_logger = logging.getLogger(__name__)
 logging.basicConfig(level=TFAIP_LOG_LEVEL)
 logging.getLogger().handlers[0].setFormatter(formatter)
 
-for handler in logging.getLogger('tensorflow').handlers:
+for handler in logging.getLogger("tensorflow").handlers:
     handler.setFormatter(formatter)
 
 
@@ -39,7 +39,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    this_logger.critical('Uncaught exception', exc_info=(exc_type, exc_value, exc_traceback))
+    this_logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
 sys.excepthook = handle_exception  # Overwrite the excepthook
@@ -54,7 +54,8 @@ class WriteToLogFile:
 
     When exit the stack the log file gets closed and the handler is removed
     """
-    def __init__(self, log_dir: str, append: bool, log_name='train.log'):
+
+    def __init__(self, log_dir: str, append: bool, log_name="train.log"):
         assert log_dir is not None
         os.makedirs(log_dir, exist_ok=True)
         self.filename = os.path.join(log_dir, log_name)
@@ -62,7 +63,7 @@ class WriteToLogFile:
         self.append = append
 
     def __enter__(self):
-        self.file_handler = logging.FileHandler(self.filename, 'a' if self.append else 'w', encoding='utf-8')
+        self.file_handler = logging.FileHandler(self.filename, "a" if self.append else "w", encoding="utf-8")
         self.file_handler.setFormatter(formatter)
         self.file_handler.setLevel(level=TFAIP_LOG_LEVEL)
         logging.getLogger().addHandler(self.file_handler)

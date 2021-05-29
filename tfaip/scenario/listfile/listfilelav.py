@@ -25,12 +25,18 @@ from tfaip.scenario.listfile.params import ListsFileGeneratorParams
 class ListFileLAV(LAV):
     def _on_lav_end(self, data_generator_params: ListsFileGeneratorParams, result):
         if self._params.store_results:
-            dump_dict = {"metrics": {k: v for k, v in result.items() if (not isinstance(v, bytes) and not type(v).__module__ == 'numpy')},
-                         "lav_params": self._params.to_dict(),
-                         "data_params": self._data.params.to_dict(),
-                         "model_params": self._model.params.to_dict()}
-            json_fn = os.path.join(self._params.model_path,
-                                   f"lav_results_{'_'.join([os.path.basename(l) for l in data_generator_params.lists])}.json")
+            dump_dict = {
+                "metrics": {
+                    k: v for k, v in result.items() if (not isinstance(v, bytes) and not type(v).__module__ == "numpy")
+                },
+                "lav_params": self._params.to_dict(),
+                "data_params": self._data.params.to_dict(),
+                "model_params": self._model.params.to_dict(),
+            }
+            json_fn = os.path.join(
+                self._params.model_path,
+                f"lav_results_{'_'.join([os.path.basename(l) for l in data_generator_params.lists])}.json",
+            )
 
             with open(json_fn, "w") as json_fp:
                 json.dump(dump_dict, json_fp, indent=2)

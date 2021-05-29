@@ -45,17 +45,16 @@ class TFAIPLayerBase(keras.layers.Layer):
 @pai_dataclass
 @dataclass
 class LayerBaseParams(ABC):
-
     @staticmethod
     @abstractmethod
-    def cls() -> Type['LayerBase']:
+    def cls() -> Type["LayerBase"]:
         raise NotImplementedError
 
     def create(self):
         return self.cls()(params=self)
 
 
-TLP = TypeVar('TLP', bound=LayerBaseParams)
+TLP = TypeVar("TLP", bound=LayerBaseParams)
 
 
 class LayerBase(Generic[TLP], TFAIPLayerBase):
@@ -80,10 +79,10 @@ class LayerBase(Generic[TLP], TFAIPLayerBase):
 
     def get_config(self):
         cfg = super().get_config()
-        cfg['params'] = self._params.to_dict()
+        cfg["params"] = self._params.to_dict()
         return cfg
 
     @classmethod
     def from_config(cls, config):
-        config['params'] = cls.params_cls().from_dict(config['params'])
+        config["params"] = cls.params_cls().from_dict(config["params"])
         return super(LayerBase, cls).from_config(config)

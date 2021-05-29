@@ -31,7 +31,8 @@ class MultiMetric(metrics.Metric, ABC):
     (e.g. dicts).
     These tensors will then be passes to the attached child-metrics that are stated upon definition of the `MultiMetric`
     """
-    def __init__(self, children: List[metrics.Metric], name='multi_metric', **kwargs):
+
+    def __init__(self, children: List[metrics.Metric], name="multi_metric", **kwargs):
         super().__init__(name=name, **kwargs)
         self.children = [MultiMetricWrapper(c) for c in children]
 
@@ -58,6 +59,7 @@ class MultiMetricWrapper(metrics.Metric):
 
     This wrapper will not call update_state, as instead wrapped_update_state is called by the MultiMetric
     """
+
     def __init__(self, metric: metrics.Metric, **kwargs):
         super().__init__(name=metric.name, **kwargs)
         self.metric = metric
@@ -80,4 +82,3 @@ class MultiMetricDefinition(NamedTuple):
     target: str
     output: str
     metric: MultiMetric
-

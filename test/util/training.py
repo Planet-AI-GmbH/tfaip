@@ -35,9 +35,7 @@ from tfaip.util.random import set_global_random_seed
 debug_test = sys.flags.debug
 
 
-def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase],
-                                 debug=debug_test,
-                                 delta=1E-5):
+def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=debug_test, delta=1e-5):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
     # The resulting metrics/loss must be identical
@@ -62,25 +60,24 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[Scenari
         trainer_params.current_epoch = 0  # Restart training
         trainer_params.output_dir = None
         trainer_params.export_best = False
-        trainer_params.warmstart = WarmStartParams(
-            model=os.path.join(tmp_dir, 'best', 'serve')
-        )
+        trainer_params.warmstart = WarmStartParams(model=os.path.join(tmp_dir, "best", "serve"))
         trainer_params.learning_rate.lr = 0.0
 
         trainer = scenario.create_trainer(trainer_params)
         logs_after_warmstart = trainer.train()
 
         for k, v in logs_after_warmstart.items():
-            if k.startswith('val'):
+            if k.startswith("val"):
                 # only test val variables, because training loss is once before and once after weight update
                 test.assertAlmostEqual(v, initial_logs[k], delta=delta)
 
 
-def single_train_iter(test: unittest.TestCase,
-                      scenario: Type[ScenarioBase],
-                      debug=debug_test,
-                      lav_every_n=1,
-                      ):
+def single_train_iter(
+    test: unittest.TestCase,
+    scenario: Type[ScenarioBase],
+    debug=debug_test,
+    lav_every_n=1,
+):
     with tempfile.TemporaryDirectory() as tmp_dir:  # To write best model
         trainer_params = scenario.default_trainer_params()
         trainer_params.output_dir = tmp_dir
@@ -100,12 +97,15 @@ def single_train_iter(test: unittest.TestCase,
         test_tensorboard_content(test, tmp_dir, train_logs, trainer)
 
 
-def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=False,
-                  delta=1E-5,
-                  batch_size_test=True,
-                  ignore_binary_metric=False,
-                  ignore_array_metric=False
-                  ):
+def lav_test_case(
+    test: unittest.TestCase,
+    scenario: Type[ScenarioBase],
+    debug=False,
+    delta=1e-5,
+    batch_size_test=True,
+    ignore_binary_metric=False,
+    ignore_array_metric=False,
+):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
         trainer_params.output_dir = tmp_dir
@@ -122,13 +122,13 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
         trainer = scenario.create_trainer(trainer_params)
         trainer.train()
 
-        json_path = os.path.join(tmp_dir, 'trainer_params.json')
+        json_path = os.path.join(tmp_dir, "trainer_params.json")
         with open(json_path) as f:
             trainer_params_dict = json.load(f)
-        trainer_params_dict['epochs'] = 2
+        trainer_params_dict["epochs"] = 2
 
         lav_params = scenario.lav_cls().params_cls()()
-        lav_params.model_path = os.path.join(trainer_params.output_dir, 'export')
+        lav_params.model_path = os.path.join(trainer_params.output_dir, "export")
         lav_params.pipeline = trainer_params.gen.setup.val
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path)
@@ -136,7 +136,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
         lav.run([trainer_params.gen.val_gen()])
         clear_session()
         set_global_random_seed(trainer_params.random_seed)
-        lav_params.model_path = os.path.join(trainer_params.output_dir, 'best')
+        lav_params.model_path = os.path.join(trainer_params.output_dir, "best")
         scenario_params = scenario.params_from_path(lav_params.model_path)
         lav_params.pipeline.batch_size = 1
         lav_params.pipeline.limit = batch_and_limit
@@ -146,7 +146,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
         if batch_size_test:
             clear_session()
             set_global_random_seed(trainer_params.random_seed)
-            lav_params.model_path = os.path.join(trainer_params.output_dir, 'best')
+            lav_params.model_path = os.path.join(trainer_params.output_dir, "best")
             scenario_params = scenario.params_from_path(lav_params.model_path)
             lav_params.pipeline.batch_size = batch_and_limit
             lav_params.pipeline.limit = batch_and_limit
@@ -159,12 +159,12 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
                         continue
                     else:
                         test.assertEqual(bs1_results[k], bs5_results[k], msg=f"on key {k}")
-                elif type(bs1_results[k]).__module__ == 'numpy':
+                elif type(bs1_results[k]).__module__ == "numpy":
                     if ignore_array_metric:
                         continue
                     else:
                         for x1, x5 in zip(np.reshape(bs1_results[k], [-1]), np.reshape(bs5_results[k], [-1])):
-                            if str(bs1_results[k].dtype).startswith('int'):
+                            if str(bs1_results[k].dtype).startswith("int"):
                                 test.assertEqual(x1, x5, msg=f"on key {k}")
                             else:
                                 test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
@@ -172,7 +172,7 @@ def lav_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=F
                     test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
 
 
-def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=1E-5, debug=debug_test):
+def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=1e-5, debug=debug_test):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
@@ -188,23 +188,23 @@ def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta
         initial_logs = trainer.train()
         clear_session()
 
-        json_path = os.path.join(tmp_dir, 'trainer_params.json')
+        json_path = os.path.join(tmp_dir, "trainer_params.json")
         with open(json_path) as f:
             trainer_params_dict = json.load(f)
 
         # train another epoch
         # set learning rate to 0, thus. evaluation result must not change
-        trainer_params_dict['epochs'] = 2
-        trainer_params_dict['learning_rate']['lr'] = 0.0
+        trainer_params_dict["epochs"] = 2
+        trainer_params_dict["learning_rate"]["lr"] = 0.0
 
-        with open(json_path, 'w') as f:
+        with open(json_path, "w") as f:
             json.dump(trainer_params_dict, f)
 
         trainer = Trainer.restore_trainer(tmp_dir)
         logs_after_resume = trainer.train()
 
         for k, v in logs_after_resume.items():
-            if k.startswith('val'):
+            if k.startswith("val"):
                 # only test val variables, because training loss is once before and once after weight update
                 test.assertAlmostEqual(v, initial_logs[k], delta=delta)
 
@@ -213,27 +213,28 @@ def test_tensorboard_content(test: unittest.TestCase, output_dir: str, logs: Dic
     tb_data_handler = TensorBoardDataHandler(trainer.scenario.keras_train_model)
 
     from tensorflow.python.summary.summary_iterator import summary_iterator
-    all_event_files = glob.glob(os.path.join(output_dir, '**', 'events.out.*'), recursive=True)
+
+    all_event_files = glob.glob(os.path.join(output_dir, "**", "events.out.*"), recursive=True)
     logs_to_find = logs.copy()
 
     def rename(s: str) -> str:
-        return s.replace('@', '_')
+        return s.replace("@", "_")
 
     logs_to_find = {rename(k): v for k, v in logs_to_find.items()}
     for event_file in all_event_files:
         log_type = os.path.split(os.path.relpath(event_file, output_dir))[0]
-        test.assertTrue(log_type in {'train', 'validation'} or log_type.startswith('lav_'))
+        test.assertTrue(log_type in {"train", "validation"} or log_type.startswith("lav_"))
 
         def add_prefix(k: str):
-            if log_type == 'train':
+            if log_type == "train":
                 return k
-            if log_type == 'validation':
-                return 'val_' + k
-            return log_type + '_' + k
+            if log_type == "validation":
+                return "val_" + k
+            return log_type + "_" + k
 
         additional_outputs_per_event = set(tb_data_handler.tensorboard_handlers.keys())
-        if log_type in 'train':
-            additional_outputs_per_event.add('lr')
+        if log_type in "train":
+            additional_outputs_per_event.add("lr")
 
         # Check that (at least for step 0) all metrics/losses are written to the tensorboard log
         for e in summary_iterator(event_file):
@@ -242,7 +243,7 @@ def test_tensorboard_content(test: unittest.TestCase, output_dir: str, logs: Dic
             if len(e.summary.value) != 1:
                 continue
             value = e.summary.value[0]
-            if value.tag.startswith('epoch_') == 0:
+            if value.tag.startswith("epoch_") == 0:
                 continue
             tag = value.tag[6:]  # no epoch_
             if tag in additional_outputs_per_event:

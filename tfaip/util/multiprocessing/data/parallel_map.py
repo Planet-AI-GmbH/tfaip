@@ -44,11 +44,17 @@ def create_worker(func):
 
 class ParallelMapPipeline(ParallelPipeline):
     """Helper class to run a tf.data.Dataset map with a py-function in parallel"""
-    def __init__(self, data, dataset: 'tf.data.Dataset', worker_func: Callable[[], DataWorker],
-                 processes: int, auto_repeat_input: bool = False):
+
+    def __init__(
+        self,
+        dataset: "tf.data.Dataset",
+        worker_func: Callable[[], DataWorker],
+        processes: int,
+        auto_repeat_input: bool = False,
+    ):
         self.dataset = dataset
         self.worker_func = worker_func
-        super().__init__(data, processes, auto_repeat_input)
+        super().__init__(processes, auto_repeat_input)
 
     def create_worker_func(self) -> Callable[[], DataWorker]:
         return partial(create_worker, self.worker_func)
@@ -57,8 +63,11 @@ class ParallelMapPipeline(ParallelPipeline):
         return self.dataset.as_numpy_iterator()
 
 
-def parallel_map_dataset(data, dataset: 'tf.data.Dataset', output_types, worker_func: Callable[[], DataWorker],
-                         processes: int) -> 'tf.data.Dataset':
+def parallel_map_dataset(
+    dataset: "tf.data.Dataset", output_types, worker_func: Callable[[], DataWorker], processes: int
+) -> "tf.data.Dataset":
     import tensorflow as tf  # pylint: disable=import-outside-toplevel
-    pipeline = ParallelMapPipeline(data, dataset, worker_func, processes)
-    return tf.data.Dataset.from_generator(pipeline.output_generator, output_types)
+
+    pipeline = ParallelMapPipeline(dataset, worker_func, processes)
+    with pipeline as output_generator:
+        return tf.data.Dataset.from_generator(output_generator, output_types)

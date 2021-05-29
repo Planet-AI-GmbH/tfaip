@@ -21,14 +21,14 @@ The global imports import static classes such as parameters and definitions.
 The other classes can be imported from ``tfaip.imports``
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 from tfaip.data.databaseparams import DataBaseParams, DataGeneratorParams
+
 # IMPORTANT!!!
 # Global imports here must not import tensorflow (it won't crash but it is slow)
 # This leads to unnecessary imports in spawned sub-processes
-from tfaip.data.pipeline.definitions import PipelineMode, Sample, \
-    INPUT_PROCESSOR, GENERAL_PROCESSOR, TARGETS_PROCESSOR
+from tfaip.data.pipeline.definitions import PipelineMode, Sample, INPUT_PROCESSOR, GENERAL_PROCESSOR, TARGETS_PROCESSOR
 from tfaip.device.device_config import DeviceConfigParams
 from tfaip.evaluator.params import EvaluatorParams
 from tfaip.lav.params import LAVParams

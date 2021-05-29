@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-TData = TypeVar('TData', bound='DataBase')
+TData = TypeVar("TData", bound="DataBase")
 
 
 class DataPipeline(Generic[TData], JoinableHolder):
@@ -53,13 +53,14 @@ class DataPipeline(Generic[TData], JoinableHolder):
     This ensures that the threads created within the pipelines are joined upon exit.
     """
 
-    def __init__(self,
-                 pipeline_params: DataPipelineParams,
-                 data_base: TData,
-                 generator_params: DataGeneratorParams,
-                 input_processors: Optional[DataProcessorPipelineParams] = None,
-                 output_processors: Optional[DataProcessorPipelineParams] = None,
-                 ):
+    def __init__(
+        self,
+        pipeline_params: DataPipelineParams,
+        data_base: TData,
+        generator_params: DataGeneratorParams,
+        input_processors: Optional[DataProcessorPipelineParams] = None,
+        output_processors: Optional[DataProcessorPipelineParams] = None,
+    ):
         super().__init__()
         self.generator_params = generator_params
         self.data = data_base
@@ -70,24 +71,25 @@ class DataPipeline(Generic[TData], JoinableHolder):
         self._input_processors: DataProcessorPipelineParams = input_processors or self.data_params.pre_proc
         self._output_processors: DataProcessorPipelineParams = output_processors or self.data_params.post_proc
 
-    def to_mode(self, mode: PipelineMode) -> 'DataPipeline':
+    def to_mode(self, mode: PipelineMode) -> "DataPipeline":
         """
         Clone the pipeline but change its mode
         """
         pipeline_params = deepcopy(self.pipeline_params)
         pipeline_params.mode = mode
-        return self.__class__(pipeline_params, self.data, self.generator_params, self._input_processors,
-                              self._output_processors)
+        return self.__class__(
+            pipeline_params, self.data, self.generator_params, self._input_processors, self._output_processors
+        )
 
-    def as_preloaded(self, progress_bar=True) -> 'RawDataPipeline':
+    def as_preloaded(self, progress_bar=True) -> "RawDataPipeline":
         """
         Preload all samples of the pipeline (as far as possible) and obtain a new DataPipeline (a `RawDataPipeline`).
         this function is handy if all samples fit in the memory. Further loading and preprocessing of the Samples
         is then not required afterwards.
         """
         if not isinstance(self._input_processors, SequentialProcessorPipelineParams):
-            raise TypeError('Preloading is currently only supported for a SequentialProcessorPipeline')
-        logger.info(f'Preloading: Converting {self.mode.value} to raw pipeline.')
+            raise TypeError("Preloading is currently only supported for a SequentialProcessorPipeline")
+        logger.info(f"Preloading: Converting {self.mode.value} to raw pipeline.")
         with self as rp:
             # Get the running data pipeline, load the samples, and create a RawDataPipeline
             non_preloadable_params = []
@@ -107,7 +109,8 @@ class DataPipeline(Generic[TData], JoinableHolder):
     def flat_input_processors(self, preload=False, non_preloadable_params=None) -> List[MappingDataProcessor]:
         if not isinstance(self._input_processors, SequentialProcessorPipelineParams):
             raise TypeError(
-                'Retrieving of flat input processors is currently only supported for a SequentialProcessorPipeline')
+                "Retrieving of flat input processors is currently only supported for a SequentialProcessorPipeline"
+            )
         if non_preloadable_params is None:
             non_preloadable_params = []
         params: SequentialProcessorPipelineParams = self._input_processors
@@ -135,7 +138,7 @@ class DataPipeline(Generic[TData], JoinableHolder):
         params = self._input_processors
 
         if params:
-            return params.create(self)
+            return params.create_with_pipeline(self)
         else:
             return DataProcessorPipeline([])
 
@@ -145,13 +148,15 @@ class DataPipeline(Generic[TData], JoinableHolder):
     def create_output_pipeline(self) -> Optional[DataProcessorPipeline]:
         params = self._output_processors
         if params:
-            return params.create(self)
+            return params.create_with_pipeline(self)
         else:
             return DataProcessorPipeline([])
 
     def __enter__(self):
-        from tfaip.data.pipeline.runningdatapipeline import \
-            RunningDataPipeline  # pylint: disable=import-outside-toplevel
+        from tfaip.data.pipeline.runningdatapipeline import (
+            RunningDataPipeline,
+        )  # pylint: disable=import-outside-toplevel
+
         return RunningDataPipeline(self)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -164,23 +169,29 @@ class RawDataPipeline(DataPipeline):
     Implementation of a RawDataPipeline that is directly created with raw input samples
     """
 
-    def __init__(self,
-                 samples: List[Sample],
-                 pipeline_params: DataPipelineParams,
-                 data_base: 'DataBase',
-                 generator_params: 'DataGeneratorParams',
-                 input_processors=None,
-                 output_processors=None,
-                 ):
-        super().__init__(pipeline_params, data_base, generator_params, input_processors,
-                         output_processors)
+    def __init__(
+        self,
+        samples: List[Sample],
+        pipeline_params: DataPipelineParams,
+        data_base: "DataBase",
+        generator_params: "DataGeneratorParams",
+        input_processors=None,
+        output_processors=None,
+    ):
+        super().__init__(pipeline_params, data_base, generator_params, input_processors, output_processors)
         self.samples = samples
 
-    def to_mode(self, mode: PipelineMode) -> 'DataPipeline':
+    def to_mode(self, mode: PipelineMode) -> "DataPipeline":
         pipeline_params = copy.deepcopy(self.pipeline_params)
         pipeline_params.mode = mode
-        return self.__class__(self.samples, pipeline_params, self.data, self.generator_params, self._input_processors,
-                              self._output_processors)
+        return self.__class__(
+            self.samples,
+            pipeline_params,
+            self.data,
+            self.generator_params,
+            self._input_processors,
+            self._output_processors,
+        )
 
     def create_data_generator(self) -> DataGenerator:
         return RawDataGenerator(self.samples, self.mode, self.generator_params)

@@ -20,38 +20,38 @@ import platform
 from subprocess import check_call
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
-root_dir = os.path.join(this_dir, '..', '..')
+root_dir = os.path.join(this_dir, "..", "..")
 
 
 def workdir_path(name: str, *args):
     # name expected to be a path .../test/scenario/{SCENARIO_NAME}/workdir
     # or .../test/scenario/workdir (to support single scenario setups)
-    scenario_dir = os.path.join('test', 'scenario')
+    scenario_dir = os.path.join("test", "scenario")
     name = os.path.abspath(name)
     if scenario_dir not in name:
-        scenario_dir = 'tfaip_scenario_test'
+        scenario_dir = "tfaip_scenario_test"
     return workdir_path_with_path(name, scenario_dir, *args)
 
 
 def workdir_path_with_path(name: str, scenario_dir: str, *args):
-    assert (scenario_dir in name)
-    pos = name.find('/', name.rfind(scenario_dir) + len(scenario_dir) + 1)
+    assert scenario_dir in name
+    pos = name.find("/", name.rfind(scenario_dir) + len(scenario_dir) + 1)
     if pos >= 0:
         base_dir = name[:pos]
     else:
         base_dir = os.path.dirname(name)
-    wd = os.path.join(base_dir, 'workdir')
-    assert (os.path.exists(wd))
-    assert (os.path.isdir(wd))
+    wd = os.path.join(base_dir, "workdir")
+    assert os.path.exists(wd)
+    assert os.path.isdir(wd)
     return os.path.join(wd, *args)
 
 
 def call_in_root(args, env=None):
     if env is None:
         env = os.environ.copy()
-    sep = ';' if platform.system() == 'Windows' else ':'
-    if 'PYTHONPATH' in env:
-        env['PYTHONPATH'] += sep + os.path.join(root_dir)
+    sep = ";" if platform.system() == "Windows" else ":"
+    if "PYTHONPATH" in env:
+        env["PYTHONPATH"] += sep + os.path.join(root_dir)
     else:
-        env['PYTHONPATH'] = os.path.join(root_dir)
+        env["PYTHONPATH"] = os.path.join(root_dir)
     return check_call(args, env=env)

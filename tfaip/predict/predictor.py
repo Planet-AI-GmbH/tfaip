@@ -27,7 +27,6 @@ from tfaip.predict.predictorbase import PredictorBase
 from tfaip.util.json_helper import TFAIPJsonDecoder
 
 
-
 class Predictor(PredictorBase):
     """
     Predictor that applies a single model on data. This is the most common case.
@@ -46,16 +45,23 @@ class Predictor(PredictorBase):
         try:
             batch_size = next(iter(outputs.values())).shape[0]
         except StopIteration as e:
-            raise ValueError(f'Outputs are empty: {outputs}') from e
+            raise ValueError(f"Outputs are empty: {outputs}") from e
 
         for i in range(batch_size):
-            un_batched_outputs, un_batched_inputs, un_batched_targets, un_batched_meta = tf.nest.map_structure(lambda x: x[i], (outputs, inputs, targets, meta))
-            parsed_meta = json.loads(un_batched_meta['meta'][0].decode('utf-8'), cls=TFAIPJsonDecoder)
-            sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets,
-                            meta=parsed_meta)
+            un_batched_outputs, un_batched_inputs, un_batched_targets, un_batched_meta = tf.nest.map_structure(
+                lambda x: x[i], (outputs, inputs, targets, meta)
+            )
+            parsed_meta = json.loads(un_batched_meta["meta"][0].decode("utf-8"), cls=TFAIPJsonDecoder)
+            sample = Sample(
+                inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets, meta=parsed_meta
+            )
 
             yield sample
 
     def _print_prediction(self, sample: Sample, print_fn):
-        print_fn('\n     PREDICTION:\n' + '\n'.join(
-            [f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in sample.outputs.items()]))
+        print_fn(
+            "\n     PREDICTION:\n"
+            + "\n".join(
+                [f"        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}" for k, v in sample.outputs.items()]
+            )
+        )

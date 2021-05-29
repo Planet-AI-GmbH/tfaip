@@ -29,24 +29,29 @@ import tensorflow.keras as keras
 
 
 class TensorboardWriter(keras.metrics.Metric):
-    """ Dummy Metric that holds the outputs of the last batch.
+    """Dummy Metric that holds the outputs of the last batch.
 
     Used to write this data to the logs, which can then be written to the tensorboard
     """
 
     def get_config(self):
         cfg = super().get_config()
-        cfg['input_shape'] = self.initial_input_shape
-        cfg['n_storage'] = self.n_storage
-        cfg['func'] = 'NOT_SUPPORTED'
+        cfg["input_shape"] = self.initial_input_shape
+        cfg["n_storage"] = self.n_storage
+        cfg["func"] = "NOT_SUPPORTED"
         return cfg
 
     @classmethod
     def from_config(cls, config):
         return super().from_config(config)
 
-    def __init__(self, func: Callable[[str, np.ndarray, int], None], input_shape: Optional[List[Optional[int]]] = None,
-                 n_storage: int = 2, **kwargs):
+    def __init__(
+        self,
+        func: Callable[[str, np.ndarray, int], None],
+        input_shape: Optional[List[Optional[int]]] = None,
+        n_storage: int = 2,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.initial_input_shape = input_shape
         self.n_storage = n_storage
@@ -58,8 +63,14 @@ class TensorboardWriter(keras.metrics.Metric):
 
     def setup(self, input_shape):
         initial_value = np.zeros([0 if s is None else s for s in input_shape])
-        self.store_w = tf.Variable(initial_value=initial_value, shape=input_shape, trainable=False,
-                                   validate_shape=False, name='store', dtype=self.dtype)
+        self.store_w = tf.Variable(
+            initial_value=initial_value,
+            shape=input_shape,
+            trainable=False,
+            validate_shape=False,
+            name="store",
+            dtype=self.dtype,
+        )
 
     def update_state(self, y_true, y_pred, **kwargs):
         if self.store_w is None:

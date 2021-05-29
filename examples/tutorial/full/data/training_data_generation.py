@@ -31,30 +31,31 @@ class TutorialDataGeneratorParams(DataGeneratorParams):
     """
     Parameters for the actual `TutorialDataGenerator` which is defined inline in `cls()`.
     """
-    dataset: str = field(default='mnist', metadata=pai_meta(
-        choices=['mnist', 'fashion_mnist'],
-        help="The dataset to select (chose also fashion_mnist)."
-    ))
 
-    force_train: bool = field(default=False, metadata=pai_meta(
-        help="Force using of training data also for validation"
-    ))
+    dataset: str = field(
+        default="mnist",
+        metadata=pai_meta(choices=["mnist", "fashion_mnist"], help="The dataset to select (chose also fashion_mnist)."),
+    )
 
-    shuffle: Optional[bool] = field(default=None, metadata=pai_meta(
-        help="Set to False to disable shuffle on training."
-    ))
+    force_train: bool = field(default=False, metadata=pai_meta(help="Force using of training data also for validation"))
+
+    shuffle: Optional[bool] = field(
+        default=None, metadata=pai_meta(help="Set to False to disable shuffle on training.")
+    )
 
     @staticmethod
     def cls():
         from tensorflow import keras
 
         from tfaip.data.pipeline.datagenerator import RawDataGenerator
+
         class TutorialDataGen(RawDataGenerator):
             """
             Load the data which is already split into train and val (=test).
             Depending on the pipeline `mode` and `force_train` select the dataset to return.
             """
-            def __init__(self, mode: PipelineMode, params: 'TutorialDataGeneratorParams'):
+
+            def __init__(self, mode: PipelineMode, params: "TutorialDataGeneratorParams"):
                 dataset = getattr(keras.datasets, params.dataset)
                 train, test = dataset.load_data()
                 data = train if mode == PipelineMode.TRAINING or params.force_train else test
@@ -67,7 +68,9 @@ class TutorialDataGeneratorParams(DataGeneratorParams):
 
 @pai_dataclass
 @dataclass
-class TutorialTrainerGeneratorParams(TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]):
+class TutorialTrainerGeneratorParams(
+    TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]
+):
     """
     Definition of the training data. Since the dataset is loaded from the keras.datasets, training and validation data
     is jointly loaded (parameter `train_val`) which is why `train_gen` and `val_gen` return the same generator.
@@ -78,7 +81,9 @@ class TutorialTrainerGeneratorParams(TrainerPipelineParamsBase[TutorialDataGener
     PipelineMode.EVALUATION.
     """
 
-    train_val: TutorialDataGeneratorParams = field(default_factory=TutorialDataGeneratorParams, metadata=pai_meta(mode='flat'))
+    train_val: TutorialDataGeneratorParams = field(
+        default_factory=TutorialDataGeneratorParams, metadata=pai_meta(mode="flat")
+    )
 
     def train_gen(self) -> TutorialDataGeneratorParams:
         return self.train_val

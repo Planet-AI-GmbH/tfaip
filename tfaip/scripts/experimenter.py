@@ -24,12 +24,24 @@ from tfaip.scripts.xlsxexperimenter.run_xlsx_experimenter import XLSXExperimente
 def main():
     parser = ArgumentParser()
 
-    parser.add_argument('--xlsx', required=True)
-    parser.add_argument('--no_use_tsp', action='store_true', default=False)
-    parser.add_argument('--gpus', nargs='+', type=str, required=False, help="The gpus to use. For multiple runs on the same gpu use e.g. --gpus 3a 3b 3b")
-    parser.add_argument('--cpus', nargs='+', type=str, required=False, help="The cpu devices. e.g. --cpus 0 1 2 3 4 to schedule on 5 cpus")
-    parser.add_argument('--dry_run', action='store_true')
-    parser.add_argument('--python', default=sys.executable)
+    parser.add_argument("--xlsx", required=True)
+    parser.add_argument("--no_use_tsp", action="store_true", default=False)
+    parser.add_argument(
+        "--gpus",
+        nargs="+",
+        type=str,
+        required=False,
+        help="The gpus to use. For multiple runs on the same gpu use e.g. --gpus 3a 3b 3b",
+    )
+    parser.add_argument(
+        "--cpus",
+        nargs="+",
+        type=str,
+        required=False,
+        help="The cpu devices. e.g. --cpus 0 1 2 3 4 to schedule on 5 cpus",
+    )
+    parser.add_argument("--dry_run", action="store_true")
+    parser.add_argument("--python", default=sys.executable)
 
     args = parser.parse_args()
 
@@ -42,5 +54,5 @@ def main():
     exp.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from tfaip.data.pipeline.datapipeline import DataPipeline
 
 
-TDataPipeline = TypeVar('TDataPipeline', bound='DataPipeline')
+TDataPipeline = TypeVar("TDataPipeline", bound="DataPipeline")
 
 
 class TFDatasetGenerator(Generic[TDataPipeline]):
@@ -48,7 +48,7 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
     def data_params(self):
         return self.data_pipeline.data_params
 
-    def _transform(self, dataset: 'tf.data.Dataset') -> 'tf.data.Dataset':
+    def _transform(self, dataset: "tf.data.Dataset") -> "tf.data.Dataset":
         # Override this, when you want to apply additional transformations on the dataset
         # Usually calling dataset.map(...)
         # Note: you should handle different cases for the different PipelineModels which will generate a different
@@ -66,7 +66,7 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
     def meta_layer_specs(self):
         return self.data_pipeline.data.meta_layer_specs()
 
-    def create(self, generator_fn: Callable[[], Iterable[Sample]]) -> 'tf.data.Dataset':
+    def create(self, generator_fn: Callable[[], Iterable[Sample]]) -> "tf.data.Dataset":
         # Local input so that not imported in spawned processes
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
 
@@ -75,7 +75,7 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
             samples = generator_fn()
             for sample in samples:
                 if isinstance(sample, Sample):
-                    meta = {'meta': [json.dumps(sample.meta, cls=TFAIPJsonEncoder)]}
+                    meta = {"meta": [json.dumps(sample.meta, cls=TFAIPJsonEncoder)]}
                     if self.mode == PipelineMode.PREDICTION:
                         yield sample.inputs, meta
                     elif self.mode == PipelineMode.TARGETS:

@@ -48,16 +48,16 @@ class CollectGenericTypes(ABCMeta):
 
         # copy from all super classes
         for super_cls in args[1]:
-            if hasattr(super_cls, '__generic_types__'):
+            if hasattr(super_cls, "__generic_types__"):
                 c.__generic_types__.update(super_cls.__generic_types__)
-            if hasattr(super_cls, '__generic_typevars__'):
+            if hasattr(super_cls, "__generic_typevars__"):
                 c.__generic_typevars__.update(super_cls.__generic_typevars__)
 
         # loop though all super classes of this class and detect if this class comprises replacements for a Generic
-        if hasattr(c, '__orig_bases__'):
+        if hasattr(c, "__orig_bases__"):
             non_matched = []
             for ob in c.__orig_bases__:
-                if not hasattr(ob, '__args__'):
+                if not hasattr(ob, "__args__"):
                     continue
                 for arg in ob.__args__:
                     # Loop though through the args, this is where the actual Types are written (the square brackets)
@@ -80,7 +80,7 @@ class CollectGenericTypes(ABCMeta):
                         # Collect all that match multiple types, they will be assigned in order
                         non_matched.append(matching_values)
                     else:
-                        raise TypeError(f'Could not find {arg} in {c.__generic_typevars__.values()}')
+                        raise TypeError(f"Could not find {arg} in {c.__generic_typevars__.values()}")
 
             if non_matched:
                 # check if ambiguous matches are all identical and if its the same length as the matches, then
@@ -89,7 +89,7 @@ class CollectGenericTypes(ABCMeta):
                     for i, matching_values in enumerate(non_matched):
                         c.__generic_types__[non_matched[0][i][0]] = matching_values[0][1]
                 else:
-                    raise TypeError('Could not determining corresponding TypeVar.')
+                    raise TypeError("Could not determining corresponding TypeVar.")
         return c
 
 
@@ -112,10 +112,10 @@ class ReplaceDefaultDataClassFieldsMeta(CollectGenericTypes):
 
         # collect all from super classes
         for super_cls in args[1]:
-            if hasattr(super_cls, '__generic_field_name_to_typevar__'):
-                c.__generic_field_name_to_typevar__.update(super_cls.__generic_field_name_to_typevar__ )
+            if hasattr(super_cls, "__generic_field_name_to_typevar__"):
+                c.__generic_field_name_to_typevar__.update(super_cls.__generic_field_name_to_typevar__)
 
-        if hasattr(c, '__dataclass_fields__'):
+        if hasattr(c, "__dataclass_fields__"):
             # track non yet tracked fields
             for name, field in c.__dataclass_fields__.items():
                 if name in field_names:

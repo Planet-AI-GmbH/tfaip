@@ -39,8 +39,8 @@ from functools import wraps
 import numpy as np
 
 PROF_DATA = {}
-ENABLE = int(os.environ.get('TFAIP_PROFILING', '0'))
-FORMAT = os.environ.get('TFAIP_PROFILING_FORMAT', '<9.3')
+ENABLE = int(os.environ.get("TFAIP_PROFILING", "0"))
+FORMAT = os.environ.get("TFAIP_PROFILING_FORMAT", "<9.3")
 
 
 def enable_profiling(enable: bool):
@@ -87,7 +87,7 @@ def profile(fn):
 
     @wraps(fn)
     def with_profiling(*args, **kwargs):
-        with ProfileScope(fn.__module__ + '::' + fn.__name__):
+        with ProfileScope(fn.__module__ + "::" + fn.__name__):
             ret = fn(*args, **kwargs)
 
         return ret
@@ -122,7 +122,7 @@ class ProfileScope(MeasureTime):
 def print_profiling(print_fn=print):
     if not ENABLE:
         return
-    print_fn(f'found {len(PROF_DATA)} functions')
+    print_fn(f"found {len(PROF_DATA)} functions")
     # leng = max([len(s) for s in PROF_DATA.keys()])
     mytuple = [(fname, points, np.sum(points)) for fname, points in PROF_DATA.items()]
     mytuple = sorted(mytuple, key=lambda t: -t[2])
@@ -130,5 +130,7 @@ def print_profiling(print_fn=print):
         max_time = max(points)
         avg_time = s / len(points)
         m = np.median(points)
-        print_fn(f'cnt = {len(points):4} | tot = {s:{FORMAT}} | max = {max_time:{FORMAT}} '
-                 f'| avg = {avg_time:{FORMAT}} | med = {m:{FORMAT}} | name = {fname}')
+        print_fn(
+            f"cnt = {len(points):4} | tot = {s:{FORMAT}} | max = {max_time:{FORMAT}} "
+            f"| avg = {avg_time:{FORMAT}} | med = {m:{FORMAT}} | name = {fname}"
+        )

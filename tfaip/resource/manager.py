@@ -41,13 +41,13 @@ class ResourceManager:
         - dump the resources to a new location.
     """
 
-    def __init__(self, working_dir: str, dump_prefix_dir: str = 'resources'):
+    def __init__(self, working_dir: str, dump_prefix_dir: str = "resources"):
         self.working_dir = working_dir if working_dir is not None else os.getcwd()
         self.dump_prefix_dir = dump_prefix_dir
         self._resources: Dict[str, Resource] = {}
 
     def register_field_value(self, field, value, recursive=True):
-        resource_id = field.metadata.get('resource_id', field.name) if field.metadata else field.name
+        resource_id = field.metadata.get("resource_id", field.name) if field.metadata else field.name
         if isinstance(value, Resource):
             self.register(resource_id, value)
         elif field.type == Resource or field.type == Optional[Resource]:
@@ -73,7 +73,7 @@ class ResourceManager:
 
     def register(self, r_id: str, resource: Resource):
         if r_id in self._resources:
-            raise KeyError(f'A resource with id {r_id} already exists.')
+            raise KeyError(f"A resource with id {r_id} already exists.")
 
         if not resource.initialized:
             if resource.abs_path is None:
@@ -103,7 +103,7 @@ class ResourceManager:
             dump_dir = os.path.join(location, self.dump_prefix_dir, resource.dump_dir)
             abs_dump_path = os.path.join(location, resource.dump_path)
             resource.abs_dump_path = abs_dump_path  # store last abs dump path
-            logger.debug(f'Exporting resource {r_id} to {dump_dir}')
+            logger.debug(f"Exporting resource {r_id} to {dump_dir}")
             os.makedirs(dump_dir, exist_ok=True)
             if os.path.isdir(resource.abs_path):
                 if not os.path.exists(abs_dump_path):

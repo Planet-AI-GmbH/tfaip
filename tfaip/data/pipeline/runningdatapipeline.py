@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 def compute_limit(limit, batch_size):
-    assert limit != 0, 'The limit must not be 0 if calling this method.'
+    assert limit != 0, "The limit must not be 0 if calling this method."
     if limit < 0:
         return limit  # no limit
     else:
@@ -62,7 +62,7 @@ class RunningDataPipeline:
         - TFDatasetGenerator
     """
 
-    def __init__(self, data_pipeline: 'DataPipeline'):
+    def __init__(self, data_pipeline: "DataPipeline"):
         self.data_pipeline = data_pipeline
         self.pipeline_params = data_pipeline.pipeline_params
         self.mode = data_pipeline.mode
@@ -87,10 +87,10 @@ class RunningDataPipeline:
 
         def extract_meta(sample: Sample) -> Sample:
             meta = sample.meta or {}
-            if 'meta' in sample.inputs:
-                input_meta = sample.inputs['meta']
+            if "meta" in sample.inputs:
+                input_meta = sample.inputs["meta"]
                 if isinstance(input_meta, (list, np.ndarray)):
-                    assert len(input_meta) == 1, 'This must be one, just be sure'
+                    assert len(input_meta) == 1, "This must be one, just be sure"
                     input_meta = input_meta[0]
 
                 meta.update(**json.loads(input_meta))
@@ -102,7 +102,7 @@ class RunningDataPipeline:
             return output_pipeline.apply(samples)
         return samples
 
-    def input_dataset(self, auto_repeat=None) -> Optional['tf.data.Dataset']:
+    def input_dataset(self, auto_repeat=None) -> Optional["tf.data.Dataset"]:
         """
         Obtain the batched, padded, prefetched tf.data.Dataset of the input.
         """
@@ -129,16 +129,21 @@ class RunningDataPipeline:
         self.pipeline_params.limit = len(data_generator)
 
         # Load the samples
-        last_generator = list(tqdm_wrapper(data_generator.generate(), progress_bar=progress_bar,
-                                           total=len(data_generator), desc='Loading samples'))
+        last_generator = list(
+            tqdm_wrapper(
+                data_generator.generate(), progress_bar=progress_bar, total=len(data_generator), desc="Loading samples"
+            )
+        )
         # Obtain the list of preprocessors that are valid to use (preloadable) and apply them one by one
-        processors = self.data_pipeline.flat_input_processors(preload=True,
-                                                              non_preloadable_params=non_preloadable_params)
+        processors = self.data_pipeline.flat_input_processors(
+            preload=True, non_preloadable_params=non_preloadable_params
+        )
         for processor in processors:
-            last_generator = processor.preload(last_generator,
-                                               num_processes=self.pipeline_params.num_processes,
-                                               progress_bar=progress_bar,
-                                               )
+            last_generator = processor.preload(
+                last_generator,
+                num_processes=self.pipeline_params.num_processes,
+                progress_bar=progress_bar,
+            )
             last_generator = list(last_generator)
 
         self.pipeline_params.limit = old_limit
@@ -177,7 +182,7 @@ class RunningDataPipeline:
                 # Stop of auto repeat is false
                 break
 
-    def _wrap_padded_batch(self, dataset: 'tf.data.Dataset') -> 'tf.data.Dataset':
+    def _wrap_padded_batch(self, dataset: "tf.data.Dataset") -> "tf.data.Dataset":
         """
         Pad and batch a tf.data.Dataset
         """
@@ -188,19 +193,31 @@ class RunningDataPipeline:
         def default(dtype):
             if dtype == tf.bool:
                 return False
-            return '' if dtype == tf.string else 0
+            return "" if dtype == tf.string else 0
 
         meta_shapes = {k: v.shape for k, v in data.meta_layer_specs().items()}
-        meta_values = {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in
-                       data.meta_layer_specs().items()}
+        meta_values = {
+            k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype)
+            for k, v in data.meta_layer_specs().items()
+        }
         if self.mode == PipelineMode.PREDICTION:
             shapes = ({k: v.shape for k, v in data.input_layer_specs().items()}, meta_shapes)
-            values = ({k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in
-                       data.input_layer_specs().items()}, meta_values)
+            values = (
+                {
+                    k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype)
+                    for k, v in data.input_layer_specs().items()
+                },
+                meta_values,
+            )
         elif self.mode == PipelineMode.TARGETS:
             shapes = ({k: v.shape for k, v in data.target_layer_specs().items()}, meta_shapes)
-            values = ({k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in
-                       data.target_layer_specs().items()}, meta_values)
+            values = (
+                {
+                    k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype)
+                    for k, v in data.target_layer_specs().items()
+                },
+                meta_values,
+            )
         else:
             shapes = (
                 {k: v.shape for k, v in data.input_layer_specs().items()},
@@ -208,10 +225,14 @@ class RunningDataPipeline:
                 meta_shapes,
             )
             values = (
-                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in
-                 data.input_layer_specs().items()},
-                {k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype) for k, v in
-                 data.target_layer_specs().items()},
+                {
+                    k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype)
+                    for k, v in data.input_layer_specs().items()
+                },
+                {
+                    k: tf.constant(pad_values.get(k, default(v.dtype)), dtype=v.dtype)
+                    for k, v in data.target_layer_specs().items()
+                },
                 meta_values,
             )
 
@@ -228,20 +249,25 @@ class RunningDataPipeline:
                 # no batch sizes given, so automatically compute them so that roughly the same amount of "tokens"
                 # is in a batch. The batch size refers to the batch size for the largest bucket
                 max_len = max(pipeline_params.bucket_boundaries)
-                bucket_batch_sizes = [max(1, (pipeline_params.batch_size * size) // max_len) for size in pipeline_params.bucket_boundaries]
+                bucket_batch_sizes = [
+                    max(1, (pipeline_params.batch_size * size) // max_len) for size in pipeline_params.bucket_boundaries
+                ]
                 bucket_batch_sizes.append(bucket_batch_sizes[-1])  # for sizes larger than the upper bucked boundary
 
-            return dataset.apply(bucket_by_sequence_length(
-                element_length_func=element_length_func,
-                bucket_batch_sizes=bucket_batch_sizes,
-                bucket_boundaries=pipeline_params.bucket_boundaries,
-                padded_shapes=shapes,
-                padding_values=values,
-                drop_remainder=pipeline_params.batch_drop_remainder,
-            ))
+            return dataset.apply(
+                bucket_by_sequence_length(
+                    element_length_func=element_length_func,
+                    bucket_batch_sizes=bucket_batch_sizes,
+                    bucket_boundaries=pipeline_params.bucket_boundaries,
+                    padded_shapes=shapes,
+                    padding_values=values,
+                    drop_remainder=pipeline_params.batch_drop_remainder,
+                )
+            )
         else:
-            return dataset.padded_batch(pipeline_params.batch_size, shapes, values,
-                                        drop_remainder=pipeline_params.batch_drop_remainder)
+            return dataset.padded_batch(
+                pipeline_params.batch_size, shapes, values, drop_remainder=pipeline_params.batch_drop_remainder
+            )
 
     def _wrap_dataset(self, dataset: tf.data.Dataset) -> tf.data.Dataset:
         """

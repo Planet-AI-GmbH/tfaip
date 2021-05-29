@@ -28,6 +28,7 @@ class TFAIPProgbarLogger(ProgbarLogger):
     This implementation of the default ProgbarLogger ads an additional mode (self.verbose == 2),
     Where instead of a progress bar the output is logged each delta_time seconds (default 5).
     """
+
     def __init__(self, delta_time=5, **kwargs):
         super().__init__(**kwargs)
         self._time_remaining = 0

@@ -23,20 +23,30 @@ from test.util.workdir import call_in_root
 from tfaip.util.file.oshelper import ChDir
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
-tfaip_dir = os.path.abspath(os.path.join(this_dir, '..', '..', 'tfaip'))
+tfaip_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "tfaip"))
 
 
 class TestExperimenterScript(unittest.TestCase):
     def test_experimenter_example_no_tsp(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             with ChDir(tmp_dir):
-                call_in_root(['tfaip-experimenter',
-                              '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
-                              '--no_use_tsp',
-                              '--dry_run'])
-                call_in_root(['tfaip-experimenter',
-                              '--xlsx', os.path.join(tfaip_dir, 'scripts', 'xlsxexperimenter', 'example.xlsx'),
-                              '--no_use_tsp'])
+                call_in_root(
+                    [
+                        "tfaip-experimenter",
+                        "--xlsx",
+                        os.path.join(tfaip_dir, "scripts", "xlsxexperimenter", "example.xlsx"),
+                        "--no_use_tsp",
+                        "--dry_run",
+                    ]
+                )
+                call_in_root(
+                    [
+                        "tfaip-experimenter",
+                        "--xlsx",
+                        os.path.join(tfaip_dir, "scripts", "xlsxexperimenter", "example.xlsx"),
+                        "--no_use_tsp",
+                    ]
+                )
 
     # Disabled test since weired errors are thrown sometimes
     # def test_experimenter_example_with_tsp(self):

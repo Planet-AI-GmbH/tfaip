@@ -33,7 +33,7 @@ class ScenarioTest(TutorialScenarioTest):
         p.gen.setup.train = DataPipelineParams(batch_size=1)
         p.gen.setup.val = DataPipelineParams(limit=10, batch_size=1)
         p.gen.__post_init__()
-        p.gen.train_val.dataset = 'fashion_mnist'
+        p.gen.train_val.dataset = "fashion_mnist"
         p.skip_model_load_test = True
         p.random_seed = 1337
         p.force_eager = False
@@ -54,9 +54,10 @@ class TestEarlyStopping(unittest.TestCase):
         trainer = ScenarioTest.create_trainer(trainer_params)
         trainer.train()
 
-        self.assertEqual(trainer_params.early_stopping.frequency * (trainer_params.early_stopping.n_to_go - 1),
-                         trainer_params.current_epoch,
-                         )
+        self.assertEqual(
+            trainer_params.early_stopping.frequency * (trainer_params.early_stopping.n_to_go - 1),
+            trainer_params.current_epoch,
+        )
 
     def test_early_stopping_limit(self):
         trainer_params = ScenarioTest.default_trainer_params()
@@ -79,7 +80,9 @@ class TestEarlyStopping(unittest.TestCase):
         trainer_params = ScenarioTest.default_trainer_params()
         trainer_params.epochs = 5
         trainer_params.early_stopping.n_to_go = 2
-        trainer_params.early_stopping.lower_threshold = 0.5  # this threshold must at least be reached (impossible in this case)
+        trainer_params.early_stopping.lower_threshold = (
+            0.5  # this threshold must at least be reached (impossible in this case)
+        )
         trainer_params.early_stopping.upper_threshold = 0.9  # this wont be reached
         trainer_params.learning_rate.lr = 0.0  # No updates, so end at epoch 2
         trainer = ScenarioTest.create_trainer(trainer_params)
@@ -91,7 +94,9 @@ class TestEarlyStopping(unittest.TestCase):
         trainer_params = ScenarioTest.default_trainer_params()
         trainer_params.epochs = 5
         trainer_params.early_stopping.n_to_go = 2
-        trainer_params.early_stopping.upper_threshold = 0.1  # this threshold must at least be reached (fulfilled in this case)
+        trainer_params.early_stopping.upper_threshold = (
+            0.1  # this threshold must at least be reached (fulfilled in this case)
+        )
         trainer_params.early_stopping.upper_threshold = 0.9  # this wont be reached
         trainer_params.learning_rate.lr = 0.0  # No updates, so end at epoch 2
         trainer = ScenarioTest.create_trainer(trainer_params)

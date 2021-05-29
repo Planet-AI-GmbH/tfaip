@@ -12,14 +12,19 @@ These guidelines shall be followed when using |tfaip|.
 Conventions
 ~~~~~~~~~~~
 
-|tfaip| follows `Googles Python style guide <https://google.github.io/styleguide/pyguide.html>`_, in short:
+|tfaip| follows `Black Python style guide <https://black.readthedocs.io>`_, in short:
 * Naming of packages: lowercase, no separators, e.g., `ctctransformer`.
 * Naming of files: snake case, e.g., `data_params`
 * Naming of classes: camelcase, e.g., `DataParamsAtr`
 * Naming of variables: snake case
 
-Furthermore, these guidelines hold for |tfaip|:
-* Naming (packages, classes, variables) should be done from coarse to fine, i.e., `DataAtr` instead of `AtrData`.
+To automatically apply the black code style on all files before committing (pre-commit hook) run:
+
+.. code-block:: shell
+
+    pre-commit install
+
+For integrating black in your IDE (e.g., pycharm) see `here <https://black.readthedocs.io/en/stable/integrations/editors.html>`_.
 
 Logging
 ~~~~~~~

@@ -23,14 +23,12 @@ The DataProcessorParams create their corresponding DataProcessor
 import logging
 from abc import ABC, abstractmethod, ABCMeta
 from dataclasses import dataclass, field
-from typing import List, Optional, Iterable, Iterator, Union, TYPE_CHECKING, Type, Set, TypeVar, \
-    Generic
+from typing import List, Optional, Iterable, Iterator, Union, TYPE_CHECKING, Type, Set, TypeVar, Generic
 
 from paiargparse import pai_dataclass, pai_meta
 from typeguard import typechecked
 
-from tfaip.data.pipeline.definitions import INPUT_PROCESSOR, \
-    TARGETS_PROCESSOR, Sample, PipelineMode, GENERAL_PROCESSOR
+from tfaip.data.pipeline.definitions import INPUT_PROCESSOR, TARGETS_PROCESSOR, Sample, PipelineMode, GENERAL_PROCESSOR
 from tfaip.util.multiprocessing.parallelmap import parallel_map
 
 if TYPE_CHECKING:
@@ -41,24 +39,24 @@ logger = logging.getLogger(__name__)
 
 class Key(str):
     """General keys to be used in the input, target, and output dicts of a DataProcessor or the Model"""
-    IMG = 'img'
-    IMG_SHAPE = 'img_shape'
-    IMG_PATH = 'img_path'
-    MASK = 'mask'
-    GT_BOXES = 'groundtruth_boxes'
-    GT_CLASSES = 'groundtruth_classes'
-    GT_NAMES = 'groundtruth_names'
-    GT_NUM = 'groundtruth_boxes_num'
-    PRED = 'pred'  # prediction which are values in [0,1] for each class-dimension. Last dimension is class dimension
-    CLASS = 'class'  # classification which is the argmax of 'pred'
-    LOGITS = 'logits'  # logits of classifications before applying softmax or sigmoid
-    SEGMENTATIONS = 'segmentation'
-    CLASSNAMES = 'classnames'
-    COORD = 'coord'
+
+    IMG = "img"
+    IMG_SHAPE = "img_shape"
+    IMG_PATH = "img_path"
+    MASK = "mask"
+    GT_BOXES = "groundtruth_boxes"
+    GT_CLASSES = "groundtruth_classes"
+    GT_NAMES = "groundtruth_names"
+    GT_NUM = "groundtruth_boxes_num"
+    PRED = "pred"  # prediction which are values in [0,1] for each class-dimension. Last dimension is class dimension
+    CLASS = "class"  # classification which is the argmax of 'pred'
+    LOGITS = "logits"  # logits of classifications before applying softmax or sigmoid
+    SEGMENTATIONS = "segmentation"
+    CLASSNAMES = "classnames"
+    COORD = "coord"
 
 
 class DataProcessorParamsMeta(ABCMeta):
-
     def __subclasscheck__(cls, subclass):
         # Custom subclass check for correct 'issubclass' support
         # I do not yet know why this is required...
@@ -86,32 +84,38 @@ class DataProcessorParams(ABC, metaclass=DataProcessorParamsMeta):
     which are then used to `create()` the actual data Processor in the thread.
     Therefore, the __init__ function of a DataProcessor is only called in its actual thread.
     """
-    modes: Set[PipelineMode] = field(default_factory=GENERAL_PROCESSOR.copy, metadata=pai_meta(
-        help='The PipelineModes when to apply this DataProcessor (e.g., only during PipelineMode.TRAINING)'
-    ))
+
+    modes: Set[PipelineMode] = field(
+        default_factory=GENERAL_PROCESSOR.copy,
+        metadata=pai_meta(
+            help="The PipelineModes when to apply this DataProcessor (e.g., only during PipelineMode.TRAINING)"
+        ),
+    )
 
     @staticmethod
-    def cls() -> Type['DataProcessorBase']:
+    def cls() -> Type["DataProcessorBase"]:
         raise NotImplementedError
 
-    def create(self, data_params: 'DataBaseParams', mode: PipelineMode) -> 'DataProcessorBase':
+    def create(self, data_params: "DataBaseParams", mode: PipelineMode) -> "DataProcessorBase":
         """
         Create the actual DataProcessor
         """
         if mode not in self.modes:
             raise ValueError(
-                f'{self.__class__.__name__} should not be created since the pipeline mode {mode} is not in its '
-                f'modes {[m.value for m in self.modes]}')
+                f"{self.__class__.__name__} should not be created since the pipeline mode {mode} is not in its "
+                f"modes {[m.value for m in self.modes]}"
+            )
         try:
             return self.cls()(self, data_params, mode)
         except TypeError as e:
             logger.exception(e)
             raise TypeError(
-                f'Data processor of type {self.cls()} could not be instantiated. Maybe the init function has a wrong '
-                f'signature.') from e
+                f"Data processor of type {self.cls()} could not be instantiated. Maybe the init function has a wrong "
+                f"signature."
+            ) from e
 
 
-T = TypeVar('T', bound=DataProcessorParams)
+T = TypeVar("T", bound=DataProcessorParams)
 
 
 class DataProcessorBase(Generic[T], ABC):
@@ -126,11 +130,12 @@ class DataProcessorBase(Generic[T], ABC):
         GeneratingDataProcessor
     """
 
-    def __init__(self,
-                 params: T,
-                 data_params: 'DataBaseParams',
-                 mode: PipelineMode,
-                 ):
+    def __init__(
+        self,
+        params: T,
+        data_params: "DataBaseParams",
+        mode: PipelineMode,
+    ):
         super().__init__()
         assert isinstance(params, DataProcessorParams)
         self.params: T = params
@@ -150,23 +155,25 @@ class DataProcessorBase(Generic[T], ABC):
         elif isinstance(self, GeneratingDataProcessor):
             return self.generate(sample)
         else:
-            raise TypeError('A DataProcessor must inherit either MappingDataProcessor or GeneratingDataProcessor')
+            raise TypeError("A DataProcessor must inherit either MappingDataProcessor or GeneratingDataProcessor")
 
-    def preload(self,
-                samples: List[Sample],
-                num_processes=1,
-                drop_invalid=True,
-                progress_bar=False,
-                ) -> Iterable[Sample]:
+    def preload(
+        self,
+        samples: List[Sample],
+        num_processes=1,
+        drop_invalid=True,
+        progress_bar=False,
+    ) -> Iterable[Sample]:
         return self.apply_on_samples(samples, num_processes, drop_invalid, progress_bar)
 
     @abstractmethod
-    def apply_on_samples(self,
-                         samples: Iterable[Sample],
-                         num_processes=1,
-                         drop_invalid=True,
-                         progress_bar=False,
-                         ) -> Iterator[Sample]:
+    def apply_on_samples(
+        self,
+        samples: Iterable[Sample],
+        num_processes=1,
+        drop_invalid=True,
+        progress_bar=False,
+    ) -> Iterator[Sample]:
         raise NotImplementedError
 
 
@@ -183,12 +190,13 @@ class GeneratingDataProcessor(DataProcessorBase[T]):
     def generate(self, samples: Iterable[Sample]) -> Iterable[Sample]:
         raise NotImplementedError
 
-    def apply_on_samples(self,
-                         samples: Iterable[Sample],
-                         num_processes=1,
-                         drop_invalid=True,
-                         progress_bar=False,
-                         ) -> Iterator[Sample]:
+    def apply_on_samples(
+        self,
+        samples: Iterable[Sample],
+        num_processes=1,
+        drop_invalid=True,
+        progress_bar=False,
+    ) -> Iterator[Sample]:
         mapped = self.generate(samples)
         if drop_invalid:
             mapped = filter(self.is_valid_sample, mapped)
@@ -206,15 +214,20 @@ class MappingDataProcessor(DataProcessorBase[T]):
     def apply(self, sample: Sample) -> Sample:
         raise NotImplementedError
 
-    def apply_on_samples(self,
-                         samples: Iterable[Sample],
-                         num_processes=1,
-                         drop_invalid=True,
-                         progress_bar=False,
-                         ) -> Iterator[Sample]:
-        mapped = parallel_map(self.apply_on_sample, samples, processes=num_processes, progress_bar=progress_bar,
-                              desc=f'Applying data processor {self.__class__.__name__}',
-                              )
+    def apply_on_samples(
+        self,
+        samples: Iterable[Sample],
+        num_processes=1,
+        drop_invalid=True,
+        progress_bar=False,
+    ) -> Iterator[Sample]:
+        mapped = parallel_map(
+            self.apply_on_sample,
+            samples,
+            processes=num_processes,
+            progress_bar=progress_bar,
+            desc=f"Applying data processor {self.__class__.__name__}",
+        )
         if drop_invalid:
             mapped = filter(self.is_valid_sample, mapped)
         return mapped
@@ -227,7 +240,7 @@ class MappingDataProcessor(DataProcessorBase[T]):
 
 class SequenceProcessorParams(DataProcessorParams):
     @staticmethod
-    def cls() -> Type['DataProcessorBase']:
+    def cls() -> Type["DataProcessorBase"]:
         raise NotImplementedError
 
 
@@ -254,6 +267,6 @@ class SequenceProcessor(MappingDataProcessor[SequenceProcessorParams]):
 
         return sample
 
-    def __init__(self, params: 'DataBaseParams', mode: PipelineMode, processors: List[MappingDataProcessor]):
+    def __init__(self, params: "DataBaseParams", mode: PipelineMode, processors: List[MappingDataProcessor]):
         super().__init__(params=SequenceProcessorParams(), data_params=params, mode=mode)
         self.processors = processors

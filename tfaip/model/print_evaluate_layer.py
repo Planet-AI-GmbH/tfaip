@@ -45,17 +45,19 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
              All outputs will be converted to numpy arrays, then model.print_evaluate is called
     """
 
-    def __init__(self, scenario: 'ScenarioBase', limit=-1, name='print_evaluate_layer'):
+    def __init__(self, scenario: "ScenarioBase", limit=-1, name="print_evaluate_layer"):
         super().__init__(name=name, trainable=False)
         self.scenario = scenario
         self.limit_reached = False
         self.limit = limit
-        self._still_allowed = tf.Variable(self.limit, trainable=False, name='_print_limit')
+        self._still_allowed = tf.Variable(self.limit, trainable=False, name="_print_limit")
         if scenario is None:
-            logger.warning('You are instantiating a PrintEvaluateLayer without a scenario. This is not supported. '
-                           'Probably you loaded the keras model with keras.models.load instead of reinstantiating '
-                           'the full graph (e.g. using tfaip-resume-training). This will not result in an error, but '
-                           'no outputs will be generated.')
+            logger.warning(
+                "You are instantiating a PrintEvaluateLayer without a scenario. This is not supported. "
+                "Probably you loaded the keras model with keras.models.load instead of reinstantiating "
+                "the full graph (e.g. using tfaip-resume-training). This will not result in an error, but "
+                "no outputs will be generated."
+            )
 
         data = self.scenario.data
         val_pipeline = data.pipeline_by_mode(PipelineMode.EVALUATION)
@@ -64,7 +66,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
     def get_config(self):
         # Implement this to get rid of warning.
         cfg = super().get_config()
-        cfg['scenario'] = None  # No scenario
+        cfg["scenario"] = None  # No scenario
         return cfg
 
     def operation(self, inputs, training=None):
@@ -87,7 +89,8 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
                 # tf function requires a list as input, hack is to pack everything into a list and storing the key
                 # names, and unpacking in the actual print function
                 # also the "training" state must be packed...
-                return tf.py_function(self.run_print, pack(inputs), Tout=[], name='print')
+                return tf.py_function(self.run_print, pack(inputs), Tout=[], name="print")
+
             a = tf.cond(tf.greater(self._still_allowed, 0), real_print, tf.no_op)
             with tf.control_dependencies([a]):
                 b = self._still_allowed.assign_sub(batch_size)
@@ -118,7 +121,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
             # take an arbitrary output, this defines the batch size
             pel_key = next(iter(o.keys()))
             if len(o[pel_key].shape) == 0:
-                raise ValueError('Loss must have shape of batch size, but got a single value instead')
+                raise ValueError("Loss must have shape of batch size, but got a single value instead")
             batch_size = o[pel_key].shape[0]
             # test if numpy calls possible, else its graph building mode
             in_np = {k: v.numpy() for k, v in i.items()}
@@ -132,7 +135,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
                 outputs = {k: v[batch] for k, v in out_np.items()}
                 targets = {k: v[batch] for k, v in target_np.items()}
                 meta = {k: v[batch] for k, v in meta_np.items()}
-                meta = json.loads(meta['meta'][0], cls=TFAIPJsonDecoder)
+                meta = json.loads(meta["meta"][0], cls=TFAIPJsonDecoder)
                 sample = Sample(inputs=inputs.copy(), outputs=outputs, targets=targets, meta=meta)
                 post_proc_sample = self._post_proc.apply_on_sample(sample)
                 self.scenario.model.print_evaluate(post_proc_sample, self.scenario.data, print_fn=logger.info)
@@ -147,11 +150,11 @@ def pack(dicts: List[dict]) -> list:
     out = [out_keys]
     for i, d in enumerate(dicts):
         if not isinstance(d, dict):
-            out_keys.append(f'_{-1:03d}_')
+            out_keys.append(f"_{-1:03d}_")
             out.append(d)
         else:
             for k, v in d.items():
-                out_keys.append(f'_{i:03d}_{k}')
+                out_keys.append(f"_{i:03d}_{k}")
                 out.append(v)
 
     return out
@@ -161,7 +164,7 @@ def unpack(lists: list) -> List[dict]:
     out_keys = lists[0]
     dicts = []
     for key, l in zip(out_keys, lists[1:]):
-        key = key.numpy().decode('utf-8')
+        key = key.numpy().decode("utf-8")
         prefix = key[:5]
         real_key = key[5:]
         idx = int(prefix[1:-1])

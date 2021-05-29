@@ -49,14 +49,14 @@ def generator(params: PredictionGeneratorParams, data: DataBase, scenario: Scena
     # This function is called in a separate thread.
     # Load the predictor (thus the model) and predict on the generator params of the predictor
     # Write the results to the output queue
-    logger.info(f'Loading generator model from {params.model} in separate thread')
+    logger.info(f"Loading generator model from {params.model} in separate thread")
     predictor = scenario.predictor_cls()(params.predictor_params, data)
-    predictor.set_model(params.model + '/serve')
+    predictor.set_model(params.model + "/serve")
     for s in predictor.predict(params.generator):
         queue.put(Sample(targets=s.targets, inputs=s.inputs, outputs=s.outputs, meta=s.meta))
 
     queue.put(None)
-    logger.info('Generator thread ended.')
+    logger.info("Generator thread ended.")
 
 
 class PredictionGenerator(DataGenerator[PredictionGeneratorParams]):

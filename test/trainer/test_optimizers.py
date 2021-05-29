@@ -21,8 +21,14 @@ from tensorflow.python.keras.backend import clear_session
 
 from test.tutorial.test_tutorial_full import TutorialScenarioTest
 from tfaip.data.databaseparams import DataPipelineParams
-from tfaip.trainer.optimizer.optimizers import OptimizerParams, SGDOptimizer, AdamOptimizer, AdamaxOptimizer, \
-    RMSpropOptimizer, AdaBeliefOptimizer
+from tfaip.trainer.optimizer.optimizers import (
+    OptimizerParams,
+    SGDOptimizer,
+    AdamOptimizer,
+    AdamaxOptimizer,
+    RMSpropOptimizer,
+    AdaBeliefOptimizer,
+)
 
 
 class ScenarioTest(TutorialScenarioTest):
@@ -32,7 +38,7 @@ class ScenarioTest(TutorialScenarioTest):
         p.gen.setup.train = DataPipelineParams(batch_size=1)
         p.gen.setup.val = DataPipelineParams(limit=1, batch_size=1)
         p.gen.__post_init__()
-        p.gen.train_val.dataset = 'fashion_mnist'
+        p.gen.train_val.dataset = "fashion_mnist"
         p.skip_model_load_test = True
         p.random_seed = 1337
         p.force_eager = False

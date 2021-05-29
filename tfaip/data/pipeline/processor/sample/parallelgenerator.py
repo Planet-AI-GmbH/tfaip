@@ -20,13 +20,13 @@ import itertools
 from functools import partial
 from typing import Callable, TYPE_CHECKING, Iterable, Optional
 
-from tfaip import Sample
+from tfaip import Sample, DataBaseParams
 from tfaip.data.pipeline.processor.sample.worker import GeneratingDataProcessorWorker
 from tfaip.util.multiprocessing.data.parallel_generator import ParallelGenerator
 from tfaip.util.multiprocessing.data.worker import DataWorker
 
 if TYPE_CHECKING:
-    from tfaip.data.pipeline.datapipeline import DataPipeline
+    from tfaip.data.pipeline.datapipeline import DataPipelineParams
 
 
 def create_generating_data_processor_worker(*args):
@@ -38,39 +38,38 @@ class ParallelDataGenerator(ParallelGenerator):
     Implementation of applying GeneratingDataProcessors in parallel by implementing the ParallelGenerator.
     """
 
-    def __init__(self,
-                 data_pipeline: 'DataPipeline',
-                 sample_generator: Iterable[Sample],
-                 create_processor_fn,
-                 auto_repeat_input: bool,
-                 num_processes: Optional[int] = None,
-                 limit: Optional[int] = None,
-                 preproc_max_tasks_per_child: Optional[int] = 250,
-                 max_in_samples: int = -1,
-                 max_out_samples: int = -1,
-                 ):
+    def __init__(
+        self,
+        pipeline_params: "DataPipelineParams",
+        sample_generator: Iterable[Sample],
+        create_processor_fn,
+        auto_repeat_input: bool,
+        num_processes: Optional[int] = None,
+        limit: Optional[int] = None,
+        preproc_max_tasks_per_child: Optional[int] = 250,
+        max_in_samples: int = -1,
+        max_out_samples: int = -1,
+    ):
         if num_processes is None:
-            num_processes = data_pipeline.pipeline_params.num_processes
+            num_processes = pipeline_params.num_processes
         if limit is None:
-            limit = data_pipeline.pipeline_params.limit
-        self.data_pipeline = data_pipeline
+            limit = pipeline_params.limit
         self.sample_generator = sample_generator
         self.create_processor_fn = create_processor_fn
-        super().__init__(holder=data_pipeline,
-                         processes=num_processes,
-                         limit=limit,
-                         auto_repeat_input=auto_repeat_input,
-                         max_tasks_per_child=preproc_max_tasks_per_child,
-                         max_in_samples=max_in_samples,
-                         max_out_samples=max_out_samples,
-                         )
+        super().__init__(
+            processes=num_processes,
+            limit=limit,
+            auto_repeat_input=auto_repeat_input,
+            max_tasks_per_child=preproc_max_tasks_per_child,
+            max_in_samples=max_in_samples,
+            max_out_samples=max_out_samples,
+        )
 
     def create_worker_func(self) -> Callable[[], DataWorker]:
-        return partial(create_generating_data_processor_worker,
-                       self.data_pipeline.data.params,
-                       self.data_pipeline.mode,
-                       self.create_processor_fn,
-                       )
+        return partial(
+            create_generating_data_processor_worker,
+            self.create_processor_fn,
+        )
 
     def generate_input(self):
         if self.limit > 0:

@@ -24,23 +24,23 @@ from tfaip.imports import GraphBase
 
 
 class TutorialGraph(GraphBase[TutorialModelParams]):
-    def __init__(self, params: TutorialModelParams, name='conv', **kwargs):
+    def __init__(self, params: TutorialModelParams, name="conv", **kwargs):
         super(TutorialGraph, self).__init__(params, name=name, **kwargs)
         # Create all layers
-        self.conv1 = Conv2D(kernel_size=(2, 2), filters=16, padding='same', name='conv1')
-        self.pool1 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name='pool1')
-        self.conv2 = Conv2D(kernel_size=(2, 2), filters=32, padding='same', name='conv2')
-        self.pool2 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name='pool2')
+        self.conv1 = Conv2D(kernel_size=(2, 2), filters=16, padding="same", name="conv1")
+        self.pool1 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name="pool1")
+        self.conv2 = Conv2D(kernel_size=(2, 2), filters=32, padding="same", name="conv2")
+        self.pool2 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name="pool2")
         self.flatten = Flatten()
-        self.ff = Dense(128, name='f_ff', activation='relu')
-        self.logits = Dense(self._params.n_classes, activation=None, name='classify')
+        self.ff = Dense(128, name="f_ff", activation="relu")
+        self.logits = Dense(self._params.n_classes, activation=None, name="classify")
 
     def build_graph(self, inputs, training=None):
         # Connect all layers and return a dict of the outputs
-        rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
+        rescaled_img = K.expand_dims(K.cast(inputs["img"], dtype="float32") / 255, -1)
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))
         logits = self.logits(self.ff(self.flatten(conv_out)))
         pred = K.softmax(logits, axis=-1)
         cls = K.argmax(pred, axis=-1)
-        out = {'pred': pred, 'logits': logits, 'class': cls}
+        out = {"pred": pred, "logits": logits, "class": cls}
         return out

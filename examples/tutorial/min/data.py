@@ -35,17 +35,15 @@ logger = logging.getLogger(__name__)
 @pai_dataclass
 @dataclass
 class TutorialDataGeneratorParams(DataGeneratorParams):
-    dataset: str = field(default='mnist', metadata=pai_meta(
-        help="The dataset to select (chose also fashion_mnist)."
-    ))
+    dataset: str = field(default="mnist", metadata=pai_meta(help="The dataset to select (chose also fashion_mnist)."))
 
     @staticmethod
-    def cls() -> Type['DataGenerator']:
+    def cls() -> Type["DataGenerator"]:
         return TutorialDataGenerator
 
 
 class TutorialDataGenerator(DataGenerator[TutorialDataGeneratorParams]):
-    def __init__(self, mode: PipelineMode, params: 'TutorialDataGeneratorParams'):
+    def __init__(self, mode: PipelineMode, params: "TutorialDataGeneratorParams"):
         super().__init__(mode, params)
         dataset = getattr(keras.datasets, params.dataset)
         train, test = dataset.load_data()
@@ -62,9 +60,11 @@ class TutorialDataGenerator(DataGenerator[TutorialDataGeneratorParams]):
 @pai_dataclass
 @dataclass
 class TutorialTrainerGeneratorParams(
-    TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]):
-    train_val: TutorialDataGeneratorParams = field(default_factory=TutorialDataGeneratorParams,
-                                                   metadata=pai_meta(mode='flat'))
+    TrainerPipelineParamsBase[TutorialDataGeneratorParams, TutorialDataGeneratorParams]
+):
+    train_val: TutorialDataGeneratorParams = field(
+        default_factory=TutorialDataGeneratorParams, metadata=pai_meta(mode="flat")
+    )
 
     def train_gen(self) -> TutorialDataGeneratorParams:
         return self.train_val
@@ -74,22 +74,22 @@ class TutorialTrainerGeneratorParams(
 
 
 def to_samples(samples):
-    return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}) for img, gt in zip(*samples)]
+    return [Sample(inputs={"img": img}, targets={"gt": gt.reshape((1,))}) for img, gt in zip(*samples)]
 
 
 @pai_dataclass
 @dataclass
 class TutorialDataParams(DataBaseParams):
     @staticmethod
-    def cls() -> Type['DataBase']:
+    def cls() -> Type["DataBase"]:
         return TutorialData
 
 
 class TutorialData(DataBase[TutorialDataParams]):
     def _input_layer_specs(self):
         # Shape and type of the input data for the graph
-        return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
+        return {"img": tf.TensorSpec(shape=(28, 28), dtype="uint8")}
 
     def _target_layer_specs(self):
         # Shape and type of the target (ground truth) data for the graph
-        return {'gt': tf.TensorSpec(shape=[1], dtype='uint8')}
+        return {"gt": tf.TensorSpec(shape=[1], dtype="uint8")}

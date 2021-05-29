@@ -26,35 +26,41 @@ from paiargparse import pai_meta, pai_dataclass
 @dataclass
 class WarmStartParams:
     """Parameters for warm-starting from a model."""
-    model: Optional[str] = field(default=None, metadata=pai_meta(
-        help='Path to the saved model or checkpoint to load the weights from.'
-    ))
 
-    allow_partial: bool = field(default=False, metadata=pai_meta(
-        help='Allow that not all weights can be matched.'
-    ))
-    trim_graph_name: bool = field(default=True, metadata=pai_meta(
-        help='Remove the graph name from the loaded model and the target model. This is useful if the model name '
-             'changed'
-    ))
+    model: Optional[str] = field(
+        default=None, metadata=pai_meta(help="Path to the saved model or checkpoint to load the weights from.")
+    )
 
-    rename: List[str] = field(default_factory=list, metadata=pai_meta(
-        help='A list of renaming rules to perform on the loaded weights. Format: FROM->TO FROM->TO ...'
-    ))
+    allow_partial: bool = field(default=False, metadata=pai_meta(help="Allow that not all weights can be matched."))
+    trim_graph_name: bool = field(
+        default=True,
+        metadata=pai_meta(
+            help="Remove the graph name from the loaded model and the target model. This is useful if the model name "
+            "changed"
+        ),
+    )
 
-    add_suffix: str = field(default="", metadata=pai_meta(
-        help="Add suffix str to all variable names"
-    ))
+    rename: List[str] = field(
+        default_factory=list,
+        metadata=pai_meta(
+            help="A list of renaming rules to perform on the loaded weights. Format: FROM->TO FROM->TO ..."
+        ),
+    )
 
-    rename_targets: List[str] = field(default_factory=list, metadata=pai_meta(
-        help='A list of renaming rules to perform on the target weights. Format: FROM->TO FROM->TO ...'
-    ))
+    add_suffix: str = field(default="", metadata=pai_meta(help="Add suffix str to all variable names"))
 
-    exclude: Optional[str] = field(default=None, metadata=pai_meta(
-        help='A regex applied on the loaded weights to ignore from loading.'
-    ))
-    include: Optional[str] = field(default=None, metadata=pai_meta(
-        help='A regex applied on the loaded weights to include from loading.'
-    ))
+    rename_targets: List[str] = field(
+        default_factory=list,
+        metadata=pai_meta(
+            help="A list of renaming rules to perform on the target weights. Format: FROM->TO FROM->TO ..."
+        ),
+    )
 
-    auto_remove_numbers_for: List[str] = field(default_factory=lambda: ['lstm_cell'])
+    exclude: Optional[str] = field(
+        default=None, metadata=pai_meta(help="A regex applied on the loaded weights to ignore from loading.")
+    )
+    include: Optional[str] = field(
+        default=None, metadata=pai_meta(help="A regex applied on the loaded weights to include from loading.")
+    )
+
+    auto_remove_numbers_for: List[str] = field(default_factory=lambda: ["lstm_cell"])

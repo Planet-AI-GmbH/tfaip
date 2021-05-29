@@ -27,7 +27,8 @@ from typing import Union
 import numpy as np
 
 AnyNumpy = Union[
-    np.ndarray, np.int, np.int8, np.int16, np.int32, np.int64, np.float, np.float16, np.float32, np.float64, np.bool]
+    np.ndarray, np.int, np.int8, np.int16, np.int32, np.int64, np.float, np.float16, np.float32, np.float64, np.bool
+]
 
 
 def enforce_types(callable):
@@ -62,7 +63,8 @@ def enforce_types(callable):
                     pass
                 if not ok:
                     raise TypeError(
-                        'Unexpected type for \'{}\' (expected {} but found {})'.format(name, type_hint, type(value)))
+                        "Unexpected type for '{}' (expected {} but found {})".format(name, type_hint, type(value))
+                    )
 
     def decorate(func):
         @wraps(func)
@@ -99,6 +101,7 @@ class GraphData(OrderedDict):
     .. hint::
         This method is based on transformers ModelOuput class.
     """
+
     def __post_init__(self):
         class_fields = fields(self)
 

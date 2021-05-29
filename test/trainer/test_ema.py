@@ -30,7 +30,7 @@ class ScenarioTest(TutorialScenarioTest):
         p.gen.setup.train = DataPipelineParams(limit=10, batch_size=1)
         p.gen.setup.val = DataPipelineParams(limit=10, batch_size=1)
         p.gen.__post_init__()
-        p.gen.train_val.dataset = 'fashion_mnist'
+        p.gen.train_val.dataset = "fashion_mnist"
         p.gen.train_val.force_train = True  # Use always training data ...
         p.gen.train_val.shuffle = False  # ... and dont shuffle the training data
         p.skip_model_load_test = True
@@ -63,8 +63,8 @@ class TestEMA(unittest.TestCase):
         after_train_logs = trainer.train()
 
         # loss and acc on train must be equal, but lower on val
-        self.assertEqual(first_train_logs['keras_loss'], after_train_logs['keras_loss'])
-        self.assertEqual(first_train_logs['raw_loss'], after_train_logs['raw_loss'])
-        self.assertEqual(first_train_logs['acc'], after_train_logs['acc'])
-        self.assertLess(first_train_logs['val_loss'], after_train_logs['val_loss'])
-        self.assertGreaterEqual(first_train_logs['val_acc'], after_train_logs['val_acc'])
+        self.assertEqual(first_train_logs["keras_loss"], after_train_logs["keras_loss"])
+        self.assertEqual(first_train_logs["raw_loss"], after_train_logs["raw_loss"])
+        self.assertEqual(first_train_logs["acc"], after_train_logs["acc"])
+        self.assertLess(first_train_logs["val_loss"], after_train_logs["val_loss"])
+        self.assertGreaterEqual(first_train_logs["val_acc"], after_train_logs["val_acc"])

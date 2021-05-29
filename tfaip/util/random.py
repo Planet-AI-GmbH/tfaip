@@ -36,8 +36,9 @@ def set_global_random_seed(n):
     from numpy.random import seed  # pylint: disable=import-outside-toplevel
     import random  # pylint: disable=import-outside-toplevel
     import tensorflow as tf  # pylint: disable=import-outside-toplevel
-    logger.info(f'Setting all random seed to {n}')
-    os.environ['PYTHONHASHSEED'] = str(n)
+
+    logger.info(f"Setting all random seed to {n}")
+    os.environ["PYTHONHASHSEED"] = str(n)
     seed(n + 1)
     tf.random.set_seed(n + 2)
     random.seed(n + 3)

@@ -50,33 +50,38 @@ def main(args, scenario_cls, scenario_params, predictor_params):
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
         from tfaip.imports import ScenarioBase
+
         export_dirs = values
         scenario, scenario_params = ScenarioBase.from_path(export_dirs[0])  # scenario based on first model
         lav_params = scenario.lav_cls().params_cls()()
         lav_params.model_path = export_dirs
         predictor_params = scenario.multi_predictor_cls().params_cls()()
 
-        parser.add_root_argument('lav', scenario.lav_cls().params_cls(), default=lav_params)
-        parser.add_root_argument('predictor', scenario.multi_predictor_cls().params_cls(), default=predictor_params,
-                                 ignore=['pipeline']),
-        parser.add_root_argument('data', scenario.predict_generator_params_cls())
+        parser.add_root_argument("lav", scenario.lav_cls().params_cls(), default=lav_params)
+        parser.add_root_argument(
+            "predictor", scenario.multi_predictor_cls().params_cls(), default=predictor_params, ignore=["pipeline"]
+        ),
+        parser.add_root_argument("data", scenario.predict_generator_params_cls())
 
         setattr(namespace, self.dest, values)
-        setattr(namespace, 'scenario', scenario)
-        setattr(namespace, 'scenario_params', scenario_params)
+        setattr(namespace, "scenario", scenario)
+        setattr(namespace, "scenario_params", scenario_params)
 
 
 def parse_args(args=None):
 
     parser = TFAIPArgumentParser()
-    parser.add_argument('--export_dirs', required=True, nargs='+', action=ScenarioSelectionAction)
-    parser.add_argument('--run_eagerly', action='store_true',
-                        help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!")
-    parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
+    parser.add_argument("--export_dirs", required=True, nargs="+", action=ScenarioSelectionAction)
+    parser.add_argument(
+        "--run_eagerly",
+        action="store_true",
+        help="Run the graph in eager mode. This is helpful for debugging. Note that all custom layers must be added to ModelBase!",
+    )
+    parser.add_argument("--dump", type=str, help="Dump the predictions and results to the given filepath")
 
     args = parser.parse_args(args=args)
     return args, args.scenario, args.scenario_params, args.predictor
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

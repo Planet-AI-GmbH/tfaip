@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 import multiprocessing
 from multiprocessing.pool import RUN
-from typing import Callable
+from typing import Callable, Optional, Iterable
 import time
 import logging
 
@@ -31,18 +31,17 @@ from tfaip.util.multiprocessing import context as mp_context
 logging = logging.getLogger(__name__)
 
 
-class ParallelPipeline(Joinable, ABC):
+class ParallelPipeline(ABC):
     """The parallel pipeline applies a worker function in a separate thread to implement a parallel map"""
 
-    def __init__(self, holder: JoinableHolder,
-                 processes: int,
-                 limit: int = -1,
-                 auto_repeat_input: bool = False,
-                 max_tasks_per_child: int = 250,
-                 run_parallel: bool = True,  # Flag to debug and disable parallel run
-                 ):
-        super().__init__(holder)
-
+    def __init__(
+        self,
+        processes: int,
+        limit: int = -1,
+        auto_repeat_input: bool = False,
+        max_tasks_per_child: int = 250,
+        run_parallel: bool = True,  # Flag to debug and disable parallel run
+    ):
         self.limit = limit
         self.auto_repeat_input = auto_repeat_input
         self.processes = processes
@@ -50,20 +49,27 @@ class ParallelPipeline(Joinable, ABC):
         self.pool = None
         self.running = False
         self._invalid_cnt = 0
+        self.run_parallel = run_parallel
+        self.max_tasks_per_child = max_tasks_per_child
+        self.pool: Optional[WrappedPool] = None
 
-        if run_parallel:
+    def __enter__(self) -> Iterable:
+        if self.run_parallel:
             # Auto repeat input should only be true during training
-            self.pool = WrappedPool(processes=self.processes, worker_constructor=self.create_worker_func(),
-                                    context=mp_context(), maxtasksperchild=max_tasks_per_child)
+            self.pool = WrappedPool(
+                processes=self.processes,
+                worker_constructor=self.create_worker_func(),
+                context=mp_context(),
+                maxtasksperchild=self.max_tasks_per_child,
+            )
+        return self._output_generator()
 
-    def join(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.running = False
         if self.pool:
             self.pool.close()
             self.pool.join()
             self.pool = None
-
-        super().join()
 
     @abstractmethod
     def create_worker_func(self) -> Callable[[], DataWorker]:
@@ -74,12 +80,13 @@ class ParallelPipeline(Joinable, ABC):
         pass
 
     def is_running(self):
+        assert self.pool is not None, "Not entered. Call within 'with'-block."
         return self.running or (self.pool and self.pool._state == RUN)  # pylint: disable=protected-access
 
     def _max_size_input_generator(self):
         self.running = True
         while self.is_running():
-            logging.debug('Input generation start')
+            logging.debug("Input generation start")
             for i, sample in enumerate(self.generate_input()):
                 while True:
                     if i == self.limit:
@@ -99,7 +106,7 @@ class ParallelPipeline(Joinable, ABC):
             if not self.auto_repeat_input:
                 break
 
-    def output_generator(self):
+    def _output_generator(self) -> Iterable:
         if self.pool is None:
             # Only one thread, run in thread
             worker = self.create_worker_func()()
@@ -107,7 +114,7 @@ class ParallelPipeline(Joinable, ABC):
             for o in map(worker.process, self._max_size_input_generator()):
                 if o is None:
                     if self._invalid_cnt % 50 == 0:
-                        logging.warning(f'Invalid data. Skipping for the {self._invalid_cnt + 1}. time.')
+                        logging.warning(f"Invalid data. Skipping for the {self._invalid_cnt + 1}. time.")
                     self._invalid_cnt += 1
                 else:
                     yield o
@@ -118,7 +125,7 @@ class ParallelPipeline(Joinable, ABC):
             for o in self.pool.imap_gen(self._max_size_input_generator()):
                 if o is None:
                     if self._invalid_cnt % 50 == 0:
-                        logging.warning(f'Invalid data. Skipping for the {self._invalid_cnt + 1}. time.')
+                        logging.warning(f"Invalid data. Skipping for the {self._invalid_cnt + 1}. time.")
                     self._invalid_cnt += 1
                 else:
                     yield o

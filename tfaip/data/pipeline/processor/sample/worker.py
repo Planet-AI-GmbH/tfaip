@@ -31,13 +31,11 @@ class MappingDataProcessorWorker(DataWorker):
 
     i.e., a list of MappingDataProcessors. The worker will be instantiated and called in a separate process.
     """
-    def __init__(self,
-                 params: 'DataBaseParams',
-                 mode: PipelineMode,
-                 data_processor_fn: Callable[[], SequenceProcessor],
-                 ):
-        self.params = params
-        self.mode = mode
+
+    def __init__(
+        self,
+        data_processor_fn: Callable[[], SequenceProcessor],
+    ):
         self.data_processor_fn = data_processor_fn
         self.processors: Optional[SequenceProcessor] = None
 
@@ -54,13 +52,10 @@ class GeneratingDataProcessorWorker(DataWorker):
     The worker will be instantiated and called in a separate process.
     """
 
-    def __init__(self,
-                 params: 'DataBaseParams',
-                 mode: PipelineMode,
-                 data_processor_fn: Callable[[], GeneratingDataProcessor],
-                 ):
-        self.params = params
-        self.mode = mode
+    def __init__(
+        self,
+        data_processor_fn: Callable[[], GeneratingDataProcessor],
+    ):
         self.data_processor_fn = data_processor_fn
         self.processor: Optional[GeneratingDataProcessor] = None
 

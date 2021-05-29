@@ -22,7 +22,7 @@ import multiprocessing.managers
 
 
 def context() -> multiprocessing.context.BaseContext:
-    return multiprocessing.get_context('spawn')
+    return multiprocessing.get_context("spawn")
 
 
 _manager = None

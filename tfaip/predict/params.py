@@ -29,20 +29,24 @@ class PredictorParams:
     """
     Parameters for the PredictorBase.
     """
-    device: DeviceConfigParams = field(default_factory=DeviceConfigParams)
-    pipeline: DataPipelineParams = field(default_factory=DataPipelineParams,
-                                         metadata=pai_meta(fix_dc=True, mode='ssnake'))
 
-    silent: bool = field(default=False, metadata=pai_meta(
-        help='If silent, do not print the current predicted sample. See also progress_bar.'
-    ))
-    progress_bar: bool = field(default=True, metadata=pai_meta(
-        help='Render a progress bar during prediction.'
-    ))
-    run_eagerly: bool = field(default=False, metadata=pai_meta(
-        help='Run the prediction model in eager mode. Use for debug only.'
-    ))
-    include_targets: bool = field(default=False, metadata=pai_meta(
-        mode='ignore', help='Include the targets which must be present (!) of each sample to the predicted sample.'
-    ))
-    include_meta: bool = field(default=False, metadata=pai_meta(mode='ignore'))
+    device: DeviceConfigParams = field(default_factory=DeviceConfigParams)
+    pipeline: DataPipelineParams = field(
+        default_factory=DataPipelineParams, metadata=pai_meta(fix_dc=True, mode="ssnake")
+    )
+
+    silent: bool = field(
+        default=False,
+        metadata=pai_meta(help="If silent, do not print the current predicted sample. See also progress_bar."),
+    )
+    progress_bar: bool = field(default=True, metadata=pai_meta(help="Render a progress bar during prediction."))
+    run_eagerly: bool = field(
+        default=False, metadata=pai_meta(help="Run the prediction model in eager mode. Use for debug only.")
+    )
+    include_targets: bool = field(
+        default=False,
+        metadata=pai_meta(
+            mode="ignore", help="Include the targets which must be present (!) of each sample to the predicted sample."
+        ),
+    )
+    include_meta: bool = field(default=False, metadata=pai_meta(mode="ignore"))

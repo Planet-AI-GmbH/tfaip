@@ -20,7 +20,7 @@ from tfaip.model.graphbase import GraphBase
 
 
 class TemplateGraph(GraphBase[TemplateModelParams]):
-    def __init__(self, params: TemplateModelParams, name='template_graph', **kwargs):
+    def __init__(self, params: TemplateModelParams, name="template_graph", **kwargs):
         super(TemplateGraph, self).__init__(params, name=name, **kwargs)
         # Create all layers
         raise NotImplementedError

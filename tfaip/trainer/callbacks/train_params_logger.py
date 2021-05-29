@@ -35,13 +35,14 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
 
     This is realized by reimplementing some of the methods of the keras ModelCheckpoint-Callback which is a base class.
     """
+
     def __init__(self, train_params, save_freq=None, store_weights=True, store_params=True):
         # before the actual ModelCheckpoint base is initialized, determine the ckpt_dir
         log_dir = train_params.output_dir
         if log_dir and train_params.checkpoint_sub_dir:
             log_dir = os.path.join(log_dir, train_params.checkpoint_sub_dir)
 
-        ckpt_dir = os.path.join(log_dir, 'variables', 'variables') if log_dir else ''
+        ckpt_dir = os.path.join(log_dir, "variables", "variables") if log_dir else ""
 
         if ckpt_dir is None or save_freq is None:
             save_freq = sys.maxsize  # never
@@ -62,11 +63,10 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
     def _save_model(self, epoch, logs):
         # Override save model to either store weights or the params
         if self.store_params:
-            if isinstance(self.save_freq,
-                          int) or self.epochs_since_last_save >= self.period:
+            if isinstance(self.save_freq, int) or self.epochs_since_last_save >= self.period:
                 logs = tf_utils.to_numpy_or_python_type(logs)
                 # Crop variables/variables of the path
-                filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, logs), '..', '..'))
+                filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, logs), "..", ".."))
                 self.train_params.current_epoch = epoch + 1
                 self.train_params.saved_checkpoint_sub_dir = os.path.relpath(filepath, self.train_params.output_dir)
                 self._save_params(filepath)
@@ -77,9 +77,9 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
     def _save_params(self, filepath):
         # Save the params only
         os.makedirs(filepath, exist_ok=True)
-        path = os.path.join(filepath, 'trainer_params.json')
+        path = os.path.join(filepath, "trainer_params.json")
         logger.debug(f"Logging current trainer state to '{path}'")
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(self.train_params.to_dict(), f, indent=2)
 
     def on_epoch_end(self, epoch, logs=None):

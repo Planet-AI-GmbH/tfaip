@@ -51,10 +51,10 @@ class TestTutorialData(unittest.TestCase):
             self.assertEqual(len(data), 3, "Expected (input, output) tuple")
             self.assertEqual(len(data[0]), 1, "Expected one inputs")
             self.assertEqual(len(data[1]), 1, "Expected one outputs")
-            self.assertTrue('img' in data[0])
-            self.assertTrue('gt' in data[1])
-            self.assertTupleEqual(data[0]['img'].shape, (1, 28, 28))
-            self.assertTupleEqual(data[1]['gt'].shape, (1, 1))
+            self.assertTrue("img" in data[0])
+            self.assertTrue("gt" in data[1])
+            self.assertTupleEqual(data[0]["img"].shape, (1, 28, 28))
+            self.assertTupleEqual(data[1]["gt"].shape, (1, 1))
 
         check(train_data)
         check(val_data)
@@ -80,5 +80,5 @@ class TestTutorialTrain(unittest.TestCase):
         warmstart_training_test_case(self, TutorialScenarioTest)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

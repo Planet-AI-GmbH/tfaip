@@ -30,10 +30,11 @@ class TFAIPDataClassArgumentParser(PAIDataClassArgumentParser):
     """
     Extension to the PAI argument parser, to allow aliases without `Params` suffix.
     """
+
     def alt_names_of_choice(self, choice) -> List[str]:
         names = super().alt_names_of_choice(choice)
         # allow to specify without Params suffix
-        if choice.__name__.endswith('Params'):
+        if choice.__name__.endswith("Params"):
             names.append(choice.__name__[:-6])
         return names
 
@@ -55,5 +56,5 @@ def post_init(dc):
         value = getattr(dc, name)
         post_init(value)
 
-    if hasattr(dc, '__post_init__'):
+    if hasattr(dc, "__post_init__"):
         dc.__post_init__()

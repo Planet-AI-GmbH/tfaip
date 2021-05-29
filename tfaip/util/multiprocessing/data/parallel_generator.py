@@ -66,7 +66,7 @@ def run(worker_fn: Callable[[], DataWorker], max_tasks: int, in_queue: Queue, ou
     logger.debug("Worker finished")
 
 
-class ParallelGenerator(Joinable, ABC):
+class ParallelGenerator(ABC):
     """
     Basic implementation to parallelize generators.
 
@@ -82,17 +82,17 @@ class ParallelGenerator(Joinable, ABC):
     Likewise, a max_tasks_per_child parameter defines how many tasks a process can process before stopped and a new
     one is launched. This is required since sometimes the memory of sup-processes is not freed automatically.
     """
-    def __init__(self,
-                 holder: JoinableHolder,
-                 processes: int,
-                 limit: int = -1,
-                 auto_repeat_input: bool = False,
-                 max_tasks_per_child: int = 250,
-                 run_parallel: bool = True,  # Flag to warning and disable parallel run
-                 max_in_samples: int = -1,
-                 max_out_samples: int = -1,
-                 ):
-        super().__init__(holder)
+
+    def __init__(
+        self,
+        processes: int,
+        limit: int = -1,
+        auto_repeat_input: bool = False,
+        max_tasks_per_child: int = 250,
+        run_parallel: bool = True,  # Flag to warning and disable parallel run
+        max_in_samples: int = -1,
+        max_out_samples: int = -1,
+    ):
 
         self.limit = limit
         self.auto_repeat_input = auto_repeat_input
@@ -120,9 +120,12 @@ class ParallelGenerator(Joinable, ABC):
             self.processes = [p for p in self.processes if p.is_alive()]
             while len(self.processes) < self.num_processes:
                 logger.debug("Spawning new process for generation")
-                self.processes.append(mp_context().Process(
-                    target=run,
-                    args=(self.create_worker_func(), self.max_tasks_per_child, self.in_queue, self.out_queue)))
+                self.processes.append(
+                    mp_context().Process(
+                        target=run,
+                        args=(self.create_worker_func(), self.max_tasks_per_child, self.in_queue, self.out_queue),
+                    )
+                )
                 self.processes[-1].start()
 
             time.sleep(0.1)
@@ -150,14 +153,13 @@ class ParallelGenerator(Joinable, ABC):
             self.in_queue.close()
             self.out_queue.close()
             self.processes = None
-        super().join()
         logger.debug("ParallelGenerator joined")
 
-    def __enter__(self):
+    def __enter__(self) -> Iterable[Any]:
         self.input_thread.start()
         while not self.is_running():
             time.sleep(0.01)
-        return self
+        return self._output_generator()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.join()
@@ -208,7 +210,7 @@ class ParallelGenerator(Joinable, ABC):
 
         logger.debug("Input thread finished")
 
-    def output_generator(self) -> Iterable[Any]:
+    def _output_generator(self) -> Iterable[Any]:
         """
         Retrieve the outputs
         """

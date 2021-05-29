@@ -189,4 +189,3 @@ Have a look at the code documentation for a description of the individual classe
   Each class has a corresponding parallel version (see lower half of Figure 1).
   Construction of the actual processors (calling ``DataProcessorParams.create``) is performed within these classes to ensure that only the parameters are passed to a spawned process not the actual class (which might not be serializable via pickle).
 * Yellow (lower left): The ``TFDatasetGenerator`` can optionally be overwritten in a DataPipeline to change the creation of the ``tf.data.Dataset`` or to inject additional data mappings performed in Tensorflow.
-

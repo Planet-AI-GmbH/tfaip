@@ -28,18 +28,18 @@ class DumpResultsCallback(LAVCallback):
     """
     Callback that dumps all results to a file using pickle.
     """
+
     def __init__(self, filepath: str):
         super().__init__()
         self.target_prediction_pairs = []
         self.filepath = filepath
-        logger.info(f'Results dumper to {self.filepath} created.')
+        logger.info(f"Results dumper to {self.filepath} created.")
 
     def on_sample_end(self, data_generator_params: DataGeneratorParams, sample):
         targets, prediction = self.lav.extract_dump_data(sample)
         self.target_prediction_pairs.append((targets, prediction))
 
     def on_lav_end(self, data_generator_params: DataGeneratorParams, result):
-        logger.info(f'Dumping results {self.filepath}.')
-        with open(self.filepath, 'wb') as f:
-            pickle.dump({'target_prediction_pairs': self.target_prediction_pairs,
-                         'result': result}, f)
+        logger.info(f"Dumping results {self.filepath}.")
+        with open(self.filepath, "wb") as f:
+            pickle.dump({"target_prediction_pairs": self.target_prediction_pairs, "result": result}, f)

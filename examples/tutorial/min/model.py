@@ -29,9 +29,9 @@ from tfaip.util.tftyping import AnyTensor
 @pai_dataclass
 @dataclass
 class TutorialModelParams(ModelBaseParams):
-    n_classes: int = field(default=10, metadata=pai_meta(
-        help="The number of classes (depends on the selected dataset)"
-    ))
+    n_classes: int = field(
+        default=10, metadata=pai_meta(help="The number of classes (depends on the selected dataset)")
+    )
 
     @staticmethod
     def cls():
@@ -39,6 +39,7 @@ class TutorialModelParams(ModelBaseParams):
 
     def graph_cls(self):
         from examples.tutorial.min.graphs import TutorialGraph
+
         return TutorialGraph
 
 
@@ -47,8 +48,8 @@ class TutorialModel(ModelBase[TutorialModelParams]):
         super().__init__(*args, **kwargs)
 
         # setup the metrics and losses for the later usage
-        self.metric_acc = keras.metrics.Accuracy('acc')
-        self.scc_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True, name='loss/cross-entropy')
+        self.metric_acc = keras.metrics.Accuracy("acc")
+        self.scc_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True, name="loss/cross-entropy")
 
     def _best_logging_settings(self):
         # Logging the model with the best ("max") accuracy ("acc")
@@ -57,7 +58,7 @@ class TutorialModel(ModelBase[TutorialModelParams]):
 
     def _loss(self, inputs, targets, outputs) -> Dict[str, AnyTensor]:
         # call the loss function and return its name and the resulting value as a dict
-        return {self.scc_loss.name: self.scc_loss(targets['gt'], outputs['logits'])}
+        return {self.scc_loss.name: self.scc_loss(targets["gt"], outputs["logits"])}
 
     def _metric(self, inputs, targets, outputs):
         # Metric of the model
@@ -68,6 +69,7 @@ class TutorialModel(ModelBase[TutorialModelParams]):
         # This optional function can be used to nicely print the data at the end of a epoch on the validation data
         # Here, the prediction and ground truth is printed and whether it is correct
         outputs, targets = sample.outputs, sample.targets
-        correct = outputs['class'] == targets['gt']
+        correct = outputs["class"] == targets["gt"]
         print_fn(
-            f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})")
+            f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})"
+        )

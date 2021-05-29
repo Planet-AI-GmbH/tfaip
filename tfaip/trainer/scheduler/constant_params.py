@@ -29,5 +29,5 @@ class Constant(LearningRateParams):
     @staticmethod
     def cls():
         from tfaip.trainer.scheduler.constant import ConstantSchedule  # pylint: disable=import-outside-toplevel
-        return ConstantSchedule
 
+        return ConstantSchedule

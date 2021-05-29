@@ -50,14 +50,14 @@ An application of _tfaip_ resolves recurrent obstacles of research and developme
 * Each scenario is created by implementing predefined interfaces (e.g., loss-function or the graph construction).
   This leads to a clean, structured, modularized, and readable code preventing bad code style and facilitates maintenance.
 * _tfaip_ provides a simple API to deploy a scenario.
-  The corresponding module will automatically apply pre-processing, infer the trained model, and optionally transform the output by a post-processing pipeline. 
+  The corresponding module will automatically apply pre-processing, infer the trained model, and optionally transform the output by a post-processing pipeline.
   The information about the pipeline-construction is embedded within the model which enables to store and load models with a different data pipeline even for the same scenario.
   This is handy if, for example, certain pre-processing steps are not required for one specific model or other inputs are expected.
 * During research, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
   Tensorflow allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
   To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, partly even impossible, and complicates debugging.
   _tfaip_ tackles this issue by providing a sophisticated pipeline setup based on so-called data processors which apply simple transformation operations in pure Python code and are automatically executed in parallel.
-  
+
 # State of the Field
 
 Efficient research in the area of Deep Learning requires the integration of highly sophisticated Open-Source frameworks such as [Tensorflow](https://www.tensorflow.org/) [@tensorflow2015-whitepaper], [PyTorch](https://pytorch.org/) [@pytorch_2019], [Caffe](https://github.com/BVLC/caffe) [@jia2014caffe], [CNTK](https://github.com/microsoft/CNTK) [@cntk2016], or [Trax](https://github.com/google/trax) [@trax2021].
@@ -101,7 +101,7 @@ The following itemization highlights the main functionality of _tfaip_:
 
 To help new users to become familiar with _tfaip_, a [comprehensive documentation](https://tfaip.readthedocs.io/), several [tutorials](https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/tutorial), and [example scenarios](https://github.com/Planet-AI-GmbH/tfaip_example_scenarios) with real-world use-cases are available:
 
-* _tfaip_ provides two tutorials that solve the classification of MNIST: 
+* _tfaip_ provides two tutorials that solve the classification of MNIST:
   the _minimal_ scenario shows the minimal implementation that is required to implement the common MNIST-tutorial in _tfaip_.
   The _full_ scenario implements the same use-case and highlights different advanced features of _tfaip_.
 * Some more [examples](https://github.com/Planet-AI-GmbH/tfaip_example_scenarios) are provided by transferring official [Tensorflow tutorials](https://www.tensorflow.org/tutorials) in the _tfaip_ framework.
@@ -109,8 +109,8 @@ To help new users to become familiar with _tfaip_, a [comprehensive documentatio
   The examples comprise:
   * Automatic Text Recognition (ATR) of single text line images
   * Image Classification
-  * Fine Tuning of a BERT 
-* [Templates](https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/template) for two basic scenarios allow setting up a new scenario by copying basic code and modifying it afterwards. 
+  * Fine Tuning of a BERT
+* [Templates](https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/template) for two basic scenarios allow setting up a new scenario by copying basic code and modifying it afterwards.
   All required files and classes are already set up, solely the abstract methods have to be implemented and classes should be renamed.
 
 # Usage of _tfaip_ in Research

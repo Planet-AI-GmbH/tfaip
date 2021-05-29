@@ -24,7 +24,7 @@ from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHan
 
 
 class ExtractLogsCallback(cb.Callback):
-    """ This callback is a utility to extract variables from the log that can not be handled by all callbacks.
+    """This callback is a utility to extract variables from the log that can not be handled by all callbacks.
 
     The actual use-case is to log custom data to the TensorBoard (e.g., bytes or images)
     The values will be added to the logs since they are "Metrics" (this is a bit hacky...), however they must
@@ -34,7 +34,8 @@ class ExtractLogsCallback(cb.Callback):
     Thereto, all logs are extracted and stored in a separated data structure which is cleared on the begin of the
     training. The TensorBoardCallback has then access to the extracted logs.
     """
-    def __init__(self, test_prefix='val_'):
+
+    def __init__(self, test_prefix="val_"):
         super().__init__()
         self._supports_tf_logs = True
         self.tensorboard_data_handler: Optional[TensorBoardDataHandler] = None
@@ -68,10 +69,10 @@ class ExtractLogsCallback(cb.Callback):
         # extract the logs, but add val_ as prefix (as common)
         self.extract(logs, prefix=self.test_prefix)
 
-    def extract(self, logs, prefix=''):
+    def extract(self, logs, prefix=""):
         if logs is None:
             return
         for k in list(logs.keys()):
             if self.tensorboard_data_handler.is_tensorboard_only(k, logs[k]):
-                self.extracted_logs[prefix + k] = logs[k].numpy() if hasattr(logs[k], 'numpy') else logs[k]
+                self.extracted_logs[prefix + k] = logs[k].numpy() if hasattr(logs[k], "numpy") else logs[k]
                 del logs[k]

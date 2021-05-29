@@ -37,21 +37,26 @@ class ListsFileDataGenerator(DataGenerator[ListsFileGeneratorParams]):
 
     On any other mode, the samples will be yielded in Order.
     """
+
     def __len__(self):
         return len(self._create_iterator())
 
     def _create_iterator(self):
         if self.mode == PipelineMode.TRAINING:
             # shuffle data and pick of list ratios
-            file_names_it = ListMixDefinition(list_filenames=self.params.lists,
-                                              mixing_ratio=self.params.list_ratios).as_generator(Random())
+            file_names_it = ListMixDefinition(
+                list_filenames=self.params.lists, mixing_ratio=self.params.list_ratios
+            ).as_generator(Random())
         else:
             # Simply load all file names in order
             if self.params.list_ratios and any(r != 1 for r in self.params.list_ratios):
-                logger.warning("List ratio was specified by is only used during training. "
-                               "Do not set list ratios to remove this warning.")
-            file_names_it = sum([FileListProviderFn(train_list_fn).get_list() for train_list_fn in self.params.lists],
-                                [])
+                logger.warning(
+                    "List ratio was specified by is only used during training. "
+                    "Do not set list ratios to remove this warning."
+                )
+            file_names_it = sum(
+                [FileListProviderFn(train_list_fn).get_list() for train_list_fn in self.params.lists], []
+            )
 
         return file_names_it
 

@@ -52,38 +52,42 @@ def main(args, scenario_meta, scenario_params):
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
         from tfaip.imports import ScenarioBase
+
         export_dir = values
         scenario, scenario_params = ScenarioBase.from_path(export_dir)
 
         default_gen_params = scenario.predict_generator_params_cls()()
-        if os.path.exists(os.path.join(export_dir, 'trainer_params.json')):
+        if os.path.exists(os.path.join(export_dir, "trainer_params.json")):
             # if trainer_params exist load val generator as default
-            with open(os.path.join(export_dir, 'trainer_params.json')) as f:
+            with open(os.path.join(export_dir, "trainer_params.json")) as f:
                 p = scenario.trainer_cls().params_cls().from_json(f.read())
                 default_gen_params = p.gen.lav_gen()[0]
 
         lav_params = scenario.lav_cls().params_cls()()
         lav_params.model_path = export_dir
 
-        parser.add_root_argument('data', DataGeneratorParams, default=default_gen_params)
-        parser.add_root_argument('lav', scenario.lav_cls().params_cls(), default=lav_params)
+        parser.add_root_argument("data", DataGeneratorParams, default=default_gen_params)
+        parser.add_root_argument("lav", scenario.lav_cls().params_cls(), default=lav_params)
 
         setattr(namespace, self.dest, values)
-        setattr(namespace, 'scenario', scenario)
-        setattr(namespace, 'scenario_params', scenario_params)
+        setattr(namespace, "scenario", scenario)
+        setattr(namespace, "scenario_params", scenario_params)
 
 
 def parse_args(args=None):
     parser = TFAIPArgumentParser(add_help=False)
-    parser.add_argument('--export_dir', required=True, action=ScenarioSelectionAction)
-    parser.add_argument('--run_eagerly', action='store_true',
-                        help="Run the graph in eager mode. This is helpful for debugging. "
-                             "Note that all custom layers must be added to ModelBase!")
-    parser.add_argument('--dump', type=str, help='Dump the predictions and results to the given filepath')
+    parser.add_argument("--export_dir", required=True, action=ScenarioSelectionAction)
+    parser.add_argument(
+        "--run_eagerly",
+        action="store_true",
+        help="Run the graph in eager mode. This is helpful for debugging. "
+        "Note that all custom layers must be added to ModelBase!",
+    )
+    parser.add_argument("--dump", type=str, help="Dump the predictions and results to the given filepath")
 
     args = parser.parse_args(args=args)
     return args, args.scenario, args.scenario_params
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

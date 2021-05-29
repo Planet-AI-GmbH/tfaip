@@ -39,6 +39,7 @@ class TemplateDataParams(DataBaseParams):
     @staticmethod
     def cls():
         from examples.template.general.data import TemplateData
+
         return TemplateData
 
 
@@ -50,10 +51,12 @@ class TemplateModelParams(ModelBaseParams):
     @staticmethod
     def cls():
         from examples.template.general.model import TemplateModel
+
         return TemplateModel
 
     def graph_cls(self):
         from examples.template.general.graphs import TemplateGraph
+
         return TemplateGraph
 
 

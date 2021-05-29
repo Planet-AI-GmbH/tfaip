@@ -28,6 +28,7 @@ class Initializer:
     """
     Global variable worker per thread that is used to call the actual method
     """
+
     worker = None
 
     def __init__(self, worker_creator):
@@ -35,20 +36,22 @@ class Initializer:
 
     def __call__(self, *args, **kwargs):
         if not Initializer.worker:
-            logger.debug('Initializing Worker')
+            logger.debug("Initializing Worker")
             Initializer.worker = self.worker_creator()
             Initializer.worker.initialize_thread()
 
-            if 'tensorflow' in sys.modules:
-                logger.warning('You imported tensorflow at some point in the parallel pipeline. '
-                               'Running the code will work, but consume more memory and takes more time for '
-                               'initialization. Consider to remove all tensorflow imports from your data workers. '
-                               '(Watch out for import in __init__.py cause they are done automatically.'
-                               'For Debugging I recommend to set a breakpoint in tensorflow.__init__.py. '
-                               'The first stop is legitimate (import from main thread), any other import is from a '
-                               'spawned child. Try to track down the import history and find the bad boy that causes '
-                               'to import tensorflow.'
-                               'Note: Use local imports if you must import tensorflow.')
+            if "tensorflow" in sys.modules:
+                logger.warning(
+                    "You imported tensorflow at some point in the parallel pipeline. "
+                    "Running the code will work, but consume more memory and takes more time for "
+                    "initialization. Consider to remove all tensorflow imports from your data workers. "
+                    "(Watch out for import in __init__.py cause they are done automatically."
+                    "For Debugging I recommend to set a breakpoint in tensorflow.__init__.py. "
+                    "The first stop is legitimate (import from main thread), any other import is from a "
+                    "spawned child. Try to track down the import history and find the bad boy that causes "
+                    "to import tensorflow."
+                    "Note: Use local imports if you must import tensorflow."
+                )
         return Initializer.worker
 
 

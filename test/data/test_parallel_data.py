@@ -24,9 +24,9 @@ from tfaip import DataGeneratorParams
 from tfaip.data.databaseparams import DataPipelineParams
 from tfaip import Sample
 from tfaip.data.pipeline.datagenerator import DataGenerator
+from tfaip.data.pipeline.processor.params import ComposedProcessorPipelineParams
 from tfaip.util.multiprocessing.data.parallel_generator import ParallelGenerator
 from tfaip.util.multiprocessing.data.worker import DataWorker
-from tfaip.util.multiprocessing.join import JoinableHolder
 
 
 class Worker(DataWorker):
@@ -42,44 +42,33 @@ class Worker(DataWorker):
 
 class DGParams(DataGeneratorParams):
     @staticmethod
-    def cls() -> Type['DataGenerator']:
+    def cls() -> Type["DataGenerator"]:
         class DG(DataGenerator):
             def __len__(self):
                 return 1000
 
             def generate(self) -> Iterable[Sample]:
-                return [Sample(inputs={'data': [i]}, targets={'targets': [i]}) for i in range(1000)]
+                return [Sample(inputs={"data": [i]}, targets={"targets": [i]}) for i in range(1000)]
 
         return DG
 
 
 class TestParallelData(unittest.TestCase):
-    def test_run(self):
-        from tfaip.imports import DataBase, DataBaseParams
+    def test_standalone_pipeline(self):
+        from tfaip.imports import DataBaseParams
 
         class TestDataParams(DataBaseParams):
             @staticmethod
             def cls():
-                return TestData
+                raise NotImplementedError
 
-        class TestData(DataBase):
-            def _input_layer_specs(self):
-                import tensorflow as tf
-                return {"data": tf.TensorSpec(shape=[1], dtype=tf.int32)}
-
-            def _target_layer_specs(self):
-                import tensorflow as tf
-                return {"targets": tf.TensorSpec(shape=[1], dtype=tf.int32)}
-
-        data = TestDataParams().create()
-        with data.create_pipeline(DataPipelineParams(num_processes=8), DGParams()) as rd:
-            for i, d in enumerate(zip(rd.input_dataset().as_numpy_iterator(), range(100))):
-                print(i, d)
-                pass
+        data_params = TestDataParams()
+        samples = [Sample()] * 100
+        pipeline = data_params.pre_proc.create(DataPipelineParams(num_processes=8), data_params)
+        for i, d in enumerate(pipeline.apply(samples)):
+            print(i, d)
 
     def test_parallel_generator(self):
-        holder = JoinableHolder()
-
         class Gen(ParallelGenerator):
             def create_worker_func(self) -> Callable[[], DataWorker]:
                 return Worker
@@ -87,10 +76,7 @@ class TestParallelData(unittest.TestCase):
             def generate_input(self):
                 return range(100)
 
-        with Gen(
-                holder,
-                processes=4
-        ) as pg:
-            for o in pg.output_generator():
+        with Gen(processes=4) as output_generator:
+            for o in output_generator:
                 print(o)
                 # NOTE: The numbers are not ordered!!

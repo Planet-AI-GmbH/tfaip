@@ -30,7 +30,7 @@ class TemplateDataGeneratorParams(DataGeneratorParams):
     # [Add parameters that define where the data originates from, e.g. file paths]
 
     @staticmethod
-    def cls() -> Type['DataGenerator']:
+    def cls() -> Type["DataGenerator"]:
         return TemplateDataGenerator
 
 

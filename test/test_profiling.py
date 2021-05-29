@@ -19,7 +19,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from tfaip.util.profiling import profile, print_profiling, ProfileScope,enable_profiling
+from tfaip.util.profiling import profile, print_profiling, ProfileScope, enable_profiling
 
 
 class Test(TestCase):

@@ -27,8 +27,10 @@ from tfaip import PipelineMode, Sample
 
 
 def to_samples(samples):
-    return [Sample(inputs={'img': img}, targets={'gt': gt.reshape((1,))}, meta={'index': i}) for i, (img, gt) in
-            enumerate(zip(*samples))]
+    return [
+        Sample(inputs={"img": img}, targets={"gt": gt.reshape((1,))}, meta={"index": i})
+        for i, (img, gt) in enumerate(zip(*samples))
+    ]
 
 
 @pai_dataclass
@@ -40,9 +42,13 @@ class TutorialPredictionGeneratorParams(DataGeneratorParams):
     GT is expected to be written in a plain text file that has the same name as the corresponding image with a ".txt"
     suffix.
     """
-    files: str = field(default='', metadata=pai_meta(
-        required=True,
-        help="Path to the image to load. Use wildcards '*' to provide multiple files."))
+
+    files: str = field(
+        default="",
+        metadata=pai_meta(
+            required=True, help="Path to the image to load. Use wildcards '*' to provide multiple files."
+        ),
+    )
 
     @staticmethod
     def cls():
@@ -56,12 +62,12 @@ class TutorialPredictionGeneratorParams(DataGeneratorParams):
 
         def load_sample(fn) -> Sample:
             img = cv2.imread(fn, flags=cv2.IMREAD_GRAYSCALE)
-            gt_path = fn + '.txt'
+            gt_path = fn + ".txt"
             if os.path.exists(gt_path):
                 with open(gt_path) as f:
                     gt = [int(f.read())]
             else:
                 gt = None
-            return Sample(inputs={'img': img}, targets={'gt': gt}, meta={'fn': fn})
+            return Sample(inputs={"img": img}, targets={"gt": gt}, meta={"fn": fn})
 
         return RawDataGenerator(list(map(load_sample, glob.glob(self.files))), mode, self)

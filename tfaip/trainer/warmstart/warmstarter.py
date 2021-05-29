@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def longest_common_startstr(strs: List[str]) -> str:
     # Search for the longest common start string of each of the passed strs
-    longest_common = ''
+    longest_common = ""
     for c in zip(*strs):
         if len(set(c)) == 1:
             longest_common += c[0]
@@ -49,22 +49,22 @@ class WarmStarter:
         self._params = params
 
         if (params.exclude or params.include) and params.allow_partial:
-            raise ValueError('Allow partial is only allowed if neither exclude not include is specified')
+            raise ValueError("Allow partial is only allowed if neither exclude not include is specified")
 
     def _trim(self, names: List[str]) -> List[str]:
         if self._params.trim_graph_name:
-            longest_common = longest_common_startstr([n for n in names if 'print_limit' not in n])
-            if '/' in longest_common:
+            longest_common = longest_common_startstr([n for n in names if "print_limit" not in n])
+            if "/" in longest_common:
                 # find slash, only trim full var names
-                longest_common = longest_common[:longest_common.rfind('/') + 1]
-                return [s[len(longest_common):] if 'print_limit' not in s else s for s in names]
+                longest_common = longest_common[: longest_common.rfind("/") + 1]
+                return [s[len(longest_common) :] if "print_limit" not in s else s for s in names]
         return names
 
     @staticmethod
     def _replace_name(name, rename_rules: Optional[List[str]] = None):
         if rename_rules:
             for replace in rename_rules:
-                from_to = replace.split('->')
+                from_to = replace.split("->")
                 if len(from_to) != 2:
                     raise ValueError(f"Renaming rule {replace} must follow the 'from->to' schemata")
 
@@ -82,21 +82,27 @@ class WarmStarter:
 
     def _auto_replace_numbers(self, name):
         for r in self._params.auto_remove_numbers_for:
-            name = re.sub(f'(.*/){r}_\\d+(/.*)', f'\\1{r}\\2', name)
+            name = re.sub(f"(.*/){r}_\\d+(/.*)", f"\\1{r}\\2", name)
 
         return name
 
     def warmstart(self, target_model: tf.keras.Model, custom_objects=None):
         if not self._params.model:
-            logger.debug('No warm start model provided')
+            logger.debug("No warm start model provided")
             return
 
         target_var_names = self._apply_renamings([w.name for w in target_model.weights], self._params.rename_targets)
         target_weights = list(zip(target_var_names, target_model.weights, target_model.get_weights()))
         all_trainable_target_weights = {name: weight for name, var, weight in target_weights if var.trainable}
-        trainable_name_to_target_var_name = {k: v for k, v in zip(self._apply_renamings(all_trainable_target_weights.keys(), self._params.rename_targets), all_trainable_target_weights.keys())}
+        trainable_name_to_target_var_name = {
+            k: v
+            for k, v in zip(
+                self._apply_renamings(all_trainable_target_weights.keys(), self._params.rename_targets),
+                all_trainable_target_weights.keys(),
+            )
+        }
         target_var_name_to_trainable_name = {v: k for k, v in trainable_name_to_target_var_name.items()}
-        logger.info(f'Warm-starting from {self._params.model}')
+        logger.info(f"Warm-starting from {self._params.model}")
         try:
             # First try to reinstantiate the model, and apply the renamings on the weights,
             # if this fails, load the weights as checkpoints, apply additional renamings, and then try to match
@@ -107,10 +113,13 @@ class WarmStarter:
             model_to_load_var_names = [w.name for w in model.weights]
             loaded_weights = list(zip(loaded_var_names, model.weights, model.get_weights()))
             all_loaded_weights = {name: weight for name, var, weight in loaded_weights if var.trainable}
-            trainable_name_to_loaded_var_name = {k: v for k, v in
-                                                 zip(self._apply_renamings(all_loaded_weights.keys(),
-                                                                           self._params.rename_targets),
-                                                     all_loaded_weights.keys())}
+            trainable_name_to_loaded_var_name = {
+                k: v
+                for k, v in zip(
+                    self._apply_renamings(all_loaded_weights.keys(), self._params.rename_targets),
+                    all_loaded_weights.keys(),
+                )
+            }
         except OSError:
             logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
             ckpt = tf.train.load_checkpoint(self._params.model)
@@ -118,14 +127,16 @@ class WarmStarter:
             model_to_load_var_names = name_shapes.keys()
 
             def rename_ckpt_var_name(name: str):
-                name = name.replace('/.ATTRIBUTES/VARIABLE_VALUE', "")
+                name = name.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
                 return name
 
             names = self._apply_renamings(model_to_load_var_names, self._params.rename)
             if self._params.add_suffix:
                 names = [name + self._params.add_suffix for name in names]
-            weights_ckpt = {rename_ckpt_var_name(pp_name): ckpt.get_tensor(name) for pp_name, name in
-                            zip(names, model_to_load_var_names)}
+            weights_ckpt = {
+                rename_ckpt_var_name(pp_name): ckpt.get_tensor(name)
+                for pp_name, name in zip(names, model_to_load_var_names)
+            }
             all_loaded_weights = weights_ckpt
             trainable_name_to_loaded_var_name = {k: k for k in names}
 
@@ -143,15 +154,17 @@ class WarmStarter:
                 names_to_load = [name for name in names_to_load if not exc.fullmatch(name)]
 
             if len(names_target.intersection(names_to_load)) == 0:
-                raise NameError(f'Not a weight could be matched.\nLoaded: {names_to_load}\nTarget: {names_target}')
+                raise NameError(f"Not a weight could be matched.\nLoaded: {names_to_load}\nTarget: {names_target}")
         elif self._params.allow_partial:
             names_to_load = names_target.intersection(names_loaded)
         else:
             diff_target = names_loaded.difference(names_target)
             diff_load = names_target.difference(names_loaded)
             if len(diff_target) > 0 or len(diff_load) > 0:
-                raise NameError(f"Not all weights could be matched:\nTargets '{diff_target}'\nLoaded: '{diff_load}'. "
-                                f'\nUse allow_partial to allow partial loading')
+                raise NameError(
+                    f"Not all weights could be matched:\nTargets '{diff_target}'\nLoaded: '{diff_load}'. "
+                    f"\nUse allow_partial to allow partial loading"
+                )
 
         names_to_load = names_target
         new_weights = []
@@ -171,12 +184,12 @@ class WarmStarter:
                     non_trainable_weights_names.append(name)
                 new_weights.append(target_weights[weight_idx][2])  # set to original weight
         not_loaded_weights = [name for name in names_loaded if name not in warm_weights_names]
-        newline = '\n\t'
-        logger.info(newline.join(['model-to-load weights:'] + model_to_load_var_names))
-        logger.info(newline.join(['renamed unmached weights:'] + [str(x) for x in not_loaded_weights]))
-        logger.info(newline.join(['Warm weights:'] + [str(x) for x in warm_weights_names]))
-        logger.info(newline.join(['Cold weights:'] + [str(x) for x in cold_weights_names]))
-        logger.info(f'There are {len(non_trainable_weights_names)} non trainable weights.')
+        newline = "\n\t"
+        logger.info(newline.join(["model-to-load weights:"] + model_to_load_var_names))
+        logger.info(newline.join(["renamed unmached weights:"] + [str(x) for x in not_loaded_weights]))
+        logger.info(newline.join(["Warm weights:"] + [str(x) for x in warm_weights_names]))
+        logger.info(newline.join(["Cold weights:"] + [str(x) for x in cold_weights_names]))
+        logger.info(f"There are {len(non_trainable_weights_names)} non trainable weights.")
         if len(names_to_load) == 0:
             raise ValueError("No warmstart weight could be matched! Set TFAIP_LOG_LEVEL=INFO for more information.")
 

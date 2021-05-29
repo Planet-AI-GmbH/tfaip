@@ -26,27 +26,27 @@ from tfaip.model.graphbase import GraphBase
 class TutorialGraph(GraphBase, ABC):
     def __init__(self, params, **kwargs):
         super(TutorialGraph, self).__init__(params, **kwargs)
-        self.acc = keras.metrics.Accuracy(name='internal_acc')
+        self.acc = keras.metrics.Accuracy(name="internal_acc")
         self.backend = params.graph.cls()
-        self.logits = keras.layers.Dense(self._params.n_classes, activation=None, name='classify')
+        self.logits = keras.layers.Dense(self._params.n_classes, activation=None, name="classify")
 
     def build_graph(self, inputs, training=None):
         # Optionally add a training attribute to check if the graph is in training or validation mode
         # To design a different behaviour of the prediction graph, check if GT is available in the inputs
         # call function that is shared by all other graphs
-        rescaled_img = K.expand_dims(K.cast(inputs['img'], dtype='float32') / 255, -1)
+        rescaled_img = K.expand_dims(K.cast(inputs["img"], dtype="float32") / 255, -1)
         backbone_out = self.backend(rescaled_img)  # call the actual graph (MLP or CNN)
-        logits = self.logits(backbone_out['out'])
+        logits = self.logits(backbone_out["out"])
         pred = K.softmax(logits, axis=-1)
         cls = K.argmax(pred, axis=-1)
-        out = {'pred': pred, 'logits': logits, 'class': cls}
+        out = {"pred": pred, "logits": logits, "class": cls}
 
         # Add conv out to outputs to show how to visualize using tensorboard
-        if 'conv_out' in backbone_out:
-            out['conv_out'] = backbone_out['conv_out']
+        if "conv_out" in backbone_out:
+            out["conv_out"] = backbone_out["conv_out"]
 
         # Add a metric within the graph in the training model.
         # This metric will however not be used in LAV
-        if 'gt' in inputs:
-            self.add_metric(self.acc(out['class'], inputs['gt']))
+        if "gt" in inputs:
+            self.add_metric(self.acc(out["class"], inputs["gt"]))
         return out

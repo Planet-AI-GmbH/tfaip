@@ -30,6 +30,7 @@ def get_commit_hash() -> Optional[str]:
     """
     try:
         import git  # local import so that no crash occurs if git is not installed
+
         repo = git.Repo(path=this_dir, search_parent_directories=True)
         h = repo.head.object.hexsha
         logger.debug(f"Git commit hash {h}")

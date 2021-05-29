@@ -26,7 +26,7 @@ from tfaip.data.pipeline.processor.sample.parallelgenerator import ParallelDataG
 from tfaip.data.pipeline.processor.sample.parallelpipeline import ParallelDataProcessorPipeline
 
 if TYPE_CHECKING:
-    from tfaip.data.pipeline.datapipeline import DataPipeline
+    from tfaip.data.pipeline.datapipeline import DataPipelineParams
 
 
 class SampleProcessorPipelineBase(ABC):
@@ -34,16 +34,31 @@ class SampleProcessorPipelineBase(ABC):
     Base Pipeline that instantiates its DataProcessors in a (optionally) separate thread.
     """
 
-    def __init__(self,
-                 params: SequentialProcessorPipelineParams,
-                 data_pipeline: 'DataPipeline',
-                 processor_fn: Optional[Callable[[], Union[SequenceProcessor, GeneratingDataProcessor]]] = None):
+    def __init__(
+        self,
+        params: SequentialProcessorPipelineParams,
+        data_pipeline_params: "DataPipelineParams",
+        processor_fn: Optional[Callable[[], Union[SequenceProcessor, GeneratingDataProcessor]]] = None,
+    ):
         self.params = params
-        self.data_pipeline = data_pipeline
+        self.data_pipeline_params = data_pipeline_params
         self.create_processor_fn = processor_fn
 
+    def apply(self, samples: Iterable[Sample], run_parallel: Optional[bool] = None) -> Iterable[Sample]:
+        """Apply the data processors on the samples
+
+        This will create the processing pipeline, process all samples and destroy the pipeline.
+        Use this on as many samples as possible to reduce the time for initialization/destruction.
+
+        Params:
+            run_parallel: override the run_parallel setting of the params
+        """
+        if run_parallel is None:
+            run_parallel = self.params.run_parallel
+        return self._apply(samples, run_parallel)
+
     @abstractmethod
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
+    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
         raise NotImplementedError
 
 
@@ -52,7 +67,7 @@ class MappingSampleProcessorPipeline(SampleProcessorPipelineBase):
     Implementation for MappingDataProcessors
     """
 
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
+    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
         if not self.create_processor_fn:
             for sample in samples:
                 yield sample
@@ -69,23 +84,22 @@ class ParallelMappingSampleProcessingPipeline(MappingSampleProcessorPipeline):
     Parallel version of the implementation for MappingDataProcessors
     """
 
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
-        if not self.params.run_parallel:
+    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
+        if not run_parallel:
             for x in super().apply(samples):
                 yield x
         else:
             parallel_pipeline = ParallelDataProcessorPipeline(
-                self.data_pipeline,
+                self.data_pipeline_params,
                 samples,
                 create_processor_fn=self.create_processor_fn,
                 auto_repeat_input=False,
                 preproc_max_tasks_per_child=self.params.max_tasks_per_process,
                 num_processes=self.params.num_threads if self.params.num_threads >= 1 else None,
             )
-            for x in parallel_pipeline.output_generator():
-                yield x
-
-            parallel_pipeline.join()
+            with parallel_pipeline as output_generator:
+                for x in output_generator:
+                    yield x
 
 
 class GeneratingSampleProcessorPipeline(SampleProcessorPipelineBase):
@@ -93,7 +107,7 @@ class GeneratingSampleProcessorPipeline(SampleProcessorPipelineBase):
     Implementation for GeneratingDataProcessors.
     """
 
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
+    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
         if not self.create_processor_fn:
             for sample in samples:
                 yield sample
@@ -109,20 +123,20 @@ class ParallelGeneratingSampleProcessorPipeline(GeneratingSampleProcessorPipelin
     Note: Only use if PipelineMode is Training, since the outputs are not ordered!
     """
 
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
-        if not self.params.run_parallel:
+    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
+        if not run_parallel:
             for x in super().apply(samples):
                 yield x
         else:
-            num_threads = self.params.num_threads if self.data_pipeline.mode == PipelineMode.TRAINING else 1
+            num_threads = self.params.num_threads if self.data_pipeline_params.mode == PipelineMode.TRAINING else 1
             # If not training, enforce num threads as 1 to yield deterministic results
             with ParallelDataGenerator(
-                    self.data_pipeline,
-                    samples,
-                    create_processor_fn=self.create_processor_fn,
-                    auto_repeat_input=False,
-                    preproc_max_tasks_per_child=self.params.max_tasks_per_process,
-                    num_processes=num_threads if num_threads >= 1 else None,
-            ) as parallel_pipeline:
-                for x in parallel_pipeline.output_generator():
+                self.data_pipeline_params,
+                samples,
+                create_processor_fn=self.create_processor_fn,
+                auto_repeat_input=False,
+                preproc_max_tasks_per_child=self.params.max_tasks_per_process,
+                num_processes=num_threads if num_threads >= 1 else None,
+            ) as output_generator:
+                for x in output_generator:
                     yield x

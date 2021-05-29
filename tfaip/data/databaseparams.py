@@ -25,8 +25,11 @@ from typing import TYPE_CHECKING, Type, List, Optional
 from paiargparse import pai_meta, pai_dataclass
 
 from tfaip.data.pipeline.definitions import PipelineMode
-from tfaip.data.pipeline.processor.params import SequentialProcessorPipelineParams, ComposedProcessorPipelineParams, \
-    DataProcessorPipelineParams
+from tfaip.data.pipeline.processor.params import (
+    SequentialProcessorPipelineParams,
+    ComposedProcessorPipelineParams,
+    DataProcessorPipelineParams,
+)
 
 if TYPE_CHECKING:
     from tfaip.data.pipeline.datagenerator import DataGenerator
@@ -41,11 +44,12 @@ class DataGeneratorParams(ABC):
     """
     Parameter class that defines how to construct a DataGenerator.
     """
+
     @staticmethod
-    def cls() -> Type['DataGenerator']:
+    def cls() -> Type["DataGenerator"]:
         raise NotImplementedError
 
-    def create(self, mode: PipelineMode) -> 'DataGenerator':
+    def create(self, mode: PipelineMode) -> "DataGenerator":
         return self.cls()(mode, self)
 
 
@@ -57,39 +61,52 @@ class DataPipelineParams:
     of a certain (e.g. train or val) pipeline.
     """
 
-    batch_size: int = field(default=16, metadata=pai_meta(
-        help='Batch size'
-    ))
-    limit: int = field(default=-1, metadata=pai_meta(
-        help='Limit the number of examples produced by the generator. Note, if GeneratingDataProcessors are present '
-             'in the data pipeline, the number of examples produced by the generator can differ.'
-    ))
-    prefetch: int = field(default=-1, metadata=pai_meta(
-        help='Prefetching data. -1 default to max(num_processes * 2 by default, 2 * batch size)'
-    ))
-    num_processes: int = field(default=4, metadata=pai_meta(
-        help='Number of processes for data loading.'
-    ))
-    batch_drop_remainder: bool = field(default=False, metadata=pai_meta(
-        help='Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size.'
-    ))
-    shuffle_buffer_size: int = field(default=-1, metadata=pai_meta(
-        help='Size of the shuffle buffer required for randomizing data (if required). Disabled by default.'
-    ))
-    mode: PipelineMode = field(default=PipelineMode.TRAINING, metadata=pai_meta(
-        mode='ignore', help='Mode of this pipeline. To be set automatically by modules (train, predict, lav...)'
-    ))
-    bucket_boundaries: List[int] = field(default_factory=list, metadata=pai_meta(
-        help='Elements of the Dataset are grouped together by length and then are padded and batched. '
-             'See tf.data.experimental.bucket_by_sequence_length'
-    ))
-    bucket_batch_sizes: Optional[List[int]] = field(default=None, metadata=pai_meta(
-        help='Batch sizes of the buckets. By default, batch_size * (len(bucked_boundaries) + 1).'
-    ))
+    batch_size: int = field(default=16, metadata=pai_meta(help="Batch size"))
+    limit: int = field(
+        default=-1,
+        metadata=pai_meta(
+            help="Limit the number of examples produced by the generator. Note, if GeneratingDataProcessors are present "
+            "in the data pipeline, the number of examples produced by the generator can differ."
+        ),
+    )
+    prefetch: int = field(
+        default=-1,
+        metadata=pai_meta(help="Prefetching data. -1 default to max(num_processes * 2 by default, 2 * batch size)"),
+    )
+    num_processes: int = field(default=4, metadata=pai_meta(help="Number of processes for data loading."))
+    batch_drop_remainder: bool = field(
+        default=False,
+        metadata=pai_meta(
+            help="Drop remainder parameter of padded_batch. Drop batch if it is smaller than batch size."
+        ),
+    )
+    shuffle_buffer_size: int = field(
+        default=-1,
+        metadata=pai_meta(
+            help="Size of the shuffle buffer required for randomizing data (if required). Disabled by default."
+        ),
+    )
+    mode: PipelineMode = field(
+        default=PipelineMode.TRAINING,
+        metadata=pai_meta(
+            mode="ignore", help="Mode of this pipeline. To be set automatically by modules (train, predict, lav...)"
+        ),
+    )
+    bucket_boundaries: List[int] = field(
+        default_factory=list,
+        metadata=pai_meta(
+            help="Elements of the Dataset are grouped together by length and then are padded and batched. "
+            "See tf.data.experimental.bucket_by_sequence_length"
+        ),
+    )
+    bucket_batch_sizes: Optional[List[int]] = field(
+        default=None,
+        metadata=pai_meta(help="Batch sizes of the buckets. By default, batch_size * (len(bucked_boundaries) + 1)."),
+    )
 
     def __post_init__(self):
         if self.num_processes <= 0:
-            raise ValueError(f'Number of processes must be > 0 but got {self.num_processes}')
+            raise ValueError(f"Number of processes must be > 0 but got {self.num_processes}")
 
         if self.prefetch < 0:
             self.prefetch = 8 * max(self.num_processes, self.batch_size // self.num_processes)
@@ -106,24 +123,23 @@ class DataBaseParams(ABC):
 
     @staticmethod
     @abstractmethod
-    def cls() -> Type['DataBase']:
+    def cls() -> Type["DataBase"]:
         raise NotImplementedError
 
-    def create(self) -> 'DataBase':
+    def create(self) -> "DataBase":
         return self.cls()(params=self)
 
     # Store pre- and post-processing
-    pre_proc: DataProcessorPipelineParams = field(default_factory=SequentialProcessorPipelineParams,
-                                                  metadata=pai_meta(
-                                                      choices=[SequentialProcessorPipelineParams,
-                                                               ComposedProcessorPipelineParams]))
-    post_proc: DataProcessorPipelineParams = field(default_factory=SequentialProcessorPipelineParams,
-                                                   metadata=pai_meta(
-                                                       choices=[SequentialProcessorPipelineParams,
-                                                                ComposedProcessorPipelineParams]))
+    pre_proc: DataProcessorPipelineParams = field(
+        default_factory=SequentialProcessorPipelineParams,
+        metadata=pai_meta(choices=[SequentialProcessorPipelineParams, ComposedProcessorPipelineParams]),
+    )
+    post_proc: DataProcessorPipelineParams = field(
+        default_factory=SequentialProcessorPipelineParams,
+        metadata=pai_meta(choices=[SequentialProcessorPipelineParams, ComposedProcessorPipelineParams]),
+    )
 
     # Other params
-    resource_base_path: str = field(default=os.getcwd(), metadata=pai_meta(
-        mode='ignore',
-        help='Path where to find the resources'
-    ))
+    resource_base_path: str = field(
+        default=os.getcwd(), metadata=pai_meta(mode="ignore", help="Path where to find the resources")
+    )

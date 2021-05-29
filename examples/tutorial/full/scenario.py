@@ -43,11 +43,11 @@ class TutorialScenario(ScenarioBase[TutorialScenarioParams, TutorialTrainerGener
         return TutorialPredictionGeneratorParams
 
     @classmethod
-    def multi_predictor_cls(cls) -> Type['MultiModelPredictor']:
+    def multi_predictor_cls(cls) -> Type["MultiModelPredictor"]:
         return TutorialMultiModelPredictor
 
     @classmethod
-    def evaluator_cls(cls) -> Type['EvaluatorBase']:
+    def evaluator_cls(cls) -> Type["EvaluatorBase"]:
         class MNISTEvaluator(EvaluatorBase):
             def __init__(self, params):
                 super(MNISTEvaluator, self).__init__(params)
@@ -60,9 +60,9 @@ class TutorialScenario(ScenarioBase[TutorialScenarioParams, TutorialTrainerGener
 
             def update_state(self, sample: Sample):
                 self.total_count += 1
-                self.true_count += np.sum(sample.targets['gt'] == sample.outputs['class'])
+                self.true_count += np.sum(sample.targets["gt"] == sample.outputs["class"])
 
             def result(self) -> Dict[str, AnyNumpy]:
-                return {'eval_acc': self.true_count / self.total_count if self.total_count else 0}
+                return {"eval_acc": self.true_count / self.total_count if self.total_count else 0}
 
         return MNISTEvaluator

@@ -21,7 +21,7 @@ def to_flat(nested_dict, including_lists=True):
         if isinstance(value, dict):
             for k, v in value.items():
                 _add(combine_keys(key, k), v, _flat_dict)
-        elif (including_lists and isinstance(value, list)):
+        elif including_lists and isinstance(value, list):
             for idx, v in enumerate(value):
                 _add(combine_key_and_list_idx(key, idx), v, _flat_dict)
         else:
@@ -31,6 +31,7 @@ def to_flat(nested_dict, including_lists=True):
     for k, v in nested_dict.items():
         _add(k, v, flat_dict)
     return flat_dict
+
 
 def to_nested(flat_dict):
     # Reconstructs the original nested dictionary from the flattened dictionary.
@@ -72,42 +73,46 @@ def to_nested(flat_dict):
                     dst = dst[subkey]
     return nested_dict
 
+
 def combine_keys(kp, kc):
     # combines parent key (kp: str) and child key (kc: str)
-    return kp + '/' + kc
+    return kp + "/" + kc
+
 
 def split_key(k):
     # splits into subkeys
-    return k.split('/')
+    return k.split("/")
+
 
 def combine_key_and_list_idx(k, idx):
     # combines a key (k: str) with a list index (idx: int)
-    return k + ':' + str(idx)
+    return k + ":" + str(idx)
+
 
 def split_key_and_list_indices(k):
     # splits into key and list indices
-    return k.split(':')
+    return k.split(":")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     nested_dict = dict()
-    nested_dict['a'] = 1
-    nested_dict['b'] = dict()
-    nested_dict['c'] = [{'c1': 10,'c2': 11}, [12, 13, 14], 3]
+    nested_dict["a"] = 1
+    nested_dict["b"] = dict()
+    nested_dict["c"] = [{"c1": 10, "c2": 11}, [12, 13, 14], 3]
 
-    nested_dict['b']['b1'] = dict()
-    nested_dict['b']['b2'] = None
-    nested_dict['b']['b3'] = 5
+    nested_dict["b"]["b1"] = dict()
+    nested_dict["b"]["b2"] = None
+    nested_dict["b"]["b3"] = 5
 
-    nested_dict['b']['b1']['b11'] = 6
-    nested_dict['b']['b1']['b12'] = 7
-    nested_dict['b']['b1']['b13'] = 8
-    nested_dict['b']['b1']['b14'] = 9
+    nested_dict["b"]["b1"]["b11"] = 6
+    nested_dict["b"]["b1"]["b12"] = 7
+    nested_dict["b"]["b1"]["b13"] = 8
+    nested_dict["b"]["b1"]["b14"] = 9
 
     flat_dict = to_flat(nested_dict)
     reconst_nested_dict = to_nested(flat_dict)
 
-    print('Original nested dict: ', nested_dict)
-    print('Flattened dict: ', flat_dict)
-    print('Reconstructed nested dict: ', reconst_nested_dict)
+    print("Original nested dict: ", nested_dict)
+    print("Flattened dict: ", flat_dict)
+    print("Reconstructed nested dict: ", reconst_nested_dict)

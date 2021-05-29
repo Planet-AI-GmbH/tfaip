@@ -26,5 +26,5 @@ class CustomMetric(tf.keras.metrics.Mean):
     """
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        trues = tf.cast(y_true, 'int64') == tf.argmax(y_pred, axis=-1)
-        return super().update_state(tf.cast(trues, 'float32'))
+        trues = tf.cast(y_true, "int64") == tf.argmax(y_pred, axis=-1)
+        return super().update_state(tf.cast(trues, "float32"))

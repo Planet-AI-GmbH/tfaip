@@ -1,13 +1,15 @@
 adabelief-tf
+black
 dataclasses-json
 GitPython
 imageio
 nptyping
 opencv-python-headless
-paiargparse==1.0.6
+paiargparse==1.1.0
 pandas
 pillow
 prettytable
+pre-commit
 python-Levenshtein
 pytest
 scikit-image
@@ -17,3 +19,6 @@ tensorflow-datasets~=3.0.0
 tqdm
 typeguard
 xlrd==1.2.0
+pdf_reports
+libsass
+pre-commit

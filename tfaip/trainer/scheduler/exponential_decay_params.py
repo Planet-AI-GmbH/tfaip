@@ -27,15 +27,16 @@ from tfaip.trainer.scheduler.learningrate_params import LearningRateParams
 @dataclass
 class ExponentialDecayParams(LearningRateParams):
     """Exponential decay parameters"""
+
     @staticmethod
     def cls():
-        from tfaip.trainer.scheduler.exponential_decay import \
-            ExponentialDecaySchedule  # pylint: disable=import-outside-toplevel
+        from tfaip.trainer.scheduler.exponential_decay import (
+            ExponentialDecaySchedule,
+        )  # pylint: disable=import-outside-toplevel
+
         return ExponentialDecaySchedule
 
-    learning_circle: int = field(default=3, metadata=pai_meta(
-        help="(type dependent) The number of epochs with a flat constant learning rate"
-    ))
-    lr_decay_rate: float = field(default=0.99, metadata=pai_meta(
-        help="(type dependent) The exponential decay factor"
-    ))
+    learning_circle: int = field(
+        default=3, metadata=pai_meta(help="(type dependent) The number of epochs with a flat constant learning rate")
+    )
+    lr_decay_rate: float = field(default=0.99, metadata=pai_meta(help="(type dependent) The exponential decay factor"))

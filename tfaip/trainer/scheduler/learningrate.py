@@ -33,9 +33,7 @@ class LearningRateSchedule(LearningRateScheduleBase, ABC):
     A custom implementation must overwrite lr(epoch)
     """
 
-    def __init__(self,
-                 params: 'LearningRateParams',
-                 name=None, **kwargs):
+    def __init__(self, params: "LearningRateParams", name=None, **kwargs):
         super().__init__(**kwargs)
         if name is None:
             name = self.__class__.__name__
@@ -45,13 +43,13 @@ class LearningRateSchedule(LearningRateScheduleBase, ABC):
         assert self.params.epochs > 0
 
     def get_config(self):
-        return {'params': self.params.to_dict()}
+        return {"params": self.params.to_dict()}
 
     @classmethod
     def from_config(cls, config):
-        from tfaip import \
-            LearningRateParams  # pylint: disable=import-outside-toplevel
-        config['params'] = LearningRateParams.from_dict(config['params'])
+        from tfaip import LearningRateParams  # pylint: disable=import-outside-toplevel
+
+        config["params"] = LearningRateParams.from_dict(config["params"])
         return cls(**config)
 
     def __call__(self, step):

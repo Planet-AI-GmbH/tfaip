@@ -33,10 +33,11 @@ class TFAIPJsonEncoder(json.JSONEncoder):
     See Also:
         TFAIPJsonDecoder
     """
+
     def default(self, obj: Any) -> Any:
         if is_dataclass(obj):
             d = obj.to_dict()
-            d['__json_dc_type__'] = obj.__class__.__module__ + ':' + obj.__class__.__name__
+            d["__json_dc_type__"] = obj.__class__.__module__ + ":" + obj.__class__.__name__
             return d
         else:
             return super().default(obj)
@@ -49,13 +50,14 @@ class TFAIPJsonDecoder(json.JSONDecoder):
     See Also:
         TFAIPJsonEncoder
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, object_hook=self.object_hook_fn, **kwargs)
 
     def object_hook_fn(self, obj):
-        if '__json_dc_type__' in obj:
-            module, name = obj['__json_dc_type__'].split(':')
-            del obj['__json_dc_type__']
+        if "__json_dc_type__" in obj:
+            module, name = obj["__json_dc_type__"].split(":")
+            del obj["__json_dc_type__"]
             cls = getattr(importlib.import_module(module), name)
             return cls.from_dict(obj)
         else:

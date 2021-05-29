@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class BlendIterablor(Iterator, Iterable):
-
     def __init__(self, ingredients: List[ListIterablor], mixing_ratios: List[float], random: Random):
         """
         :param ingredients: iterablors

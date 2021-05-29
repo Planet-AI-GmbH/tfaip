@@ -23,57 +23,60 @@ from paiargparse import pai_dataclass, pai_meta
 from tfaip.trainer.scheduler.learningrate_params import LearningRateParams
 
 
-@pai_dataclass(alt='CosineDecay')
+@pai_dataclass(alt="CosineDecay")
 @dataclass
 class CosineDecayParams(LearningRateParams):
     """Definition of a cosine decay"""
+
     @staticmethod
     def cls():
-        from tfaip.trainer.scheduler.cosine_decay import \
-            CosineDecaySchedule  # pylint: disable=import-outside-toplevel
+        from tfaip.trainer.scheduler.cosine_decay import CosineDecaySchedule  # pylint: disable=import-outside-toplevel
+
         return CosineDecaySchedule
 
-    learning_circle: int = field(default=3, metadata=pai_meta(
-        help='(type dependent) The number of epochs with a flat constant learning rate'
-    ))
-    lr_decay_rate: float = field(default=0.99, metadata=pai_meta(
-        help='(type dependent) The exponential decay factor'
-    ))
-    decay_fraction: float = field(default=0.1, metadata=pai_meta(
-        help='(type dependent) Alpha value of cosine decay'
-    ))
-    final_epochs: int = field(default=50, metadata=pai_meta(
-        help='(type dependent) Number of final epochs with a steep decline in the learning rate'
-    ))
+    learning_circle: int = field(
+        default=3, metadata=pai_meta(help="(type dependent) The number of epochs with a flat constant learning rate")
+    )
+    lr_decay_rate: float = field(default=0.99, metadata=pai_meta(help="(type dependent) The exponential decay factor"))
+    decay_fraction: float = field(default=0.1, metadata=pai_meta(help="(type dependent) Alpha value of cosine decay"))
+    final_epochs: int = field(
+        default=50,
+        metadata=pai_meta(help="(type dependent) Number of final epochs with a steep decline in the learning rate"),
+    )
 
 
-@pai_dataclass(alt='WarmupConstantDecay')
+@pai_dataclass(alt="WarmupConstantDecay")
 @dataclass
 class WarmupCosineDecayParams(CosineDecayParams):
     """Cosine decay with warmup"""
+
     @staticmethod
     def cls():
-        from tfaip.trainer.scheduler.cosine_decay import \
-            WarmupCosineDecaySchedule  # pylint: disable=import-outside-toplevel
+        from tfaip.trainer.scheduler.cosine_decay import (
+            WarmupCosineDecaySchedule,
+        )  # pylint: disable=import-outside-toplevel
+
         return WarmupCosineDecaySchedule
 
-    warmup_epochs: int = field(default=10, metadata=pai_meta(
-        help='(type dependent) Number of epochs with an increasing learning rate.'
-    ))
-    warmup_factor: int = field(default=10, metadata=pai_meta(
-        help='(type dependent) Factor from which to start warmup learning (lr/fac)'
-    ))
+    warmup_epochs: int = field(
+        default=10, metadata=pai_meta(help="(type dependent) Number of epochs with an increasing learning rate.")
+    )
+    warmup_factor: int = field(
+        default=10, metadata=pai_meta(help="(type dependent) Factor from which to start warmup learning (lr/fac)")
+    )
 
 
-@pai_dataclass(alt='WarmupConstantCosineDecay')
+@pai_dataclass(alt="WarmupConstantCosineDecay")
 @dataclass
 class WarmupConstantCosineDecayParams(WarmupCosineDecayParams):
     @staticmethod
     def cls():
-        from tfaip.trainer.scheduler.cosine_decay import \
-            WarmupConstantCosineDecaySchedule  # pylint: disable=import-outside-toplevel
+        from tfaip.trainer.scheduler.cosine_decay import (
+            WarmupConstantCosineDecaySchedule,
+        )  # pylint: disable=import-outside-toplevel
+
         return WarmupConstantCosineDecaySchedule
 
-    constant_epochs: int = field(default=10, metadata=pai_meta(
-        help='(Type dependent) Number of constant epochs before starting lr decay'
-    ))
+    constant_epochs: int = field(
+        default=10, metadata=pai_meta(help="(Type dependent) Number of constant epochs before starting lr decay")
+    )

@@ -28,10 +28,11 @@ from paiargparse import pai_dataclass, pai_meta
 from tfaip.data.pipeline.processor.dataprocessor import DataProcessorParams
 
 if TYPE_CHECKING:
-    from tfaip.data.pipeline.datapipeline import DataPipeline
+    from tfaip import DataBaseParams
+    from tfaip.data.pipeline.datapipeline import DataPipeline, DataPipelineParams
     from tfaip.data.pipeline.processor.pipeline import DataProcessorPipeline
 
-TP = TypeVar('TP', bound=DataProcessorParams)
+TP = TypeVar("TP", bound=DataProcessorParams)
 
 
 @pai_dataclass
@@ -41,20 +42,30 @@ class DataProcessorPipelineParams(ABC):
     General parameters for a `DataProcessorPipeline`.
     The parameters provide a function to create the respective Pipeline (`create`)
     """
-    run_parallel: bool = field(default=True, metadata=pai_meta(
-        help='Run this pipeline in parallel.'
-    ))
-    num_threads: int = field(default=-1, metadata=pai_meta(
-        help='The number of threads to use for this pipeline. Else use the value of the generator params.'
-    ))  # Upper limit for the threads to use maximal (default = -1 = no limit)
-    max_tasks_per_process: int = field(default=250, metadata=pai_meta(
-        help='Maximum tasks of a child in the preproc pipeline after a child is recreated. '
-             'Higher numbers for better performance but on the drawback if higher memory consumption. '
-             'Only used if the scenario uses a DataPipeline.'
-    ))
+
+    run_parallel: bool = field(default=True, metadata=pai_meta(help="Run this pipeline in parallel."))
+    num_threads: int = field(
+        default=-1,
+        metadata=pai_meta(
+            help="The number of threads to use for this pipeline. Else use the value of the generator params."
+        ),
+    )  # Upper limit for the threads to use maximal (default = -1 = no limit)
+    max_tasks_per_process: int = field(
+        default=250,
+        metadata=pai_meta(
+            help="Maximum tasks of a child in the preproc pipeline after a child is recreated. "
+            "Higher numbers for better performance but on the drawback if higher memory consumption. "
+            "Only used if the scenario uses a DataPipeline."
+        ),
+    )
+
+    def create_with_pipeline(self, data_pipeline: "DataPipeline") -> "DataProcessorPipeline":
+        return self.create(data_pipeline.pipeline_params, data_pipeline.data.params)
 
     @abstractmethod
-    def create(self, data_pipeline: 'DataPipeline') -> 'DataProcessorPipeline':
+    def create(
+        self, data_pipeline_params: "DataPipelineParams", data_params: "DataBaseParams"
+    ) -> "DataProcessorPipeline":
         """
         Create the actual DataProcessorPipeline
         """
@@ -102,6 +113,7 @@ class SequentialProcessorPipelineParams(DataProcessorPipelineParams):
     Upon creation, the processors will automatically be grouped to Processors of same type which will then be used to
     create the actual ComposedProcessorPipeline.
     """
+
     processors: List[DataProcessorParams] = field(default_factory=list)
 
     def flatten_processors(self) -> List[DataProcessorParams]:
@@ -113,9 +125,15 @@ class SequentialProcessorPipelineParams(DataProcessorPipelineParams):
     def replace_all(self, t: Type[DataProcessorParams], p: DataProcessorParams):
         self.processors = [p if isinstance(sp, t) else sp for sp in self.processors]
 
-    def create(self, data_pipeline: 'DataPipeline') -> 'DataProcessorPipeline':
-        from tfaip.data.pipeline.processor.dataprocessor import MappingDataProcessor, GeneratingDataProcessor, \
-            SequenceProcessor  # pylint: disable=import-outside-toplevel
+    def create(
+        self, data_pipeline_params: "DataPipelineParams", data_params: "DataBaseParams"
+    ) -> "DataProcessorPipeline":
+        from tfaip.data.pipeline.processor.dataprocessor import (
+            MappingDataProcessor,
+            GeneratingDataProcessor,
+            SequenceProcessor,
+        )  # pylint: disable=import-outside-toplevel
+
         composed_params = ComposedProcessorPipelineParams(pipelines=[])
         last_type = None
         # Group parameters into pipelines
@@ -123,28 +141,32 @@ class SequentialProcessorPipelineParams(DataProcessorPipelineParams):
             processor_type = p.cls()
             if issubclass(processor_type, MappingDataProcessor):
                 if len(composed_params.pipelines) == 0 or last_type != SequenceProcessor:
-                    composed_params.pipelines.append(SequentialProcessorPipelineParams(
-                        run_parallel=self.run_parallel,
-                        num_threads=self.num_threads,
-                        max_tasks_per_process=self.max_tasks_per_process,
-                        processors=[p]
-                    ))
+                    composed_params.pipelines.append(
+                        SequentialProcessorPipelineParams(
+                            run_parallel=self.run_parallel,
+                            num_threads=self.num_threads,
+                            max_tasks_per_process=self.max_tasks_per_process,
+                            processors=[p],
+                        )
+                    )
                 else:
                     composed_params.pipelines[-1].processors.append(p)
 
                 last_type = SequenceProcessor
             elif issubclass(processor_type, GeneratingDataProcessor):
-                composed_params.pipelines.append(SequentialProcessorPipelineParams(
-                    run_parallel=self.run_parallel,
-                    num_threads=self.num_threads,
-                    max_tasks_per_process=self.max_tasks_per_process,
-                    processors=[p],
-                ))
+                composed_params.pipelines.append(
+                    SequentialProcessorPipelineParams(
+                        run_parallel=self.run_parallel,
+                        num_threads=self.num_threads,
+                        max_tasks_per_process=self.max_tasks_per_process,
+                        processors=[p],
+                    )
+                )
                 last_type = GeneratingDataProcessor
             else:
                 raise NotImplementedError
 
-        return composed_params.create(data_pipeline)
+        return composed_params.create(data_pipeline_params, data_params)
 
 
 @pai_dataclass
@@ -155,6 +177,7 @@ class ComposedProcessorPipelineParams(DataProcessorPipelineParams):
     Note that within a SequentialProcessorPipeline only one GeneratingDataProcessorParams may exists, or a list of
     MappingDataProcessorParams.
     """
+
     pipelines: List[SequentialProcessorPipelineParams] = field(default_factory=list)
 
     def erase_all(self, t: Type[DataProcessorParams]):
@@ -168,7 +191,11 @@ class ComposedProcessorPipelineParams(DataProcessorPipelineParams):
     def flatten_processors(self) -> List[DataProcessorParams]:
         return sum((p.flatten_processors() for p in self.pipelines), [])
 
-    def create(self, data_pipeline: 'DataPipeline') -> 'DataProcessorPipeline':
-        from tfaip.data.pipeline.processor.pipeline import \
-            DataProcessorPipeline  # pylint: disable=import-outside-toplevel
-        return DataProcessorPipeline.from_params(data_pipeline, self, data_pipeline.data_params, data_pipeline.mode)
+    def create(
+        self, data_pipeline_params: "DataPipelineParams", data_params: "DataBaseParams"
+    ) -> "DataProcessorPipeline":
+        from tfaip.data.pipeline.processor.pipeline import (
+            DataProcessorPipeline,
+        )  # pylint: disable=import-outside-toplevel
+
+        return DataProcessorPipeline.from_params(data_pipeline_params, self, data_params)

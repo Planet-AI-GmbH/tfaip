@@ -31,9 +31,9 @@ def tqdm_wrapper(iterable, *, total=1, desc="", progress_bar=False):
         return tqdm(iterable, total=total, desc=desc)
 
 
-def parallel_map(f, d, *,
-                 desc="", processes=1, progress_bar=False, use_thread_pool=False, max_tasks_per_child=None
-                 ) -> Iterable[Any]:
+def parallel_map(
+    f, d, *, desc="", processes=1, progress_bar=False, use_thread_pool=False, max_tasks_per_child=None
+) -> Iterable[Any]:
     if processes <= 0:
         processes = os.cpu_count()
 

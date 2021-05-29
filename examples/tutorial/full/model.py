@@ -43,23 +43,29 @@ class TutorialModelParams(ModelBaseParams):
     def graph_cls():
         return TutorialGraph
 
-    n_classes: int = field(default=10, metadata=pai_meta(
-        help="The number of classes (depends on the selected dataset)",
-    ))
-    graph: TutorialBackendParams = field(default_factory=MLPGraphParams, metadata=pai_meta(
-        choices=[MLPGraphParams, ConvGraphParams],  # Optionally list valid selections
-        help="The network architecture to apply",
-    ))
+    n_classes: int = field(
+        default=10,
+        metadata=pai_meta(
+            help="The number of classes (depends on the selected dataset)",
+        ),
+    )
+    graph: TutorialBackendParams = field(
+        default_factory=MLPGraphParams,
+        metadata=pai_meta(
+            choices=[MLPGraphParams, ConvGraphParams],  # Optionally list valid selections
+            help="The network architecture to apply",
+        ),
+    )
 
 
 class TutorialModel(ModelBase[TutorialModelParams]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.acc_metric = keras.metrics.Accuracy(name='acc')
-        self.scc_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True, name='keras_loss')
-        self.acc_raw_metric = keras.metrics.Mean(name='raw_acc')
-        self.custom_metric = CustomMetric(name='custom_acc')
+        self.acc_metric = keras.metrics.Accuracy(name="acc")
+        self.scc_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True, name="keras_loss")
+        self.acc_raw_metric = keras.metrics.Mean(name="raw_acc")
+        self.custom_metric = CustomMetric(name="custom_acc")
 
     def _best_logging_settings(self):
         return "max", "acc"
@@ -68,30 +74,32 @@ class TutorialModel(ModelBase[TutorialModelParams]):
         # Loss functions of the model that require one target and one output (use a keras metric)
         # If a loss requires more than one input use _extended_loss
         return {
-            'keras_loss': self.scc_loss(targets['gt'], outputs['logits']),  # either call a keras.Loss
-            'raw_loss': tf.keras.losses.sparse_categorical_crossentropy(targets['gt'], outputs['logits'],
-                                                                        from_logits=True),  # or add a raw loss
+            "keras_loss": self.scc_loss(targets["gt"], outputs["logits"]),  # either call a keras.Loss
+            "raw_loss": tf.keras.losses.sparse_categorical_crossentropy(
+                targets["gt"], outputs["logits"], from_logits=True
+            ),  # or add a raw loss
         }
 
     def _loss_weights(self) -> Optional[Dict[str, float]]:
         # Weight the losses (if desired)
         # Here, both losses compute the same, hence weighting has no effect
-        return {'keras_loss': 0.5, 'raw_loss': 0.5}
+        return {"keras_loss": 0.5, "raw_loss": 0.5}
 
     def _metric(self, inputs, targets, outputs):
         # Return a dict of metrics. The MetricDefinition defines the target and output which is passed to the
         # respective metric. If more than one target or output is required to compute a (custom) metric, use
         # _extended_metric instead
-        gt = tf.squeeze(targets['gt'], axis=-1)
+        gt = tf.squeeze(targets["gt"], axis=-1)
         return [
-            self.custom_metric(gt, outputs['pred']),
-            self.acc_metric(gt, outputs['class']),
-            self.acc_raw_metric(tf.cast(tf.cast(gt, 'int64') == outputs['class'], 'float32'))
+            self.custom_metric(gt, outputs["pred"]),
+            self.acc_metric(gt, outputs["class"]),
+            self.acc_raw_metric(tf.cast(tf.cast(gt, "int64") == outputs["class"], "float32")),
         ]
 
     def _print_evaluate(self, sample: Sample, data, print_fn=print):
         # Print informative text during validation
         outputs, targets = sample.outputs, sample.targets
-        correct = outputs['class'] == targets['gt']
+        correct = outputs["class"] == targets["gt"]
         print_fn(
-            f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})")
+            f"PRED/GT: {outputs['class']}{'==' if correct else '!='}{targets['gt']} (p = {outputs['pred'][outputs['class']]})"
+        )

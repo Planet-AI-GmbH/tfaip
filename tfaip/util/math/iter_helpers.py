@@ -49,7 +49,7 @@ class ListIterablor(Iterator, Iterable):
 
 
 class ThreadSafeIterablor(Iterator, Iterable):
-    """ wraps iterators to add thread safeness """
+    """wraps iterators to add thread safeness"""
 
     def __init__(self, it: Iterator):
         assert isinstance(it, Iterator)

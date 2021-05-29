@@ -25,10 +25,8 @@ class WeightDecaySchedule(LearningRateSchedule):
 
     Wrap the LR schedule and multiply by weight decay. Take care of base LR and modify weight decay accordingly
     """
-    def __init__(self,
-                 weight_decay: float,
-                 learning_rate_schedule: 'LearningRateSchedule',
-                 name=None, **kwargs):
+
+    def __init__(self, weight_decay: float, learning_rate_schedule: "LearningRateSchedule", name=None, **kwargs):
         super().__init__(**kwargs)
         if name is None:
             name = self.__class__.__name__

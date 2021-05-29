@@ -52,16 +52,18 @@ def validate_specs(func):
             if len(spec.shape) == 0:
                 # Reason: keras.predict automatically calls "expand_2d" which will expand 1d tensors (batch size) to
                 # 2D tensors, which is not performed during training. This can lead to non-desired behaviour.
-                raise ValueError(f'Shape of tensor spec must be at least one dimensional (excluding the '
-                                 f'batch dimension), but got {spec.shape} for tensor {s}. Use (1, ) or [1] to '
-                                 f'denote one dimensional data.')
+                raise ValueError(
+                    f"Shape of tensor spec must be at least one dimensional (excluding the "
+                    f"batch dimension), but got {spec.shape} for tensor {s}. Use (1, ) or [1] to "
+                    f"denote one dimensional data."
+                )
 
         return retval
 
     return wrapper
 
 
-TDP = TypeVar('TDP', bound=DataBaseParams)
+TDP = TypeVar("TDP", bound=DataBaseParams)
 
 
 class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
@@ -96,7 +98,7 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         self._pipelines = {k: v.as_preloaded(progress_bar) for k, v in self._pipelines.items()}
 
     def print_params(self):
-        logger.info('data={}', self._params.to_json(indent=2))
+        logger.info("data={}", self._params.to_json(indent=2))
 
     @property
     def params(self) -> TDP:
@@ -114,13 +116,15 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         raise Exception("Implement this function if you want to use buckets")
 
     def create_pipeline(self, pipeline_params: DataPipelineParams, params: DataGeneratorParams) -> DataPipeline:
-        return self.data_pipeline_cls()(pipeline_params,
-                                        self,
-                                        generator_params=params,
-                                        )
+        return self.data_pipeline_cls()(
+            pipeline_params,
+            self,
+            generator_params=params,
+        )
 
-    def get_or_create_pipeline(self, pipeline_params: DataPipelineParams,
-                               params: Optional[DataGeneratorParams]) -> DataPipeline:
+    def get_or_create_pipeline(
+        self, pipeline_params: DataPipelineParams, params: Optional[DataGeneratorParams]
+    ) -> DataPipeline:
         mode = pipeline_params.mode
         if mode in self._pipelines:
             return self._pipelines[mode]
@@ -177,14 +181,14 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         raise NotImplementedError
 
     def _meta_layer_specs(self) -> Dict[str, tf.TensorSpec]:
-        return {'meta': tf.TensorSpec(shape=[1], dtype=tf.string)}
+        return {"meta": tf.TensorSpec(shape=[1], dtype=tf.string)}
 
     def register_resource_from_parameter(self, param_name: str) -> Resource:
         return self.resources.register(param_name, Resource(getattr(self._params, param_name)))
 
     def dump_resources(self, root_path: str, data_params_dict: dict):
         # dump resources and adjust the paths in the dumped dict
-        data_params_dict['resource_base_path'] = '.'
+        data_params_dict["resource_base_path"] = "."
         self.resources.dump(root_path)
         for r_id, resource in self.resources.items():
             if r_id in data_params_dict:

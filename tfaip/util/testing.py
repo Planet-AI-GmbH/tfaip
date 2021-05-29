@@ -25,8 +25,8 @@ import tfaip.util.logging as logging
 from tfaip.device.device_config import DeviceConfigParams, DeviceConfig
 
 # Initialize "Devices" (for all tests), using the same config!
-if 'CUDA_VISIBLE_DEVICES' not in os.environ:
-    os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Disable gpu usage
+if "CUDA_VISIBLE_DEVICES" not in os.environ:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Disable gpu usage
 
 
 def setup_test_init():
@@ -37,4 +37,4 @@ def setup_test_init():
 
     DeviceConfig(DeviceConfigParams())
 
-    logging.logger(__name__).debug('Set up device config for testing')
+    logging.logger(__name__).debug("Set up device config for testing")

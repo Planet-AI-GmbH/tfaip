@@ -24,6 +24,7 @@ K = tf.keras.backend
 
 class WeightsMovingAverage(addons_optimizer.MovingAverage):
     """Wrapper for an Optimizer to compute the exponential moving average of trained weights"""
+
     def __init__(self, average_decay=0.99, **kwargs):
         super().__init__(average_decay=average_decay, **kwargs)
         self.is_avg = False
@@ -54,7 +55,7 @@ class WeightsMovingAverage(addons_optimizer.MovingAverage):
                 continue
 
             try:
-                avg = self.get_slot(var, 'average')
+                avg = self.get_slot(var, "average")
             except KeyError:
                 # occurs of var is not trainable...
                 continue

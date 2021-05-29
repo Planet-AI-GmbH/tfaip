@@ -4,7 +4,7 @@ This tool is designed for scheduling/logging of experiments by using an xlsx fil
 Pass an xlsx file to parse `--xlsx`, the desired `--gpus` for scheduling, optionally the python executable of the target virtual env via `--python`.
 Launch in the "Working"-Dir
 
-**Notes:** 
+**Notes:**
 * This tool currently requires python >=3.7
 
 Examples:
@@ -32,6 +32,5 @@ Third row (PARAM labels, setup):
 * optionally pass additional flags (e.g. `post_distortions:split:empty`):
   * `:split` split the value of this parameter into individual args
   * `:empty` allow this parameter to be empty when added to the list (note, by default, empty `NULL` values are omitted)
-  
- 
+
 

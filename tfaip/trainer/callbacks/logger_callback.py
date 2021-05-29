@@ -34,17 +34,18 @@ class LoggerCallback(Callback):
 
     This is required for the train.log where the progress bar and thus the metrics are not written to.
     """
+
     def __init__(self):
         super().__init__()
         self.last_logs = {}
 
     def on_epoch_begin(self, epoch, logs=None):
         self.last_logs = logs
-        logger.info(f'Start of epoch {epoch + 1:4d}')
+        logger.info(f"Start of epoch {epoch + 1:4d}")
 
     def on_epoch_end(self, epoch, logs=None):
         self.last_logs = logs
         if logs is None:
             return
-        logs_str = ' - '.join(f'{k}: {np.mean(logs[k]):.4f}' for k in sorted(logs.keys()))
-        logger.info(f'Results of epoch {epoch + 1:4d} {logs_str}')
+        logs_str = " - ".join(f"{k}: {np.mean(logs[k]):.4f}" for k in sorted(logs.keys()))
+        logger.info(f"Results of epoch {epoch + 1:4d} {logs_str}")

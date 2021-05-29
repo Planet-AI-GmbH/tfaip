@@ -28,6 +28,7 @@ class ListFileScenario(ScenarioBase[TScenarioParams, ListFileTrainerPipelinePara
     The ListFileScenario uses ListFileTrainerPipelineParams which create a DataGenerator that will yield each line
     as a Sample's input and target. This must then be processed by DataProcessors.
     """
+
     @classmethod
     def lav_cls(cls):
         return ListFileLAV

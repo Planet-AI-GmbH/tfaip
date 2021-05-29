@@ -49,10 +49,10 @@ def main(args, scenario_cls: ScenarioBase, scenario_params):
 
     prediction_gen = enumerate(predictor.predict(args.data))
     if args.dump_prediction:
-        path = args.dump_prediction + '.tar.gz'
+        path = args.dump_prediction + ".tar.gz"
         if os.path.isfile(path):
             os.remove(path)
-        with tarfile.open(path, mode='x:gz') as tar:
+        with tarfile.open(path, mode="x:gz") as tar:
             for i, r in prediction_gen:
                 b = io.BytesIO()
                 pickle.dump(r, b)
@@ -72,22 +72,22 @@ class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
         scenario, scenario_params = ScenarioBase.from_path(values[0])
         predict_params = scenario.predictor_cls().params_cls()()
-        parser.add_root_argument('data', scenario.predict_generator_params_cls())
-        parser.add_root_argument('predict', predict_params.__class__, default=predict_params)
+        parser.add_root_argument("data", scenario.predict_generator_params_cls())
+        parser.add_root_argument("predict", predict_params.__class__, default=predict_params)
 
         setattr(namespace, self.dest, values)
-        setattr(namespace, 'scenario', scenario)
-        setattr(namespace, 'scenario_params', scenario_params)
+        setattr(namespace, "scenario", scenario)
+        setattr(namespace, "scenario_params", scenario_params)
 
 
 def parse_args(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('--export_dir', required=True, nargs="+", action=ScenarioSelectionAction)
-    parser.add_argument('--dump_prediction', type=str, help="Dumps the prediction results as tar.gz")
+    parser.add_argument("--export_dir", required=True, nargs="+", action=ScenarioSelectionAction)
+    parser.add_argument("--dump_prediction", type=str, help="Dumps the prediction results as tar.gz")
 
     args = parser.parse_args(args=args)
     return args, args.scenario, args.scenario_params
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

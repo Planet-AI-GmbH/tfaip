@@ -22,10 +22,10 @@ from tfaip.util.enum import StrEnum
 
 
 class PipelineMode(StrEnum):
-    TRAINING = 'training'  # Inputs and Targets, however during training e.g. Data-Augmentation, etc.
-    EVALUATION = 'evaluation'  # Inputs and Targets (e.g. LAV and validation)
-    PREDICTION = 'prediction'  # Inputs
-    TARGETS = 'targets'  # Targets
+    TRAINING = "training"  # Inputs and Targets, however during training e.g. Data-Augmentation, etc.
+    EVALUATION = "evaluation"  # Inputs and Targets (e.g. LAV and validation)
+    PREDICTION = "prediction"  # Inputs
+    TARGETS = "targets"  # Targets
 
 
 INPUT_PROCESSOR = {PipelineMode.TRAINING, PipelineMode.EVALUATION, PipelineMode.PREDICTION}

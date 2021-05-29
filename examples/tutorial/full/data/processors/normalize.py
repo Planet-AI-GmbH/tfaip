@@ -38,11 +38,12 @@ class NormalizeProcessor(MappingDataProcessor[NormalizeProcessorParams]):
     Example class to show how to use processors that are run in parallel in the samples in the input pipeline.
     This processor will normalize and center the input sample in the range of [-1, 1] (we know the input is in [0, 255]
     """
+
     def apply(self, sample: Sample) -> Sample:
         inputs = sample.inputs.copy()
 
-        inputs['img'] = inputs['img'] / 255
+        inputs["img"] = inputs["img"] / 255
         if self.params.center:
-            inputs['img'] = (inputs['img'] - 0.5) * 2
+            inputs["img"] = (inputs["img"] - 0.5) * 2
 
         return sample.new_inputs(inputs)

@@ -21,9 +21,9 @@ import tensorflow as tf
 class Count(tf.keras.metrics.Metric):
     """Metric which counts the number of examples seen"""
 
-    def __init__(self, name='count', dtype=tf.int64, **kwargs):
+    def __init__(self, name="count", dtype=tf.int64, **kwargs):
         super().__init__(name, dtype, **kwargs)
-        self.count = self.add_weight(name, initializer='zeros')
+        self.count = self.add_weight(name, initializer="zeros")
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         first_tensor = tf.nest.flatten(y_true)[0]

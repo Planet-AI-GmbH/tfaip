@@ -34,16 +34,16 @@ class ListsFileGeneratorParams(DataGeneratorParams):
 
     @staticmethod
     def cls():
-        from tfaip.scenario.listfile.datagenerator import \
-            ListsFileDataGenerator  # pylint: disable=import-outside-toplevel
+        from tfaip.scenario.listfile.datagenerator import (
+            ListsFileDataGenerator,
+        )  # pylint: disable=import-outside-toplevel
+
         return ListsFileDataGenerator
 
-    lists: Optional[List[str]] = field(default_factory=list, metadata=pai_meta(
-        help="Training list files."
-    ))
-    list_ratios: Optional[List[float]] = field(default=None, metadata=pai_meta(
-        help="Ratios of picking list files. Must be supported by the scenario"
-    ))
+    lists: Optional[List[str]] = field(default_factory=list, metadata=pai_meta(help="Training list files."))
+    list_ratios: Optional[List[float]] = field(
+        default=None, metadata=pai_meta(help="Ratios of picking list files. Must be supported by the scenario")
+    )
 
     def __post_init__(self):
         if self.lists:
@@ -51,8 +51,10 @@ class ListsFileGeneratorParams(DataGeneratorParams):
                 self.list_ratios = [1.0] * len(self.lists)
             else:
                 if len(self.list_ratios) != len(self.lists):
-                    raise ValueError(f"Length of list_ratios must be equals to number of lists. "
-                                     f"Got {self.list_ratios}!={self.lists}")
+                    raise ValueError(
+                        f"Length of list_ratios must be equals to number of lists. "
+                        f"Got {self.list_ratios}!={self.lists}"
+                    )
 
 
 @pai_dataclass
@@ -61,4 +63,5 @@ class ListFileTrainerPipelineParams(TrainerPipelineParams[ListsFileGeneratorPara
     """
     Implemented TrainerPipelineParams that replaces the defaults of train and val to ListFileGeneratorParams.
     """
+
     pass

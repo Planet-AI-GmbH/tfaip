@@ -31,12 +31,12 @@ def import_submodules(package, recursive=True):
     if isinstance(package, str):
         package = importlib.import_module(package)
     results = {}
-    if not hasattr(package, '__path__'):
+    if not hasattr(package, "__path__"):
         # is already a module
         results[package.__name__] = package
         return results
 
-    for loader, full_name, is_pkg in pkgutil.walk_packages(package.__path__, prefix=package.__name__ + '.'):
+    for loader, full_name, is_pkg in pkgutil.walk_packages(package.__path__, prefix=package.__name__ + "."):
         del loader  # unused
         results[full_name] = importlib.import_module(full_name)
         if recursive and is_pkg:
@@ -44,16 +44,28 @@ def import_submodules(package, recursive=True):
     return results
 
 
-def import_graphs(module_name, sub_module_name='graphs') -> List[Type[GraphBase]]:
-    package_name = module_name[:module_name.rfind('.')] + '.' + sub_module_name
+def import_graphs(module_name, sub_module_name="graphs") -> List[Type[GraphBase]]:
+    package_name = module_name[: module_name.rfind(".")] + "." + sub_module_name
     try:
         modules = import_submodules(package_name)
     except ModuleNotFoundError:
-        logger.error(f'Could not find module {package_name}. Most probably you forgot to define either '
-                     'a graphs.py file or graph dir in your scenario.')
+        logger.error(
+            f"Could not find module {package_name}. Most probably you forgot to define either "
+            "a graphs.py file or graph dir in your scenario."
+        )
         raise
-    return [c for n, c in sum([inspect.getmembers(module, lambda member: inspect.isclass(
-        member) and member.__module__ == module.__name__ and issubclass(member, GraphBase)) for _, module in
-                               modules.items()], [])]
-
-
+    return [
+        c
+        for n, c in sum(
+            [
+                inspect.getmembers(
+                    module,
+                    lambda member: inspect.isclass(member)
+                    and member.__module__ == module.__name__
+                    and issubclass(member, GraphBase),
+                )
+                for _, module in modules.items()
+            ],
+            [],
+        )
+    ]

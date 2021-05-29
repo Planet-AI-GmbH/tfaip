@@ -50,7 +50,7 @@ from tfaip.util.random import set_global_random_seed
 
 logger = logging.getLogger(__name__)
 
-TTrainerParams = TypeVar('TTrainerParams', bound=TrainerParams)
+TTrainerParams = TypeVar("TTrainerParams", bound=TrainerParams)
 
 
 class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
@@ -66,23 +66,23 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
     @staticmethod
     def parse_trainer_params(d: Union[str, dict]) -> Tuple[TTrainerParams, Type[ScenarioBase]]:
         if isinstance(d, str):
-            if not d.endswith('.json'):
-                d = os.path.join(d, 'trainer_params.json')
+            if not d.endswith(".json"):
+                d = os.path.join(d, "trainer_params.json")
 
             with open(d) as f:
                 d = json.load(f)
-        scenario, scenario_params = ScenarioBase.from_dict(d['scenario'])
+        scenario, scenario_params = ScenarioBase.from_dict(d["scenario"])
         trainer_params: TrainerParams = scenario.trainer_cls().params_cls().from_dict(d)
-        logger.info(f'trainer_params={trainer_params.to_json(indent=2)}')
+        logger.info(f"trainer_params={trainer_params.to_json(indent=2)}")
 
         # Load the actual scenario params for the particular scenario
         trainer_params.scenario = scenario_params
         return trainer_params, scenario
 
     @classmethod
-    def restore_trainer(cls, checkpoint: Union[str, dict]) -> 'Trainer':
+    def restore_trainer(cls, checkpoint: Union[str, dict]) -> "Trainer":
         trainer_params, scenario = cls.parse_trainer_params(checkpoint)
-        logger.info(f'trainer_params={trainer_params.to_json(indent=2)}')
+        logger.info(f"trainer_params={trainer_params.to_json(indent=2)}")
         trainer = scenario.create_trainer(trainer_params, restore=True)
         return trainer
 
@@ -95,7 +95,7 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             set_global_random_seed(self._params.random_seed)
 
         if restore and not self._params.output_dir:
-            raise ValueError('To restore a training, a checkpoint dir must be provided')
+            raise ValueError("To restore a training, a checkpoint dir must be provided")
 
         self.device_config = DeviceConfig(self._params.device)
 
@@ -106,11 +106,12 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         if params.export_best and not params.output_dir:
             raise ValueError("To use 'export_best' a 'output_dir' must be specified")
         if self._params.output_dir:
-            scenario.params.id = os.path.basename(self._params.output_dir) + '_'
+            scenario.params.id = os.path.basename(self._params.output_dir) + "_"
         else:
-            scenario.params.id = ''
-        scenario.params.id = scenario.params.id + scenario.params.scenario_id + '_' + datetime.today().strftime(
-            '%Y-%m-%d')
+            scenario.params.id = ""
+        scenario.params.id = (
+            scenario.params.id + scenario.params.scenario_id + "_" + datetime.today().strftime("%Y-%m-%d")
+        )
 
         self._scenario = scenario
         self.stop_training = False
@@ -119,7 +120,7 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         self._data = None
         self._model = None
 
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(self._params.tf_cpp_min_log_level)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(self._params.tf_cpp_min_log_level)
 
     @property
     def scenario(self):
@@ -148,7 +149,7 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
     @distribute_strategy
     def train(self, callbacks=None) -> Dict[str, AnyNumpy]:
-        """ Start training
+        """Start training
 
         Returns:
             The last logs
@@ -165,17 +166,20 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         self._data.get_or_create_pipeline(self.params.gen.setup.train, self.params.gen.train_gen())
         self._data.get_or_create_pipeline(self.params.gen.setup.val, self.params.gen.val_gen())
 
-        self._scenario.setup_training(optimizer, self._params.skip_model_load_test,
-                                      run_eagerly=self._params.force_eager,
-                                      no_train_scope=self._params.no_train_scope)
+        self._scenario.setup_training(
+            optimizer,
+            self._params.skip_model_load_test,
+            run_eagerly=self._params.force_eager,
+            no_train_scope=self._params.no_train_scope,
+        )
         if self.restore:
             logger.info(f"Restoring from checkpoint '{self._params.output_dir}'")
             # load_weights also restores the optimizer weights!
             self._scenario.keras_train_model.load_weights(
-                os.path.join(self._params.output_dir, self._params.saved_checkpoint_sub_dir, 'variables',
-                             'variables'))
+                os.path.join(self._params.output_dir, self._params.saved_checkpoint_sub_dir, "variables", "variables")
+            )
             if self._params.warmstart.model:
-                logger.warning('Ignoring warmstart since training is resumed from a checkpoint')
+                logger.warning("Ignoring warmstart since training is resumed from a checkpoint")
         else:
             custom_objects = self._model.all_custom_objects()
             self.create_warmstarter().warmstart(self._scenario.keras_train_model, custom_objects)
@@ -185,20 +189,22 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
         if self._params.epochs <= self._params.current_epoch:
             logger.warning(
-                f'Attempting to train until epoch {self._params.current_epoch} but the model was already trained for '
-                f'{self._params.current_epoch} epochs. Final export only.')
+                f"Attempting to train until epoch {self._params.current_epoch} but the model was already trained for "
+                f"{self._params.current_epoch} epochs. Final export only."
+            )
         else:
             logger.info(
-                f'Starting training in epoch {self._params.current_epoch}. '
-                f'{self._params.epochs - self._params.current_epoch} remaining.')
+                f"Starting training in epoch {self._params.current_epoch}. "
+                f"{self._params.epochs - self._params.current_epoch} remaining."
+            )
 
             self._callbacks = callbacks
             self.fit()
 
         # export the model to "output_dir/export"
         if self._params.output_dir and self._params.export_final:
-            logger.info('Final export of the model.')
-            self._scenario.export(os.path.join(self._params.output_dir, 'export'))
+            logger.info("Final export of the model.")
+            self._scenario.export(os.path.join(self._params.output_dir, "export"))
 
         return logger_callback.last_logs
 
@@ -215,19 +221,21 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         else:
             save_freq = None
 
-        return TrainerCheckpointsCallback(self._params, save_freq, store_weights=store_weights,
-                                          store_params=store_params)
+        return TrainerCheckpointsCallback(
+            self._params, save_freq, store_weights=store_weights, store_params=store_params
+        )
 
-    def setup_callbacks(self,
-                        optimizer,
-                        callbacks=None,
-                        ):
+    def setup_callbacks(
+        self,
+        optimizer,
+        callbacks=None,
+    ):
         external_callbacks = callbacks
         callbacks = []
 
         extract_logs_cb = ExtractLogsCallback()
         callbacks.append(extract_logs_cb)
-        callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode='steps'))
+        callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode="steps"))
         callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback())
         # split storing of parameters and weights
@@ -254,11 +262,15 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
         if self._params.output_dir:
             # Tensorflow Callback as last, so that it is allowed to add additional outputs (e.g. LAVCallback)
-            callbacks.append(TensorBoardCallback(log_dir=self._params.output_dir,
-                                                 steps_per_epoch=self._steps_per_epoch,
-                                                 extracted_logs_cb=extract_logs_cb,
-                                                 reset=self._params.current_epoch == 0,
-                                                 profile='10,20' if self._params.profile else 0))
+            callbacks.append(
+                TensorBoardCallback(
+                    log_dir=self._params.output_dir,
+                    steps_per_epoch=self._steps_per_epoch,
+                    extracted_logs_cb=extract_logs_cb,
+                    reset=self._params.current_epoch == 0,
+                    profile="10,20" if self._params.profile else 0,
+                )
+            )
 
         callbacks.append(LoggerCallback())
         if external_callbacks:
@@ -268,38 +280,46 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
     def setup_steps_per_epoch(self):
         if self._params.samples_per_epoch < 0:
-            logger.info(f'Setting samples per epoch relative to dataset size with a factor of '
-                        f'{self._params.scale_epoch_size}. Note that this '
-                        'requires the creation of the data generator once before training.')
+            logger.info(
+                f"Setting samples per epoch relative to dataset size with a factor of "
+                f"{self._params.scale_epoch_size}. Note that this "
+                "requires the creation of the data generator once before training."
+            )
             samples_per_epoch = len(self._params.gen.train_data(self._data).create_data_generator())
 
             if self._params.scale_epoch_size != 1:
                 samples_per_epoch = int(samples_per_epoch * self._params.scale_epoch_size)
 
             if samples_per_epoch <= 0:
-                raise ValueError('Could not compute the number of samples per epoch based on the size of the data '
-                                 'generator. Please implement __len__ correctly.')
-            logger.info(f'Set samples per epoch to {samples_per_epoch}')
+                raise ValueError(
+                    "Could not compute the number of samples per epoch based on the size of the data "
+                    "generator. Please implement __len__ correctly."
+                )
+            logger.info(f"Set samples per epoch to {samples_per_epoch}")
         else:
             samples_per_epoch = self._params.samples_per_epoch
             if self._params.scale_epoch_size != 1:
                 logger.warning(
-                    'Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch.'
-                    'Set samples_per_epoch to the default (=-1) to use relative computation.')
+                    "Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch."
+                    "Set samples_per_epoch to the default (=-1) to use relative computation."
+                )
 
         self._steps_per_epoch = samples_per_epoch // self.params.gen.setup.train.batch_size
         if self._steps_per_epoch <= 0:
-            raise ValueError(f'Samples per epoch must be greater than the train batch size, but got '
-                             f'{samples_per_epoch} < {self.params.gen.setup.train.batch_size}')
+            raise ValueError(
+                f"Samples per epoch must be greater than the train batch size, but got "
+                f"{samples_per_epoch} < {self.params.gen.setup.train.batch_size}"
+            )
 
     def fit(self):
-        self._scenario.fit(epochs=self._params.epochs,
-                           initial_epoch=self._params.current_epoch,
-                           steps_per_epoch=self._steps_per_epoch,
-                           validation_freq=self._params.val_every_n,
-                           callbacks=self._callbacks,
-                           verbose=self._params.progress_bar_mode,
-                           )
+        self._scenario.fit(
+            epochs=self._params.epochs,
+            initial_epoch=self._params.current_epoch,
+            steps_per_epoch=self._steps_per_epoch,
+            validation_freq=self._params.val_every_n,
+            callbacks=self._callbacks,
+            verbose=self._params.progress_bar_mode,
+        )
 
     @typechecked
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
@@ -311,25 +331,28 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             # do not return actual instance since gradient accumulation_optimizer will override the given optimizer
             real_optimizer, args = self._params.optimizer.create()
             lr_schedule = self._params.learning_rate.create()
-            args['learning_rate'] = lr_schedule
-            if 'weight_decay' in args:
+            args["learning_rate"] = lr_schedule
+            if "weight_decay" in args:
                 if isinstance(lr_schedule, LearningRateSchedule):
-                    args['weight_decay'] = WeightDecaySchedule(args['weight_decay'], lr_schedule)
+                    args["weight_decay"] = WeightDecaySchedule(args["weight_decay"], lr_schedule)
 
             if self._params.ema_decay != 0.0:
                 if self._params.ema_decay >= 1:
-                    raise ValueError(f'The EMA decay is {self._params.ema_decay} >= 1 which is invalid. Either pass '
-                                     f'a negative value for an automatic computation, or a value in (0, 1).')
+                    raise ValueError(
+                        f"The EMA decay is {self._params.ema_decay} >= 1 which is invalid. Either pass "
+                        f"a negative value for an automatic computation, or a value in (0, 1)."
+                    )
                 elif self._params.ema_decay < 0.0:
                     emadecay = 0.75 ** (
-                            float(self._params.gen.setup.train.batch_size) / max(self._params.samples_per_epoch, 1))
+                        float(self._params.gen.setup.train.batch_size) / max(self._params.samples_per_epoch, 1)
+                    )
                     # Very short epochs lead to low ema decays. prevent this...
                     emadecay = max(emadecay, 0.99)
                     # Very long epochs lead to very very high ema decays. prevent this...
                     emadecay = min(emadecay, 0.99975)
                 else:
                     emadecay = self._params.ema_decay
-                return WeightsMovingAverage, {'optimizer': real_optimizer(**args), 'average_decay': emadecay}
+                return WeightsMovingAverage, {"optimizer": real_optimizer(**args), "average_decay": emadecay}
             else:
                 return real_optimizer, args
 

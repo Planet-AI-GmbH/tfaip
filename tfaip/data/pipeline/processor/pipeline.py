@@ -18,39 +18,49 @@
 """Implementation of the actual pipelines that run the DataProcessors optionally in parallel"""
 import logging
 from functools import partial
-from typing import List, Iterable, TYPE_CHECKING
+from typing import List, Iterable, TYPE_CHECKING, Union, Optional
 
-from tfaip import DataBaseParams
+from tfaip import DataBaseParams, DataGeneratorParams
 from tfaip import PipelineMode, Sample
-from tfaip.data.pipeline.processor.dataprocessor import DataProcessorParams, GeneratingDataProcessor, SequenceProcessor, \
-    MappingDataProcessor
+from tfaip.data.pipeline.processor.dataprocessor import (
+    DataProcessorParams,
+    GeneratingDataProcessor,
+    SequenceProcessor,
+    MappingDataProcessor,
+)
 from tfaip.data.pipeline.processor.params import ComposedProcessorPipelineParams
-from tfaip.data.pipeline.processor.sample.processorpipeline import SampleProcessorPipelineBase, \
-    ParallelMappingSampleProcessingPipeline, MappingSampleProcessorPipeline, ParallelGeneratingSampleProcessorPipeline, \
-    GeneratingSampleProcessorPipeline
+from tfaip.data.pipeline.processor.sample.processorpipeline import (
+    SampleProcessorPipelineBase,
+    ParallelMappingSampleProcessingPipeline,
+    MappingSampleProcessorPipeline,
+    ParallelGeneratingSampleProcessorPipeline,
+    GeneratingSampleProcessorPipeline,
+)
 
 if TYPE_CHECKING:
-    from tfaip.data.pipeline.datapipeline import DataPipeline
+    from tfaip.data.pipeline.datapipeline import DataPipelineParams
 
 logger = logging.getLogger(__name__)
 
 
-def _create_sequence_processor_fn(proc_params: List[DataProcessorParams], data_params: 'DataBaseParams',
-                                  mode: PipelineMode) -> SequenceProcessor:
+def _create_sequence_processor_fn(
+    proc_params: List[DataProcessorParams], data_params: "DataBaseParams", mode: PipelineMode
+) -> SequenceProcessor:
     processors: List[MappingDataProcessor] = []
     for p in proc_params:
         proc = p.create(data_params, mode)
         if proc is None:
             continue
         if not isinstance(proc, MappingDataProcessor):
-            raise TypeError('Only MappingDataProcessors allowed')
+            raise TypeError("Only MappingDataProcessors allowed")
         processors.append(proc)
     return SequenceProcessor(data_params, mode, processors)
 
 
-def _create_generator_processor_fn(proc_params: DataProcessorParams, data_params: 'DataBaseParams',
-                                   mode: PipelineMode) -> GeneratingDataProcessor:
-    assert issubclass(proc_params.cls(), GeneratingDataProcessor), 'Only valid for GeneratingDataProcessors'
+def _create_generator_processor_fn(
+    proc_params: DataProcessorParams, data_params: "DataBaseParams", mode: PipelineMode
+) -> GeneratingDataProcessor:
+    assert issubclass(proc_params.cls(), GeneratingDataProcessor), "Only valid for GeneratingDataProcessors"
     return proc_params.create(data_params, mode)
 
 
@@ -61,21 +71,26 @@ class DataProcessorPipeline:
 
     @staticmethod
     def from_params(
-            data_pipeline: 'DataPipeline',
-            pipeline_params: ComposedProcessorPipelineParams,
-            data_params: DataBaseParams,
-            mode: PipelineMode) -> 'DataProcessorPipeline':
+        data_pipeline_params: "DataPipelineParams",
+        pipeline_params: ComposedProcessorPipelineParams,
+        data_params: DataBaseParams,
+    ) -> "DataProcessorPipeline":
         # convert to pipelines
         # The asserts check that the input pipeline_params are valid
         sample_processor_pipelines: List[SampleProcessorPipelineBase] = []
+        mode = data_pipeline_params.mode
         for pipeline in pipeline_params.pipelines:
             data_processors = []
             for p in pipeline.processors:
                 if mode in p.modes:
                     data_processors.append(p)
                 else:
-                    logger.debug('{} should not be created since the pipeline mode {} is not in its modes {}',
-                                 p.__class__.__name__, mode, [m.value for m in p.modes])
+                    logger.debug(
+                        "{} should not be created since the pipeline mode {} is not in its modes {}",
+                        p.__class__.__name__,
+                        mode,
+                        [m.value for m in p.modes],
+                    )
 
             if len(data_processors) == 0:
                 continue
@@ -86,9 +101,12 @@ class DataProcessorPipeline:
                 cfn = partial(_create_sequence_processor_fn, data_processors, data_params, mode)
                 if pipeline.run_parallel and len(data_processors) > 0:
                     sample_processor_pipelines.append(
-                        ParallelMappingSampleProcessingPipeline(pipeline, data_pipeline, cfn))
+                        ParallelMappingSampleProcessingPipeline(pipeline, data_pipeline_params, cfn)
+                    )
                 else:
-                    sample_processor_pipelines.append(MappingSampleProcessorPipeline(pipeline, data_pipeline, cfn))
+                    sample_processor_pipelines.append(
+                        MappingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
+                    )
             elif issubclass(processor_type, GeneratingDataProcessor):
                 # Only one GeneratingDataProcessor per SequenceProcessorParams
                 assert all(issubclass(dp.cls(), GeneratingDataProcessor) for dp in data_processors)
@@ -96,32 +114,46 @@ class DataProcessorPipeline:
                 cfn = partial(_create_generator_processor_fn, data_processors[0], data_params, mode)
                 if pipeline.run_parallel:
                     sample_processor_pipelines.append(
-                        ParallelGeneratingSampleProcessorPipeline(pipeline, data_pipeline, cfn))
+                        ParallelGeneratingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
+                    )
                 else:
-                    sample_processor_pipelines.append(GeneratingSampleProcessorPipeline(pipeline, data_pipeline, cfn))
+                    sample_processor_pipelines.append(
+                        GeneratingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
+                    )
             else:
                 raise NotImplementedError
 
-        return DataProcessorPipeline(sample_processor_pipelines)
+        return DataProcessorPipeline(sample_processor_pipelines, mode)
 
-    def __init__(self, pipeline: List[SampleProcessorPipelineBase]):
+    def __init__(self, pipeline: List[SampleProcessorPipelineBase], mode: PipelineMode):
         self.pipeline = pipeline
+        self.mode = mode
 
-    def apply(self, samples: Iterable[Sample]) -> Iterable[Sample]:
+    def apply(
+        self, samples: Union[Iterable[Sample], DataGeneratorParams], run_parallel: Optional[bool] = None
+    ) -> Iterable[Sample]:
+        """Apply the individual pipelines (Mapping or Generating, possibly parallel) on the samples
+
+        The samples will be processed in parallel if set up.
+
+        Params:
+            samples: Either an iterable of samples or DataGeneratorParams
+            run_parallel: Use to Override the (default) settings of the pipeline params
         """
-        Apply the individual pipelines (Mapping or Generating, possibly parallel) on the samples
-        """
+        if isinstance(samples, DataGeneratorParams):
+            samples = samples.create(self.mode).generate()
+
         for p in self.pipeline:
-            samples = p.apply(samples)
+            samples = p.apply(samples, run_parallel)
 
         return samples
 
     def apply_on_sample(self, sample: Sample) -> Sample:
-        """
-        Apply the individual pipelines (Mapping or Generating, possibly parallel) on the samples
+        """Apply the individual pipelines (Mapping or Generating, possibly parallel) on the samples
+
         Use this with caution since all pipelines are created first which is a great overhead if only one sample is
         processed.
         In this case, usually `run_parallel` should be set to false to remove at least the biggest part of the overhead.
         Running in parallel is not required in this case (usually).
         """
-        return next(iter(self.apply([sample])))
+        return next(iter(self.apply([sample], run_parallel=False)))

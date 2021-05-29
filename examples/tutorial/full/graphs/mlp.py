@@ -24,27 +24,21 @@ from tensorflow.keras.layers import Dense, Flatten
 from examples.tutorial.full.graphs.backend import TutorialBackendParams, TutorialBackend
 
 
-@pai_dataclass(alt='MLP')
+@pai_dataclass(alt="MLP")
 @dataclass
 class MLPGraphParams(TutorialBackendParams):
-    nodes: List[int] = field(default_factory=lambda: [128], metadata=pai_meta(
-        help="Definition of the hidden layers"
-    ))
-    activation: str = field(default='relu', metadata=pai_meta(
-        help="Activation function of the hidden layers"
-    ))
+    nodes: List[int] = field(default_factory=lambda: [128], metadata=pai_meta(help="Definition of the hidden layers"))
+    activation: str = field(default="relu", metadata=pai_meta(help="Activation function of the hidden layers"))
 
     def cls(self):
         return MLPLayers(self)
 
 
 class MLPLayers(TutorialBackend[MLPGraphParams]):
-    def __init__(self, graph_params: MLPGraphParams, name='MLP', **kwargs):
+    def __init__(self, graph_params: MLPGraphParams, name="MLP", **kwargs):
         super(MLPLayers, self).__init__(graph_params, name=name, **kwargs)
         self.flatten = Flatten()
-        self.hidden_layers = [
-            Dense(nodes, activation=graph_params.activation) for nodes in graph_params.nodes
-        ]
+        self.hidden_layers = [Dense(nodes, activation=graph_params.activation) for nodes in graph_params.nodes]
 
     def call(self, images, **kwargs):
         out = self.flatten(images)
@@ -52,5 +46,5 @@ class MLPLayers(TutorialBackend[MLPGraphParams]):
             out = layer(out)
 
         return {
-            'out': out,
+            "out": out,
         }

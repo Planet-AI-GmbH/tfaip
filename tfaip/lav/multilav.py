@@ -42,12 +42,13 @@ class MultiLAV(ABC):
     def params_cls(cls) -> Type[LAVParams]:
         return LAVParams
 
-    def __init__(self,
-                 params: LAVParams,
-                 predictor_fn: Callable[[List[str], PredictorParams], MultiModelPredictor],
-                 evaluator: EvaluatorBase,
-                 predictor_params: PredictorParams
-                 ):
+    def __init__(
+        self,
+        params: LAVParams,
+        predictor_fn: Callable[[List[str], PredictorParams], MultiModelPredictor],
+        evaluator: EvaluatorBase,
+        predictor_params: PredictorParams,
+    ):
         assert params.model_path
         self._params = params
         self._predictor_fn = predictor_fn
@@ -61,11 +62,12 @@ class MultiLAV(ABC):
         predictor_params.include_targets = True
 
     @distribute_strategy
-    def run(self,
-            data_gen_params: DataGeneratorParams,
-            callbacks: List[LAVCallback] = None,
-            run_eagerly=False,
-            ):
+    def run(
+        self,
+        data_gen_params: DataGeneratorParams,
+        callbacks: List[LAVCallback] = None,
+        run_eagerly=False,
+    ):
         if callbacks is None:
             callbacks = []
 

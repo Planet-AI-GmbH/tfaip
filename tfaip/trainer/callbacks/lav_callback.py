@@ -39,8 +39,9 @@ class LAVCallback(Callback):
     Therefore, LAV results are also added to the tensorboard (with a custom LAV handler)
     """
 
-    def __init__(self, trainer_params: 'TrainerParams', scenario: 'ScenarioBase',
-                 extract_logs_cb: 'ExtractLogsCallback'):
+    def __init__(
+        self, trainer_params: "TrainerParams", scenario: "ScenarioBase", extract_logs_cb: "ExtractLogsCallback"
+    ):
         super().__init__()
         self._supports_tf_logs = True  # True so that we can manipulate the logs
         self.scenario = scenario
@@ -59,30 +60,34 @@ class LAVCallback(Callback):
         if epoch < self.trainer_params.lav_min_epoch:
             self.lav_this_epoch = False
         else:
-            self.lav_this_epoch = (epoch % self.trainer_params.lav_every_n) == 0 or epoch == self.trainer_params.epochs - 1
+            self.lav_this_epoch = (
+                epoch % self.trainer_params.lav_every_n
+            ) == 0 or epoch == self.trainer_params.epochs - 1
 
     def on_epoch_end(self, epoch, logs=None):
         # Run LAV
         if not self.lav_this_epoch:
-            logger.debug(f'No LAV in epoch {epoch}')
+            logger.debug(f"No LAV in epoch {epoch}")
             return
 
-        logger.info('Running LAV')
+        logger.info("Running LAV")
         start = time.time()
         logs = logs if logs else {}
         for i, r in enumerate(
-                self.lav.run(self.trainer_params.gen.lav_gen(),
-                             self.scenario.keras_predict_model,
-                             run_eagerly=self.trainer_params.force_eager,
-                             return_tensorboard_outputs=True)):
-            logs_str = ' - '.join(
-                f'{k}: {np.mean(r[k]):.4f}' for k in sorted(r.keys()) if not isinstance(r[k], bytes))
-            logs_str = f'LAV l{i} Metrics (dt={(time.time() - start) / 60:.2f}min) - {logs_str}'
+            self.lav.run(
+                self.trainer_params.gen.lav_gen(),
+                self.scenario.keras_predict_model,
+                run_eagerly=self.trainer_params.force_eager,
+                return_tensorboard_outputs=True,
+            )
+        ):
+            logs_str = " - ".join(f"{k}: {np.mean(r[k]):.4f}" for k in sorted(r.keys()) if not isinstance(r[k], bytes))
+            logs_str = f"LAV l{i} Metrics (dt={(time.time() - start) / 60:.2f}min) - {logs_str}"
             logger.info(logs_str)
             for k, v in r.items():
-                if 'multi_metric' in k:
+                if "multi_metric" in k:
                     continue
                 if self.extract_logs_cb.tensorboard_data_handler.is_tensorboard_only(k, v):
-                    self.extract_logs_cb.extracted_logs[f'lav_l{i}_{k}'] = v
+                    self.extract_logs_cb.extracted_logs[f"lav_l{i}_{k}"] = v
                 else:
-                    logs[f'lav_l{i}_{k}'] = v
+                    logs[f"lav_l{i}_{k}"] = v

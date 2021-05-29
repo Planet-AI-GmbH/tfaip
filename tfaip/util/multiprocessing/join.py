@@ -26,10 +26,11 @@ class JoinableHolder:
     When join() is called, the JoinableHolder waits for all joinables to join() until resuming.
     This is useful for waiting for processes to finish.
     """
+
     def __init__(self):
         self._joinables: List[Joinable] = []
 
-    def register_joinable(self, joinable: 'Joinable'):
+    def register_joinable(self, joinable: "Joinable"):
         self._joinables.append(joinable)
 
     def withdraw_joinable(self, joinable):

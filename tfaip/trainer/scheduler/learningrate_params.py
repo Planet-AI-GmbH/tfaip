@@ -26,6 +26,7 @@ from paiargparse import pai_meta, pai_dataclass
 @dataclass
 class LearningRateParams(ABC):
     """Base definition of learning rate params"""
+
     @staticmethod
     @abstractmethod
     def cls():
@@ -33,22 +34,23 @@ class LearningRateParams(ABC):
 
     def create(self):
         if self.epochs < 0:
-            raise ValueError('Epochs not specified.')
+            raise ValueError("Epochs not specified.")
 
         return self.cls()(self)
 
-    lr: float = field(default=0.001, metadata=pai_meta(
-        help='The learning rate.'
-    ))
-    step_function: bool = field(default=True, metadata=pai_meta(
-        help='(type dependent) Step function of exponential decay.'
-    ))
-    offset_epochs: int = field(default=0, metadata=pai_meta(
-        help='Offset to subtract from the current training epoch (if the total is negative it will be capped at 0, '
-             'and i.e., if < 0 the total epoch is greater than the training epoch). '
-             'Can be used to reset the learning rate schedule when resuming training.'
-    ))
+    lr: float = field(default=0.001, metadata=pai_meta(help="The learning rate."))
+    step_function: bool = field(
+        default=True, metadata=pai_meta(help="(type dependent) Step function of exponential decay.")
+    )
+    offset_epochs: int = field(
+        default=0,
+        metadata=pai_meta(
+            help="Offset to subtract from the current training epoch (if the total is negative it will be capped at 0, "
+            "and i.e., if < 0 the total epoch is greater than the training epoch). "
+            "Can be used to reset the learning rate schedule when resuming training."
+        ),
+    )
 
     # Updated during training to support loading and resuming
-    steps_per_epoch: int = field(default=-1, metadata=pai_meta(mode='ignore'))
-    epochs: int = field(default=-1, metadata=pai_meta(mode='ignore'))
+    steps_per_epoch: int = field(default=-1, metadata=pai_meta(mode="ignore"))
+    epochs: int = field(default=-1, metadata=pai_meta(mode="ignore"))

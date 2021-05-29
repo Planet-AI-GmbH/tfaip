@@ -21,20 +21,34 @@ import unittest
 
 from test.util.workdir import call_in_root
 
-work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tutorial', 'workdir'))
+work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tutorial", "workdir"))
 
 
 class TestPredictScript(unittest.TestCase):
     def test_predict_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            call_in_root(['tfaip-train', 'examples.tutorial.full',
-                          '--trainer.samples_per_epoch', '10',
-                          '--trainer.epochs', '1',
-                          '--trainer.output_dir', d,
-                          '--train.batch_size', '2',
-                          '--val.limit', '10',
-                          ])
-            call_in_root(['tfaip-predict',
-                          '--data.files', os.path.join(work_dir, 'data', '*.png'),
-                          '--export_dir', os.path.join(d, 'best'),
-                          ])
+            call_in_root(
+                [
+                    "tfaip-train",
+                    "examples.tutorial.full",
+                    "--trainer.samples_per_epoch",
+                    "10",
+                    "--trainer.epochs",
+                    "1",
+                    "--trainer.output_dir",
+                    d,
+                    "--train.batch_size",
+                    "2",
+                    "--val.limit",
+                    "10",
+                ]
+            )
+            call_in_root(
+                [
+                    "tfaip-predict",
+                    "--data.files",
+                    os.path.join(work_dir, "data", "*.png"),
+                    "--export_dir",
+                    os.path.join(d, "best"),
+                ]
+            )

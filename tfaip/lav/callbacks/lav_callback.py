@@ -31,10 +31,11 @@ class LAVCallback(ABC):
     """
     Base class of a callback that can be added to LAV
     """
+
     def __init__(self):
-        self.lav: 'LAV' = None  # Set from lav
-        self.data: 'DataBase' = None  # Set from lav
-        self.model: 'ModelBase' = None  # set from lav
+        self.lav: "LAV" = None  # Set from lav
+        self.data: "DataBase" = None  # Set from lav
+        self.model: "ModelBase" = None  # set from lav
 
     @abstractmethod
     def on_sample_end(self, data_generator_params: DataGeneratorParams, sample):

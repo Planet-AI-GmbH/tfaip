@@ -24,7 +24,7 @@ Dynamic graphs allow to change and setup layers with parameters that can be set 
 * First, setup a static [Graph](graphs/tutorialgraph.py) which will handle the creation of the dynamic layers.
   For MNIST, this graph also adds the final output as additional layer since it is obligatory.
   Furthermore, the data is normalized and reshaped.
-* Next, create a [base class and base params](graphs/backend.py) which is derived from `keras.layers.Layer` 
+* Next, create a [base class and base params](graphs/backend.py) which is derived from `keras.layers.Layer`
   and must layer be implemented by each variant.
   Add an abstract method to the parameters to define how to create the layer.
   Here (`cls()`), only the class type is returned while assuming that the first and only argument of the `__init__` is the parameter.
@@ -33,5 +33,5 @@ Dynamic graphs allow to change and setup layers with parameters that can be set 
   In the tutorial, a [CNN](graphs/cnn.py) and [MLP](graphs/mlp.py) setup is provided.
 * Finally, add a parameter to select the layers to the base params, here called `graph` in the `ModelParams`.
   Optionally, set the `choices` flag of `pai_meta` to provide the list of available parameters that can be selected.
-  The static [Graph](graphs/tutorialgraph.py) calls the abstract `cls()` method to retrieve the actual implementation 
+  The static [Graph](graphs/tutorialgraph.py) calls the abstract `cls()` method to retrieve the actual implementation
   and instantiates it.

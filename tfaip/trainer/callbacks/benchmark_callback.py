@@ -34,6 +34,7 @@ class BenchmarkResults:
 
     Use pretty_print to print a formatted table of the full results.
     """
+
     n_batches: float = 0
     n_samples: float = 0
     total_time: float = 1e-10
@@ -43,10 +44,10 @@ class BenchmarkResults:
     samples_per_second: float = 0
 
     def pretty_print(self, print_fn=print):
-        table = prettytable.PrettyTable(['', 'Total', 'Batch', 'Sample'])
-        table.add_row(['Count', 1, self.n_batches, self.n_samples])
-        table.add_row(['Time Per', self.total_time, self.avg_time_per_batch, self.avg_time_per_sample])
-        table.add_row(['Per Second', 1 / self.total_time, self.batches_per_second, self.samples_per_second])
+        table = prettytable.PrettyTable(["", "Total", "Batch", "Sample"])
+        table.add_row(["Count", 1, self.n_batches, self.n_samples])
+        table.add_row(["Time Per", self.total_time, self.avg_time_per_batch, self.avg_time_per_sample])
+        table.add_row(["Per Second", 1 / self.total_time, self.batches_per_second, self.samples_per_second])
         if print_fn is None:
             return table
         print_fn(table)
@@ -97,21 +98,37 @@ class BenchmarkCallback(Callback):
         l_te = self.last_test_results
         a_te = copy(self.avg_train_results).finish_epoch(self.total_train_time.duration_till_now())
         table = prettytable.PrettyTable(
-            ['Benchmark', 'Train Total', 'Train Batch', 'Train Sample', 'Test Total', 'Test Batch', 'Test Sample'])
+            ["Benchmark", "Train Total", "Train Batch", "Train Sample", "Test Total", "Test Batch", "Test Sample"]
+        )
 
         def add(prefix, a_tr, a_te):
-            table.add_row([prefix + ' Count', 1, a_tr.n_batches, a_tr.n_samples, 1, a_te.n_batches, a_te.n_samples])
+            table.add_row([prefix + " Count", 1, a_tr.n_batches, a_tr.n_samples, 1, a_te.n_batches, a_te.n_samples])
             table.add_row(
-                [prefix + ' Time Per', a_tr.total_time, a_tr.avg_time_per_batch, a_tr.avg_time_per_sample,
-                 a_te.total_time,
-                 a_te.avg_time_per_batch, a_te.avg_time_per_sample])
+                [
+                    prefix + " Time Per",
+                    a_tr.total_time,
+                    a_tr.avg_time_per_batch,
+                    a_tr.avg_time_per_sample,
+                    a_te.total_time,
+                    a_te.avg_time_per_batch,
+                    a_te.avg_time_per_sample,
+                ]
+            )
             table.add_row(
-                [prefix + ' Per Second', 1 / a_tr.total_time, a_tr.batches_per_second, a_tr.samples_per_second,
-                 1 / a_te.total_time, a_te.batches_per_second, a_te.samples_per_second])
+                [
+                    prefix + " Per Second",
+                    1 / a_tr.total_time,
+                    a_tr.batches_per_second,
+                    a_tr.samples_per_second,
+                    1 / a_te.total_time,
+                    a_te.batches_per_second,
+                    a_te.samples_per_second,
+                ]
+            )
 
-        add('AVG', a_tr, a_te)
-        add('Last', l_tr, l_te)
-        logger.info('Benchmark results:\n' + str(table))
+        add("AVG", a_tr, a_te)
+        add("Last", l_tr, l_te)
+        logger.info("Benchmark results:\n" + str(table))
 
     def on_train_begin(self, logs=None):
         self.total_train_time.__enter__()
@@ -131,7 +148,7 @@ class BenchmarkCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.total_epoch_time.__exit__(None, None, None)
-        count = logs['count'].numpy()
+        count = logs["count"].numpy()
         self.last_train_results.finish_epoch(self.total_epoch_time.duration, count)
         self.avg_train_results.n_samples += count
         self.print()
@@ -153,9 +170,9 @@ class BenchmarkCallback(Callback):
 
     def on_test_end(self, logs=None):
         self.total_test_time.__exit__(None, None, None)
-        self.last_test_results.finish_epoch(self.total_test_time.duration, logs['count'])
+        self.last_test_results.finish_epoch(self.total_test_time.duration, logs["count"])
         self.avg_test_results.total_time += self.total_test_time.duration
-        self.avg_test_results.n_samples += logs['count']
+        self.avg_test_results.n_samples += logs["count"]
 
     def on_test_batch_begin(self, batch, logs=None):
         self.batch_time.__enter__()

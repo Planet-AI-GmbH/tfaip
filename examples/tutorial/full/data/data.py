@@ -44,17 +44,16 @@ class TutorialData(DataBase[TutorialDataParams]):
         # (=validation during training), Targets (only produce GroundTruth)), the third parameter are optional args.
         params.pre_proc = SequentialProcessorPipelineParams(
             run_parallel=False,  # Set this to True to run the pipeline in parallel (by spawning subprocesses)
-            processors=[
-                NormalizeProcessorParams()
-            ])
+            processors=[NormalizeProcessorParams()],
+        )
 
         return params
 
     def _input_layer_specs(self):
         # Define the input specs of the graph. Here a [28, 28] image of type uint8. The batch dimension is not stated.
-        return {'img': tf.TensorSpec(shape=(28, 28), dtype='uint8')}
+        return {"img": tf.TensorSpec(shape=(28, 28), dtype="uint8")}
 
     def _target_layer_specs(self):
         # Define the target specs. Here a single label of type uint8 is the target (the number in the image).
         # The batch dimension is not stated and scalars must be of dimension [1]
-        return {'gt': tf.TensorSpec(shape=[1], dtype='uint8')}
+        return {"gt": tf.TensorSpec(shape=[1], dtype="uint8")}

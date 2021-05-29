@@ -31,7 +31,7 @@ class ScenarioTest(TutorialScenarioTest):
         p.gen.setup.val = DataPipelineParams(limit=10, batch_size=1, num_processes=1)
         p.gen.__post_init__()
         p.gen.train_val.shuffle = False  # Do not shuffle so that the same elements are produced
-        p.gen.train_val.dataset = 'fashion_mnist'
+        p.gen.train_val.dataset = "fashion_mnist"
         p.gen.train_val.force_train = True  # Use Train as val
         p.skip_model_load_test = True
         p.random_seed = 1337
@@ -72,10 +72,10 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         after_logs = trainer.train()
 
         # loss and acc on train must be equal, but lower on val
-        self.assertAlmostEqual(first_train_logs['keras_loss'], after_logs['keras_loss'], places=2, msg='loss_loss')
-        self.assertAlmostEqual(first_train_logs['acc'], after_logs['acc'], places=2, msg='acc')
-        self.assertLess(first_train_logs['val_loss'], after_logs['val_loss'], "val_loss")
-        self.assertGreater(first_train_logs['val_acc'], after_logs['val_acc'], "val_acc")
+        self.assertAlmostEqual(first_train_logs["keras_loss"], after_logs["keras_loss"], places=2, msg="loss_loss")
+        self.assertAlmostEqual(first_train_logs["acc"], after_logs["acc"], places=2, msg="acc")
+        self.assertLess(first_train_logs["val_loss"], after_logs["val_loss"], "val_loss")
+        self.assertGreater(first_train_logs["val_acc"], after_logs["val_acc"], "val_acc")
 
         clear_session()
 
@@ -100,6 +100,7 @@ class TestTrainAccumulationOptimizer(unittest.TestCase):
         after_train_logs = trainer.train()
 
         for k, v in after_train_logs.items():
-            self.assertAlmostEqual(v, first_train_logs[k], places=6,
-                                   msg=f'{k}. Before {first_train_logs}, after {after_train_logs}')
+            self.assertAlmostEqual(
+                v, first_train_logs[k], places=6, msg=f"{k}. Before {first_train_logs}, after {after_train_logs}"
+            )
         clear_session()

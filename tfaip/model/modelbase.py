@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-TMP = TypeVar('TMP', bound=ModelBaseParams)
+TMP = TypeVar("TMP", bound=ModelBaseParams)
 
 
 class ModelBase(Generic[TMP], ABC):
@@ -53,12 +53,11 @@ class ModelBase(Generic[TMP], ABC):
 
     @classmethod
     def all_custom_objects(cls) -> Dict[str, Type[tf.keras.layers.Layer]]:
-        """Custom objects required to instantiate saved keras models
-        """
+        """Custom objects required to instantiate saved keras models"""
         root_graph = cls.root_graph_cls()
         return {
             root_graph.__name__: root_graph,
-            'TensorboardWriter': TensorboardWriter,
+            "TensorboardWriter": TensorboardWriter,
         }
 
     def __init__(self, params: TMP):
@@ -66,8 +65,9 @@ class ModelBase(Generic[TMP], ABC):
         self._count_metric = Count()
 
     @staticmethod
-    def root_graph_cls() -> Type['RootGraph']:
+    def root_graph_cls() -> Type["RootGraph"]:
         from tfaip.model.graphbase import RootGraph
+
         return RootGraph
 
     @property
@@ -86,11 +86,11 @@ class ModelBase(Generic[TMP], ABC):
 
     def _best_logging_settings(self) -> Tuple[str, str]:
         # Override this function
-        return 'min', 'loss/mean_epoch'
+        return "min", "loss/mean_epoch"
 
     @typechecked
     def metric(self, inputs, targets, outputs) -> List[AnyTensor]:
-        """ The metrics of the model
+        """The metrics of the model
 
         Override _metric in a custom implementation.
 
@@ -100,8 +100,7 @@ class ModelBase(Generic[TMP], ABC):
         return metrics
 
     def _target_output_metric(self) -> List[Tuple[str, str, tf.keras.metrics.Metric]]:
-        """Deprecated
-        """
+        """Deprecated"""
         return []
 
     def _metric(self, inputs, targets, outputs) -> List[AnyTensor]:
@@ -122,8 +121,10 @@ class ModelBase(Generic[TMP], ABC):
         :param targets:   The outputs of the model
         :return: Dictionary of the weights
         """
-        logger.warning('Sample weights are deprecated and should not be called anymore.'
-                       'Sample weights are still required for deprecated multi metrics, though.')
+        logger.warning(
+            "Sample weights are deprecated and should not be called anymore."
+            "Sample weights are still required for deprecated multi metrics, though."
+        )
         return self._sample_weights(inputs, targets)
 
     def _sample_weights(self, inputs: Dict[str, tf.Tensor], targets: Dict[str, tf.Tensor]) -> Dict[str, Any]:
@@ -173,21 +174,23 @@ class ModelBase(Generic[TMP], ABC):
         pass
 
     @typechecked()
-    def export_graphs(self,
-                      inputs: Dict[str, AnyTensor],
-                      outputs: Dict[str, AnyTensor],
-                      targets: Dict[str, AnyTensor],
-                      ) -> Dict[str, tf.keras.Model]:
+    def export_graphs(
+        self,
+        inputs: Dict[str, AnyTensor],
+        outputs: Dict[str, AnyTensor],
+        targets: Dict[str, AnyTensor],
+    ) -> Dict[str, tf.keras.Model]:
         eg = self._export_graphs(inputs, outputs, targets)
-        if 'default' not in eg:
+        if "default" not in eg:
             raise KeyError(f'Expected at least an export graph with label "default" in {eg}.')
         return eg
 
-    def _export_graphs(self,
-                       inputs: Dict[str, tf.Tensor],
-                       outputs: Dict[str, tf.Tensor],
-                       targets: Dict[str, tf.Tensor],
-                       ) -> Dict[str, tf.keras.Model]:
+    def _export_graphs(
+        self,
+        inputs: Dict[str, tf.Tensor],
+        outputs: Dict[str, tf.Tensor],
+        targets: Dict[str, tf.Tensor],
+    ) -> Dict[str, tf.keras.Model]:
         # Override this function
         del targets  # not required in the default implementation
         return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
@@ -203,7 +206,7 @@ class ModelBase(Generic[TMP], ABC):
             model.add_metric(loss_v, name=name)
 
         model.add_loss(total_loss)
-        model.add_metric(total_loss, name='loss/mean_epoch')
+        model.add_metric(total_loss, name="loss/mean_epoch")
 
     def add_all_metrics(self, model, inputs, targets, outputs):
         for metric_v in self.metric(inputs, targets, outputs):
@@ -218,7 +221,9 @@ class ModelBase(Generic[TMP], ABC):
             for v in model.multi_metrics:
                 for c in v.metric.children:
                     model.add_metric(c(targets[v.target], outputs[v.output], sample_weights.get(c.name, None)))
-                model.add_metric(v.metric(targets[v.target], outputs[v.output], sample_weights.get(v.metric.name, None)))
+                model.add_metric(
+                    v.metric(targets[v.target], outputs[v.output], sample_weights.get(v.metric.name, None))
+                )
 
         if len(model.target_output_metrics) > 0:
             sample_weights = self.sample_weights(inputs, targets)

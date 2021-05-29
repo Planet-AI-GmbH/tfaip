@@ -22,7 +22,7 @@ from tfaip.trainer.scheduler.learningrate import LearningRateSchedule
 
 class ConstantSchedule(LearningRateSchedule):
     def __init__(self, params: Constant):
-        super().__init__(params, 'constant')
+        super().__init__(params, "constant")
 
     def lr(self, epoch):
         return self.params.lr

@@ -35,11 +35,12 @@ def unbatched(values, batch_size=None):
 
     def extract_at(v, i):
         if v.shape[0] != batch_size:
-            logger.warning(f'Expected batch size {batch_size} but got {v.shape[0]} (total shape {v.shape}).'
-                           f'This tensor will be added as is. '
-                           f'If it is an input or output, consider to compute this input in the graph. '
-                           f'Else do not return it as output, or call broad_cast to the actual batch size. '
-                           )
+            logger.warning(
+                f"Expected batch size {batch_size} but got {v.shape[0]} (total shape {v.shape})."
+                f"This tensor will be added as is. "
+                f"If it is an input or output, consider to compute this input in the graph. "
+                f"Else do not return it as output, or call broad_cast to the actual batch size. "
+            )
             return v
         return v[i]
 
@@ -69,5 +70,5 @@ def to_unbatched_samples(inputs, targets, outputs, meta) -> Iterable[Sample]:
             inputs=inputs[i] if inputs else None,
             targets=targets[i] if targets else None,
             outputs=outputs[i] if outputs else None,
-            meta=meta[i] if meta else None
+            meta=meta[i] if meta else None,
         )

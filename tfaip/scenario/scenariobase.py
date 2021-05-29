@@ -28,8 +28,7 @@ from collections import Counter
 from contextlib import ExitStack
 from dataclasses import dataclass
 from itertools import chain
-from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, TypeVar, Generic, \
-    NoReturn
+from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, TypeVar, Generic, NoReturn
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -51,18 +50,20 @@ from tfaip.util.tfaipargparse import post_init
 from tfaip.util.tftyping import AnyTensor
 
 if TYPE_CHECKING:
-    from tfaip.imports import LAVParams, LAV, TrainerParams, Predictor, PredictorParams, MultiModelPredictor, \
-        Trainer
+    from tfaip.imports import LAVParams, LAV, TrainerParams, Predictor, PredictorParams, MultiModelPredictor, Trainer
 
 logger = logging.getLogger(__name__)
 
 
-def list_scenarios_in_module(module) -> List[Tuple[str, Type['ScenarioBase']]]:
-    return inspect.getmembers(module, lambda member: inspect.isclass(member)
-                                                     and member.__module__ == module.__name__
-                                                     and issubclass(member, ScenarioBase)
-                                                     and member != ScenarioBase
-                                                     and 'ScenarioBase' not in member.__name__)
+def list_scenarios_in_module(module) -> List[Tuple[str, Type["ScenarioBase"]]]:
+    return inspect.getmembers(
+        module,
+        lambda member: inspect.isclass(member)
+        and member.__module__ == module.__name__
+        and issubclass(member, ScenarioBase)
+        and member != ScenarioBase
+        and "ScenarioBase" not in member.__name__,
+    )
 
 
 @pai_dataclass
@@ -71,13 +72,14 @@ class KerasModelData:
     """
     Utility structure to hold shared information about the model
     """
+
     extended_loss_names: List[str]
     extended_metric_names: List[str]
     tensorboard_output_names: List[str]
 
 
-TScenarioParams = TypeVar('TScenarioParams', bound=ScenarioBaseParams)
-TTrainerPipelineParams = TypeVar('TTrainerPipelineParams', bound=TrainerPipelineParamsBase)
+TScenarioParams = TypeVar("TScenarioParams", bound=ScenarioBaseParams)
+TTrainerPipelineParams = TypeVar("TTrainerPipelineParams", bound=TrainerPipelineParamsBase)
 
 
 class ScenarioBaseMeta(CollectGenericTypes):
@@ -115,14 +117,14 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         """
         scenario_params = cls.params_cls()()
         scenario_params.scenario_base_path = inspect.getfile(cls)
-        scenario_params.scenario_id = cls.__module__ + ':' + cls.__name__
+        scenario_params.scenario_id = cls.__module__ + ":" + cls.__name__
         scenario_params.model = cls.model_cls().params_cls()()
         scenario_params.data = cls.data_cls().default_params()
         scenario_params.evaluator = cls.evaluator_cls().default_params()
         return scenario_params
 
     @classmethod
-    def default_trainer_params(cls) -> 'TrainerParams[TScenarioParams, TTrainerPipelineParams]':
+    def default_trainer_params(cls) -> "TrainerParams[TScenarioParams, TTrainerPipelineParams]":
         """
         Override to change the default trainer params for this scenario.
 
@@ -130,10 +132,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
 
         Returns: TrainerParams with adapted defaults
         """
-        return cls.trainer_cls().params_cls()(
-            scenario=cls.default_params(),
-            gen=cls.trainer_pipeline_params_cls()()
-        )
+        return cls.trainer_cls().params_cls()(scenario=cls.default_params(), gen=cls.trainer_pipeline_params_cls()())
 
     @classmethod
     def params_from_dict(cls, d: dict) -> TScenarioParams:
@@ -149,8 +148,8 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         Returns: ScenarioParams of the respective Scenario
         """
         # Support to also pass trainer params
-        if 'scenario' in d:
-            d = d['scenario']
+        if "scenario" in d:
+            d = d["scenario"]
         return cls.params_cls().from_dict(d)
 
     @classmethod
@@ -188,30 +187,30 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             # already pointing to a file
             with open(path) as f:
                 d = json.load(f)
-                if 'scenario' in d:
-                    scenario_params_dict = d['scenario']
+                if "scenario" in d:
+                    scenario_params_dict = d["scenario"]
                 else:
                     scenario_params_dict = d
 
         else:
             # Search for trainer_params.json or scenario_params.json
-            trainer_params_json_path = os.path.join(path, 'trainer_params.json')
-            scenario_params_json_path = os.path.join(path, 'scenario_params.json')
+            trainer_params_json_path = os.path.join(path, "trainer_params.json")
+            scenario_params_json_path = os.path.join(path, "scenario_params.json")
             if os.path.exists(trainer_params_json_path):
                 with open(trainer_params_json_path) as f:
-                    scenario_params_dict = json.load(f)['scenario']
+                    scenario_params_dict = json.load(f)["scenario"]
             elif os.path.exists(scenario_params_json_path):
                 with open(scenario_params_json_path) as f:
                     scenario_params_dict = json.load(f)
             else:
-                raise FileNotFoundError(f'Either {trainer_params_json_path} or {scenario_params_json_path} must exist!')
+                raise FileNotFoundError(f"Either {trainer_params_json_path} or {scenario_params_json_path} must exist!")
 
         # Adapt resource path. Resources are detected relative to the location of the params file
-        scenario_params_dict['data']['resource_base_path'] = path
+        scenario_params_dict["data"]["resource_base_path"] = path
         return scenario_params_dict
 
     @classmethod
-    def from_path(cls, path: str) -> Tuple[Type['ScenarioBase'], TScenarioParams]:
+    def from_path(cls, path: str) -> Tuple[Type["ScenarioBase"], TScenarioParams]:
         """
         Instantiate a scenario from a path.
 
@@ -222,11 +221,11 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             Tuple of the actual Scenario class and the parsed Scenario params
         """
         if cls != ScenarioBase:
-            raise ValueError('You are calling this method from a real Scenario class. Call params_from_path instead')
+            raise ValueError("You are calling this method from a real Scenario class. Call params_from_path instead")
         return cls.from_dict(cls.read_params_dict_from_path(path))
 
     @classmethod
-    def from_dict(cls, d: dict) -> Tuple[Type['ScenarioBase'], TScenarioParams]:
+    def from_dict(cls, d: dict) -> Tuple[Type["ScenarioBase"], TScenarioParams]:
         """
         Instantiate a scenario from a dict.
 
@@ -237,7 +236,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             Tuple of the actual Scenario class and the parsed Scenario params
         """
         if cls != ScenarioBase:
-            raise ValueError('You are calling this method from a real Scenario class. Call params_from_dict instead')
+            raise ValueError("You are calling this method from a real Scenario class. Call params_from_dict instead")
         scenario_params: ScenarioBaseParams = ScenarioBaseParams.from_dict(d)
         return scenario_params.cls(), scenario_params
 
@@ -250,7 +249,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         return cls.params_cls().model_cls().cls()
 
     @classmethod
-    def trainer_cls(cls) -> Type['Trainer[TrainerParams]']:
+    def trainer_cls(cls) -> Type["Trainer[TrainerParams]"]:
         # setup default trainer and trainer params with the correct sub-classes
         from tfaip.trainer.trainer import Trainer, TrainerParams  # pylint: disable=import-outside-toplevel
 
@@ -264,47 +263,54 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         return LocalTrainer
 
     @classmethod
-    def lav_cls(cls) -> Type['LAV']:
+    def lav_cls(cls) -> Type["LAV"]:
         from tfaip.lav.lav import LAV  # pylint: disable=import-outside-toplevel
+
         return LAV
 
     @classmethod
-    def multi_lav_cls(cls) -> Type['MultiLAV']:
+    def multi_lav_cls(cls) -> Type["MultiLAV"]:
         return MultiLAV
 
     @classmethod
-    def predictor_cls(cls) -> Type['Predictor']:
+    def predictor_cls(cls) -> Type["Predictor"]:
         from tfaip.predict.predictor import Predictor  # pylint: disable=import-outside-toplevel
+
         return Predictor
 
     @classmethod
-    def evaluator_cls(cls) -> Type['EvaluatorBase']:
+    def evaluator_cls(cls) -> Type["EvaluatorBase"]:
         return EvaluatorBase
 
     @classmethod
-    def multi_predictor_cls(cls) -> Type['MultiModelPredictor']:
-        from tfaip.predict.multimodelpredictor import \
-            MultiModelPredictor  # pylint: disable=import-outside-toplevel
+    def multi_predictor_cls(cls) -> Type["MultiModelPredictor"]:
+        from tfaip.predict.multimodelpredictor import MultiModelPredictor  # pylint: disable=import-outside-toplevel
+
         return MultiModelPredictor
 
     @classmethod
-    def create_trainer(cls, trainer_params: 'TrainerParams', restore=False) -> 'Trainer':
+    def create_trainer(cls, trainer_params: "TrainerParams", restore=False) -> "Trainer":
         post_init(trainer_params)
         return cls.trainer_cls()(trainer_params, cls(trainer_params.scenario), restore)
 
     @classmethod
-    def create_lav(cls, lav_params: 'LAVParams', scenario_params: TScenarioParams) -> 'LAV':
+    def create_lav(cls, lav_params: "LAVParams", scenario_params: TScenarioParams) -> "LAV":
         post_init(lav_params)
         post_init(scenario_params)
-        return cls.lav_cls()(lav_params,
-                             data_fn=lambda: cls.data_cls()(scenario_params.data),
-                             model_fn=lambda: scenario_params.model.create(),
-                             evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
-                             )
+        return cls.lav_cls()(
+            lav_params,
+            data_fn=lambda: cls.data_cls()(scenario_params.data),
+            model_fn=lambda: scenario_params.model.create(),
+            evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
+        )
 
     @classmethod
-    def create_multi_lav(cls, lav_params: 'LAVParams', scenario_params: TScenarioParams,
-                         predictor_params: Optional['PredictorParams'] = None):
+    def create_multi_lav(
+        cls,
+        lav_params: "LAVParams",
+        scenario_params: TScenarioParams,
+        predictor_params: Optional["PredictorParams"] = None,
+    ):
         post_init(lav_params)
         post_init(scenario_params)
         post_init(predictor_params)
@@ -316,22 +322,23 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         )
 
     @classmethod
-    def create_predictor(cls, model: str, params: 'PredictorParams') -> 'Predictor':
+    def create_predictor(cls, model: str, params: "PredictorParams") -> "Predictor":
         post_init(params)
         data_params = cls.params_from_path(model).data
         post_init(data_params)
         predictor = cls.predictor_cls()(params, cls.data_cls()(data_params))
         if isinstance(model, str):
-            model = keras.models.load_model(os.path.join(model, 'serve'),
-                                            compile=False,
-                                            custom_objects=cls.model_cls().all_custom_objects(),
-                                            )
+            model = keras.models.load_model(
+                os.path.join(model, "serve"),
+                compile=False,
+                custom_objects=cls.model_cls().all_custom_objects(),
+            )
 
         predictor.set_model(model)
         return predictor
 
     @classmethod
-    def create_multi_predictor(cls, paths: List[str], params: 'PredictorParams') -> 'MultiModelPredictor':
+    def create_multi_predictor(cls, paths: List[str], params: "PredictorParams") -> "MultiModelPredictor":
         post_init(params)
         predictor_cls = cls.multi_predictor_cls()
         return predictor_cls.from_paths(paths, params, cls)
@@ -411,7 +418,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         """
         Print the ScenarioParams to logger.info
         """
-        logger.info(f'scenario_params={self._params.to_json(indent=2)}')
+        logger.info(f"scenario_params={self._params.to_json(indent=2)}")
 
     def best_logging_settings(self) -> Tuple[str, str]:
         """
@@ -419,8 +426,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         """
         return self.graph.model.best_logging_settings()
 
-    def export(self, path: str, trainer_params: Optional['TrainerParams'] = None,
-               export_resources: bool = True) -> NoReturn:
+    def export(
+        self, path: str, trainer_params: Optional["TrainerParams"] = None, export_resources: bool = True
+    ) -> NoReturn:
         """
         Export the prediction model to a given path
 
@@ -430,14 +438,14 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             export_resources: Set to true (default) to also export the resources
         """
         trainer_params_dict = trainer_params.to_dict() if trainer_params else None
-        scenario_params_dict = trainer_params_dict['scenario'] if trainer_params_dict else self._params.to_dict()
+        scenario_params_dict = trainer_params_dict["scenario"] if trainer_params_dict else self._params.to_dict()
         if export_resources:
             self._export_resources(path, scenario_params_dict)
 
         # Export serve models
         if self._params.export_serve:
             for label, export_graph in self._export_graphs.items():
-                if label == 'default':
+                if label == "default":
                     path_serve = os.path.join(path, self._params.default_serve_dir)  # default model handled separately
                 else:
                     path_serve = os.path.join(path, self._params.additional_serve_dir, label)
@@ -446,18 +454,18 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
 
         # Export the NetConfigBaseParams
         if self._params.export_net_config:
-            with open(os.path.join(path, self._params.net_config_filename), 'w') as f:
+            with open(os.path.join(path, self._params.net_config_filename), "w") as f:
                 json.dump(self.net_config().to_dict(), f, indent=2)
 
         # Export the training or scenario params
         if trainer_params_dict:
             params_path = os.path.join(path, self._params.trainer_params_filename)
-            logger.debug(f'Storing trainer params to {params_path}')
-            with open(params_path, 'w') as f:
+            logger.debug(f"Storing trainer params to {params_path}")
+            with open(params_path, "w") as f:
                 json.dump(trainer_params_dict, f, indent=2)
         else:
             params_path = os.path.join(path, self._params.scenario_params_filename)
-            with open(params_path, 'w') as f:
+            with open(params_path, "w") as f:
                 json.dump(scenario_params_dict, f, indent=2)
 
     def _export_resources(self, root_path: str, scenario_params_dict: dict) -> NoReturn:
@@ -469,7 +477,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             scenario_params_dict: parameters of the exported dir. Adapt paths within the dict to be relative
         """
         os.makedirs(os.path.join(root_path), exist_ok=True)
-        self.data.dump_resources(root_path, scenario_params_dict['data'])  # export the data resources
+        self.data.dump_resources(root_path, scenario_params_dict["data"])  # export the data resources
 
     def _print_all_layer(self) -> NoReturn:
         """
@@ -495,14 +503,15 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         if not regex:
             return
 
-        logger.info(f'Setting no train scope to {regex}')
+        logger.info(f"Setting no train scope to {regex}")
         no_train_scope = re.compile(regex)
 
         try:
+
             def _set_for_layer(layer, prefix):
                 # Recursively loop through all layers, check if the full layer name (separated by /) matches the regex.
                 for sub_layer in layer._flatten_layers(False, False):  # pylint: disable=protected-access
-                    full_layer_name = prefix + '/' + sub_layer.name if prefix else sub_layer.name
+                    full_layer_name = prefix + "/" + sub_layer.name if prefix else sub_layer.name
                     if no_train_scope.fullmatch(full_layer_name):
                         logger.info(f'Excluding layer "{full_layer_name}" from training')
                         sub_layer.trainable = False
@@ -511,13 +520,15 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                         # all child layers are non-trainable automatically
                         _set_for_layer(sub_layer, full_layer_name)
 
-            _set_for_layer(self._keras_train_model, '')
+            _set_for_layer(self._keras_train_model, "")
         except Exception as e:
-            raise Exception('Setting no train scopes was designed for TF 2.4.0. '
-                            'Maybe you use an incompatible version') from e
+            raise Exception(
+                "Setting no train scopes was designed for TF 2.4.0. " "Maybe you use an incompatible version"
+            ) from e
 
-    def setup_training(self, optimizer, skip_model_load_test=False, run_eagerly=False,
-                       no_train_scope: Optional[str] = None) -> NoReturn:
+    def setup_training(
+        self, optimizer, skip_model_load_test=False, run_eagerly=False, no_train_scope: Optional[str] = None
+    ) -> NoReturn:
         """
         Set training by constructing the training and prediction keras Models.
 
@@ -544,40 +555,43 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         def assert_unique_keys(keys):
             non_unique = [k for k, v in Counter(keys).items() if v > 1]
             if len(non_unique) > 0:
-                raise KeyError('Keys of input, outputs, and targets must be unique. '
-                               f'The following keys occurr more than once: {set(non_unique)}')
+                raise KeyError(
+                    "Keys of input, outputs, and targets must be unique. "
+                    f"The following keys occurr more than once: {set(non_unique)}"
+                )
 
         all_keys = list(chain(real_inputs.keys(), real_targets.keys(), real_meta.keys()))
         assert_unique_keys(all_keys)
 
-        logger.info('Building training keras model')
+        logger.info("Building training keras model")
         self._keras_train_model = create_training_graph(self, self.graph.model, self.graph)
-        logger.info('Attempting to set no train scope')
+        logger.info("Attempting to set no train scope")
         self._set_no_train_scope(no_train_scope)  # exclude layers from training
 
-        logger.info('Building prediction/export keras model (for export and decoding)')
+        logger.info("Building prediction/export keras model (for export and decoding)")
         pred_outputs = self.graph.predict(real_inputs)
         self._export_graphs = self.graph.model.export_graphs(real_inputs, pred_outputs, real_targets)
-        self._keras_predict_model = self._export_graphs['default']
+        self._keras_predict_model = self._export_graphs["default"]
 
-        logger.info('Compiling training model including optimization')
+        logger.info("Compiling training model including optimization")
         self._keras_train_model.compile(optimizer=optimizer, run_eagerly=run_eagerly)
-        logger.info('Compiling prediction model graph')
+        logger.info("Compiling prediction model graph")
         self._keras_predict_model.compile(run_eagerly=run_eagerly)
 
-        logger.info('Models successfully constructed')
+        logger.info("Models successfully constructed")
 
         # check if loading/saving of model works (before actual training, but only in graph mode)
         if not skip_model_load_test and not run_eagerly:
-            logger.info('Checking if model can be saved')
+            logger.info("Checking if model can be saved")
             with tempfile.TemporaryDirectory() as tmp:
                 self._keras_predict_model.save(tmp)
-                logger.info('Prediction model successfully saved. Attempting to load it')
+                logger.info("Prediction model successfully saved. Attempting to load it")
                 keras.models.load_model(tmp, custom_objects=self.model.all_custom_objects())
-            logger.info('Model can be successfully loaded')
+            logger.info("Model can be successfully loaded")
 
-    def _wrap_data(self, dataset: Optional[tf.data.Dataset], steps_per_epoch: int, is_debug_data: bool = False) -> \
-            Optional[tf.data.Dataset]:
+    def _wrap_data(
+        self, dataset: Optional[tf.data.Dataset], steps_per_epoch: int, is_debug_data: bool = False
+    ) -> Optional[tf.data.Dataset]:
         """
         Wrap the tf.data.Dataset:
           - add step and epoch as input node
@@ -604,23 +618,19 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             # this is required to allow for custom losses with multiple inputs
             zeros = tf.repeat(tf.constant(0, dtype=tf.int64), batch_size)
             if self._keras_train_model:
-                step_epoch = {'step': zeros + self._keras_train_model.optimizer.iterations,
-                              'epoch': zeros + self._keras_train_model.optimizer.iterations // steps_per_epoch}
+                step_epoch = {
+                    "step": zeros + self._keras_train_model.optimizer.iterations,
+                    "epoch": zeros + self._keras_train_model.optimizer.iterations // steps_per_epoch,
+                }
             else:
                 # No train model exists, this happens on model debug
-                step_epoch = {'step': zeros,
-                              'epoch': zeros}
+                step_epoch = {"step": zeros, "epoch": zeros}
             wrapped_targets = {**targets, **step_epoch}
             return (inputs, wrapped_targets, meta), {}
 
         return dataset.map(regroup)
 
-    def fit(self,
-            epochs,
-            callbacks,
-            steps_per_epoch,
-            initial_epoch=0,
-            **kwargs) -> NoReturn:
+    def fit(self, epochs, callbacks, steps_per_epoch, initial_epoch=0, **kwargs) -> NoReturn:
         """
         Train the scenario.
 
@@ -642,19 +652,20 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             if self.data.pipeline_by_mode(PipelineMode.EVALUATION) is not None:
                 val_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.EVALUATION)).input_dataset()
             else:
-                logger.warning('Training without validation.')
+                logger.warning("Training without validation.")
                 val_dataset = None
 
             # Train the model
-            self._keras_train_model.fit(self._wrap_data(train_dataset, steps_per_epoch),
-                                        epochs=epochs,
-                                        callbacks=callbacks,
-                                        steps_per_epoch=steps_per_epoch,
-                                        initial_epoch=initial_epoch,
-                                        validation_data=self._wrap_data(val_dataset, steps_per_epoch),
-                                        shuffle=False,
-                                        **kwargs
-                                        )
+            self._keras_train_model.fit(
+                self._wrap_data(train_dataset, steps_per_epoch),
+                epochs=epochs,
+                callbacks=callbacks,
+                steps_per_epoch=steps_per_epoch,
+                initial_epoch=initial_epoch,
+                validation_data=self._wrap_data(val_dataset, steps_per_epoch),
+                shuffle=False,
+                **kwargs,
+            )
 
     def net_config(self) -> NetConfigParamsBase:
         """
@@ -673,29 +684,29 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             # However, this 'solution' should work for NOW
             res = dict()
             if is_input:
-                base_name_serve = 'serving_default_'
+                base_name_serve = "serving_default_"
             else:
-                base_name_serve = 'StatefulPartitionedCall:'
+                base_name_serve = "StatefulPartitionedCall:"
 
             for idx, k in enumerate(sorted(nodes.keys())):
                 v = nodes[k]
                 node_serve = base_name_serve
                 if is_input:
-                    node_serve += k + ':0'
+                    node_serve += k + ":0"
                 else:
                     node_serve += str(idx)
 
                 res[k] = NetConfigNodeSpec(
                     shape=list(map(str, v.shape.dims)) if isinstance(v.shape.dims, Iterable) else [],
                     dtype=v.dtype.name,
-                    node_serve=node_serve
+                    node_serve=node_serve,
                 )
             return res
 
         # Create the actual class with the parsed spects
         net_config = self.__class__.net_config_cls()(
             id_model=self.params.id,
-            id_serve='serve',
+            id_serve="serve",
             in_nodes=parse_spec(self._keras_predict_model.input, True),
             out_nodes=parse_spec(self._keras_predict_model.output, False),
             tf_version=tf.__version__,
@@ -713,7 +724,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         pass
 
 
-def import_scenario(module_name: str) -> Type['ScenarioBase']:
+def import_scenario(module_name: str) -> Type["ScenarioBase"]:
     """
     module_name can either be:
     - module and class name separated by a ':', e.g.: tfaip.scenarios.tutorial.min.scenario:TutorialScenario
@@ -724,32 +735,37 @@ def import_scenario(module_name: str) -> Type['ScenarioBase']:
     def import_module(module_path_or_name: str):
         import sys
         import os
+
         if os.getcwd() not in sys.path:
             sys.path.append(os.getcwd())
         try:
-            return importlib.import_module(module_path_or_name.replace('/', '.'))
+            return importlib.import_module(module_path_or_name.replace("/", "."))
         except ModuleNotFoundError:
-            raise ModuleNotFoundError(f"No module named '{module_path_or_name}'. Please specify the full module to "
-                                      f"import or a relative path of the working directory. "
-                                      f"E.g.: tfaip.scenario.tutorial.full")
+            raise ModuleNotFoundError(
+                f"No module named '{module_path_or_name}'. Please specify the full module to "
+                f"import or a relative path of the working directory. "
+                f"E.g.: tfaip.scenario.tutorial.full"
+            )
 
-    if ':' in module_name:
-        module_path, scenario_class_name = module_name.split(':')
-        module = import_module(module_path.replace('/', '.'))
+    if ":" in module_name:
+        module_path, scenario_class_name = module_name.split(":")
+        module = import_module(module_path.replace("/", "."))
         return getattr(module, scenario_class_name)
 
-    module = import_module(module_name.replace('/', '.'))
+    module = import_module(module_name.replace("/", "."))
     all_scenario_cls = list_scenarios_in_module(module)
     if len(all_scenario_cls) == 0:
         # No scenarios found, try module_name + '.scenario'
-        if module_name.endswith('.scenario'):
+        if module_name.endswith(".scenario"):
             raise ModuleNotFoundError(f"No scenario found in module {module_name}")
         else:
-            return import_scenario(module_name + '.scenario')
+            return import_scenario(module_name + ".scenario")
     else:
         if len(all_scenario_cls) > 1:
-            raise ValueError(f"Multiple scenarios found in module {module_name}. Append the Scenario name to select "
-                             f"one specific ({module_name}:NAME_OF_SCENARIO). "
-                             f"Found scenarios: {', '.join([s[0] for s in all_scenario_cls])}")
+            raise ValueError(
+                f"Multiple scenarios found in module {module_name}. Append the Scenario name to select "
+                f"one specific ({module_name}:NAME_OF_SCENARIO). "
+                f"Found scenarios: {', '.join([s[0] for s in all_scenario_cls])}"
+            )
 
         return all_scenario_cls[0][1]

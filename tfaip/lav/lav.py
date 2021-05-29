@@ -73,10 +73,12 @@ class MetricsAccumulator:
             self.running_sum = {k: 0 for k, v in new_values.items()}
             self.running_weight = {k: 0 for k, v in new_values.items()}
 
-        self.running_sum = {k: (self.running_sum[k] + weighted(v, sample_weights.get(k, None))) for k, v in
-                            new_values.items()}
-        self.running_weight = {k: (v + (1 if k not in sample_weights else sample_weights[k])) for k, v in
-                               self.running_weight.items()}
+        self.running_sum = {
+            k: (self.running_sum[k] + weighted(v, sample_weights.get(k, None))) for k, v in new_values.items()
+        }
+        self.running_weight = {
+            k: (v + (1 if k not in sample_weights else sample_weights[k])) for k, v in self.running_weight.items()
+        }
 
     def final(self):
         return {k: v / self.running_weight[k] for k, v in self.running_sum.items()}
@@ -88,6 +90,7 @@ class EvaluationCallback(Callback):
     the EvaluationCallback handles writing to post proc queue, reading the post proc data back again
     evaluating the result and writing it to the logs
     """
+
     def __init__(self, evaluator: EvaluatorBase, runnable_data_pipeline):
         super().__init__()
         self._supports_tf_logs = True
@@ -109,14 +112,14 @@ class EvaluationCallback(Callback):
         self.post_proc_runner.start()
 
     def on_test_batch_end(self, batch, logs=None):
-        (inputs, targets, meta), _, outputs = to_numpy_or_python_type(logs['__outputs__'])
+        (inputs, targets, meta), _, outputs = to_numpy_or_python_type(logs["__outputs__"])
 
         samples = to_unbatched_samples(inputs, targets, outputs, meta)
         for sample in samples:
             self.write_queue.put(sample)
 
         logs.update(self.evaluator.result())  # not up to date, since running asynchron!
-        del logs['__outputs__']
+        del logs["__outputs__"]
 
     def on_test_end(self, logs=None):
         assert logs is not None
@@ -142,30 +145,32 @@ class LAV(ABC):
     def params_cls(cls) -> Type[LAVParams]:
         return LAVParams
 
-    def __init__(self,
-                 params: LAVParams,
-                 data_fn: Callable[[], 'DataBase'],
-                 model_fn: Callable[[], 'ModelBase'],
-                 evaluator_fn: Callable[[], EvaluatorBase],
-                 ):
+    def __init__(
+        self,
+        params: LAVParams,
+        data_fn: Callable[[], "DataBase"],
+        model_fn: Callable[[], "ModelBase"],
+        evaluator_fn: Callable[[], EvaluatorBase],
+    ):
         assert params.model_path
         self._params = params
         self._data_fn = data_fn
         self._model_fn = model_fn
         self._evaluator_fn = evaluator_fn
         self.device_config = DeviceConfig(self._params.device)
-        self._data: Optional['DataBase'] = None
-        self._model: Optional['ModelBase'] = None
+        self._data: Optional["DataBase"] = None
+        self._model: Optional["ModelBase"] = None
         self.benchmark_results = BenchmarkResults()
 
     @distribute_strategy
-    def run(self,
-            generator_params: Iterable[DataGeneratorParams],
-            keras_model: keras.Model = None,
-            run_eagerly=False,
-            callbacks: List[LAVCallback] = None,
-            return_tensorboard_outputs=False,
-            ) -> Iterable[Dict[str, float]]:
+    def run(
+        self,
+        generator_params: Iterable[DataGeneratorParams],
+        keras_model: keras.Model = None,
+        run_eagerly=False,
+        callbacks: List[LAVCallback] = None,
+        return_tensorboard_outputs=False,
+    ) -> Iterable[Dict[str, float]]:
         callbacks = callbacks or []
         with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
@@ -177,12 +182,15 @@ class LAV(ABC):
             cb.lav, cb.data, cb.model = self, self._data, model
 
         if run_eagerly:
-            logger.warning('Running in eager mode. Use this only for debugging, since the graph of the saved model '
-                           'might get changed due to "reconstruction" of the graph')
+            logger.warning(
+                "Running in eager mode. Use this only for debugging, since the graph of the saved model "
+                'might get changed due to "reconstruction" of the graph'
+            )
 
         if not keras_model:
-            keras_model = keras.models.load_model(os.path.join(self._params.model_path, 'serve'),
-                                                  compile=False, custom_objects=model.all_custom_objects())
+            keras_model = keras.models.load_model(
+                os.path.join(self._params.model_path, "serve"), compile=False, custom_objects=model.all_custom_objects()
+            )
 
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the
         # dataset. Then create the metrics as output of the new model
@@ -203,12 +211,11 @@ class LAV(ABC):
 
                 y_pred = self(x, training=False)
                 # Updates stateful loss metrics.
-                self.compiled_loss(
-                    y, y_pred, sample_weight, regularization_losses=self.losses)
+                self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
 
                 self.compiled_metrics.update_state(y, y_pred, sample_weight)
                 logs = {m.name: m.result() for m in self.metrics}
-                logs['__outputs__'] = (x, y, y_pred)
+                logs["__outputs__"] = (x, y, y_pred)
                 return logs
 
             def get_config(self):
@@ -227,12 +234,11 @@ class LAV(ABC):
             val_data = self._data.create_pipeline(self._params.pipeline, params)
             with evaluator:
                 with val_data as rd:
-                    extract_logs_callback = ExtractLogsCallback(test_prefix='')
+                    extract_logs_callback = ExtractLogsCallback(test_prefix="")
                     benchmark_callback = BenchmarkCallback()
-                    eval_callbacks = [EvaluationCallback(evaluator, rd),
-                                      extract_logs_callback, benchmark_callback]
+                    eval_callbacks = [EvaluationCallback(evaluator, rd), extract_logs_callback, benchmark_callback]
                     if not self._params.silent:
-                        eval_callbacks.append(ProgbarLogger(count_mode='steps'))
+                        eval_callbacks.append(ProgbarLogger(count_mode="steps"))
 
                     r = lav_model.evaluate(
                         rd.input_dataset().map(regroup),

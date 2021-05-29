@@ -24,7 +24,6 @@ def limit(min_val, val, max_val):
 
 
 class KeyHelper(object):
-
     def __init__(self, dct: Dict):
         self._keys = sorted(dct)
         self._size = len(self._keys)

@@ -38,10 +38,9 @@ class TensorBoardDataHandler:
           Note, this step is optional, if the type of the metric is bytes.
         - Overwrite handle to write the actual data with the raw tensorboard writer
     """
+
     def __init__(self, model: tf.keras.Model):
-        self.tensorboard_handlers = {
-            m.name: m for m in model.metrics if isinstance(m, TensorboardWriter)
-        }
+        self.tensorboard_handlers = {m.name: m for m in model.metrics if isinstance(m, TensorboardWriter)}
 
     def handle(self, name, name_for_tb, value, step):
         # Handle your output.
@@ -53,5 +52,8 @@ class TensorBoardDataHandler:
             summary_ops_v2.scalar(name_for_tb, value, step=step)
 
     def is_tensorboard_only(self, key: str, value: AnyTensor):
-        return key in self.tensorboard_handlers or isinstance(value, bytes) or (
-                    isinstance(value, tf.Tensor) and value.dtype == tf.string)
+        return (
+            key in self.tensorboard_handlers
+            or isinstance(value, bytes)
+            or (isinstance(value, tf.Tensor) and value.dtype == tf.string)
+        )

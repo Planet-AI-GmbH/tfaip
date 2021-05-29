@@ -39,12 +39,12 @@ class Parameter:
     flag: str
     sub_param: bool
     split: bool = False
-    delim: str = ' '
+    delim: str = " "
     allow_empty: bool = False
 
     @staticmethod
     def parse(s: str, is_sub_param: bool):
-        params = s.split(':')
+        params = s.split(":")
         p = Parameter(params[0], is_sub_param)
         for param in params[1:]:
             setattr(p, param, True)
@@ -57,7 +57,7 @@ class Parameter:
                 if self.allow_empty:
                     return [self.flag]
                 return [""]
-            value = '{}'.format(value)
+            value = "{}".format(value)
             if self.split:
                 return [self.flag] + value.split(self.delim)
 
@@ -67,7 +67,7 @@ class Parameter:
                 if self.allow_empty:
                     return ["--" + self.flag]
                 return []
-            value = '{}'.format(value)
+            value = "{}".format(value)
             if self.split:
                 return ["--" + self.flag] + value.split(self.delim)
 
@@ -105,17 +105,17 @@ class XLSXExperimenter:
         cleanup_idx = None
         command = None
         for i, v in enumerate(header.columns):
-            if v == 'ID':
+            if v == "ID":
                 id = i
-            elif v == 'COMMAND':
+            elif v == "COMMAND":
                 command = i
-            elif v == 'PARAMS':
+            elif v == "PARAMS":
                 params = i
-            elif v == 'SCENARIO':
+            elif v == "SCENARIO":
                 scenario = i
-            elif v == 'SKIP':
+            elif v == "SKIP":
                 skip_idx = i
-            elif v == 'CLEANUP':
+            elif v == "CLEANUP":
                 cleanup_idx = i
 
         assert skip_idx is not None
@@ -145,7 +145,7 @@ class XLSXExperimenter:
                 continue
 
             if isinstance(parameter, str):
-                parameters.append(Parameter.parse(parameter, groups[i] != 'default'))
+                parameters.append(Parameter.parse(parameter, groups[i] != "default"))
             else:
                 parameters.append(None)
 
@@ -157,7 +157,7 @@ class XLSXExperimenter:
             if index < 2:
                 continue
             if not (isinstance(row[skip_idx], float) and np.isnan(row[skip_idx])):
-                print('Skipping: {}'.format(row[id]))
+                print("Skipping: {}".format(row[id]))
                 continue
 
             cmd = Command(str(row[id]), row[command], row[scenario], row[cleanup_idx], {}, {})
@@ -166,7 +166,7 @@ class XLSXExperimenter:
                 if param is None:
                     continue
 
-                if group == 'default':
+                if group == "default":
                     selected_group = cmd.default_commands
                 else:
                     if group not in cmd.grouped_commands:
@@ -188,23 +188,23 @@ class XLSXExperimenter:
             if not self.use_ts:
                 ts_socket = None
             elif self.with_gpu:
-                ts_socket = 'gpu{}'.format(self.devices[device_idx].label)
+                ts_socket = "gpu{}".format(self.devices[device_idx].label)
             else:
-                ts_socket = 'cpu{}'.format(self.devices[device_idx].label)
+                ts_socket = "cpu{}".format(self.devices[device_idx].label)
 
             tsp_call = []
             env = os.environ.copy()
-            env['ID'] = str(c.id)
-            env['PYTHON'] = self.python
+            env["ID"] = str(c.id)
+            env["PYTHON"] = self.python
             if self.use_ts:
-                env['TS_SOCKET'] = ts_socket
-                tsp_call = ['tsp', '-L', c.id]
+                env["TS_SOCKET"] = ts_socket
+                tsp_call = ["tsp", "-L", c.id]
 
             def single_param(k, v):
                 params = get_parameter_by_flag(k).to_str(v)
                 if params[0].endswith("__cls__"):
                     # Override class type of parameter
-                    params[0] = params[0][:-len('__cls__')]
+                    params[0] = params[0][: -len("__cls__")]
                 return params
 
             def group_param(group_name, k, v):
@@ -212,31 +212,40 @@ class XLSXExperimenter:
                 if len(params[0]) == 0:
                     return []  # empty parameter, skip
                 else:
-                    params[0] = '--' + group_name + '.' + params[0]
+                    params[0] = "--" + group_name + "." + params[0]
                 return params
 
-            call = (tsp_call
-                    + [c.command, c.scenario]
-                    + (['--device.gpus', str(self.devices[device_idx].device_id)] if self.with_gpu else [])
-                    + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
-                    + sum(sum([[group_param(group_name, k, v) for k, v in group.items()] for
-                           group_name, group in c.grouped_commands.items()], []), [])
-                    )
+            call = (
+                tsp_call
+                + [c.command, c.scenario]
+                + (["--device.gpus", str(self.devices[device_idx].device_id)] if self.with_gpu else [])
+                + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
+                + sum(
+                    sum(
+                        [
+                            [group_param(group_name, k, v) for k, v in group.items()]
+                            for group_name, group in c.grouped_commands.items()
+                        ],
+                        [],
+                    ),
+                    [],
+                )
+            )
             call = [str(c) for c in call if c]
             if not self.dry_run:
                 if c.cleanup:
-                    print('Cleanup not implemented yet')
-                print('CALL [{}, {}]>> {}'.format(ts_socket, c.id, ' '.join(call)))
+                    print("Cleanup not implemented yet")
+                print("CALL [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
                 out = run(call, env=env, check=True, stderr=PIPE, stdout=PIPE, universal_newlines=True)
                 print(out.stderr)
                 print(out.stdout)
 
                 if self.use_ts:
-                    result = run(['tsp', '-i'], env=env, check=True, capture_output=True)
-                    if result.stdout.startswith(b'Exit status: died with exit code -1'):
-                        raise Exception('Error in cmd')
+                    result = run(["tsp", "-i"], env=env, check=True, capture_output=True)
+                    if result.stdout.startswith(b"Exit status: died with exit code -1"):
+                        raise Exception("Error in cmd")
             else:
-                print('DRY RUN [{}, {}]>> {}'.format(ts_socket, c.id, ' '.join(call)))
+                print("DRY RUN [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
 
             if self.use_ts:
                 device_idx = (device_idx + 1) % len(self.devices)

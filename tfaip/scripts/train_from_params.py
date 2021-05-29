@@ -28,13 +28,13 @@ logger = logging.getLogger(__name__)
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
         trainer_params, scenario = Trainer.parse_trainer_params(values)
-        parser.add_root_argument('trainer', trainer_params.__class__, default=trainer_params)
-        setattr(namespace, 'scenario_cls', scenario)
+        parser.add_root_argument("trainer", trainer_params.__class__, default=trainer_params)
+        setattr(namespace, "scenario_cls", scenario)
 
 
 def main(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('params_file', type=str, help='path to the trainer_params.json', action=ScenarioSelectionAction)
+    parser.add_argument("params_file", type=str, help="path to the trainer_params.json", action=ScenarioSelectionAction)
     args = parser.parse_args(args=args)
 
     with WriteToLogFile(args.trainer.output_dir, append=False):
@@ -43,5 +43,5 @@ def main(args=None):
         trainer.train()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

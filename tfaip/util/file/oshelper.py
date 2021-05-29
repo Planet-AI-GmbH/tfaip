@@ -31,6 +31,7 @@ class ChDir:
     # working dir is reset
     ```
     """
+
     def __init__(self, path):
         self._cd = os.getcwd()  # store the current working dir to reset it on exit
         self.path = path

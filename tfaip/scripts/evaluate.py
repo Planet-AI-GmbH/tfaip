@@ -34,9 +34,9 @@ def run():
 
 def main(prediction: str, scenario, evaluator_params):
     with scenario.create_evaluator(evaluator_params) as e:
-        with tarfile.open(prediction, 'r:gz') as tar:
+        with tarfile.open(prediction, "r:gz") as tar:
             names = tar.getnames()
-            for file in tqdm_wrapper(tar.getnames(), total=len(names), desc='Evaluating', progress_bar=True):
+            for file in tqdm_wrapper(tar.getnames(), total=len(names), desc="Evaluating", progress_bar=True):
                 sample = pickle.load(tar.extractfile(file))
                 e.update_state(sample)
 
@@ -47,18 +47,18 @@ class ScenarioSelectionAction(Action):
         evaluator_params = scenario.evaluator_cls().default_params()
 
         parser = TFAIPArgumentParser()
-        parser.add_root_argument('evaluator', evaluator_params.__class__, evaluator_params)
+        parser.add_root_argument("evaluator", evaluator_params.__class__, evaluator_params)
         setattr(namespace, self.dest, scenario)
 
 
 def parse_args(args=None):
     parser = TFAIPArgumentParser()
-    parser.add_argument('--prediction', type=str, required=True, help="Path to the prediction dump")
-    parser.add_argument('--scenario', type=str, required=True, action=ScenarioSelectionAction)
+    parser.add_argument("--prediction", type=str, required=True, help="Path to the prediction dump")
+    parser.add_argument("--scenario", type=str, required=True, action=ScenarioSelectionAction)
 
     args = parser.parse_args(args=args)
     return args.prediction, args.scenario, args.evaluator_params
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

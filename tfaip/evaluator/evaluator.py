@@ -27,7 +27,7 @@ from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.tfaipargparse import post_init
 from tfaip.util.typing import AnyNumpy
 
-TP = TypeVar('TP', bound=EvaluatorParams)
+TP = TypeVar("TP", bound=EvaluatorParams)
 
 
 class EvaluatorBase(Generic[TP], metaclass=CollectGenericTypes):
@@ -47,7 +47,7 @@ class EvaluatorBase(Generic[TP], metaclass=CollectGenericTypes):
 
     @classmethod
     def params_cls(cls) -> Type[TP]:
-        return cls.__generic_types__['TP']
+        return cls.__generic_types__["TP"]
 
     @classmethod
     def default_params(cls) -> TP:

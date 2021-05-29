@@ -121,7 +121,7 @@ The `_print_evaluate`-function receives a single sample (unbatched) and displays
 class TutorialModel(ModelBase[TutorialModelParams]):
     def create_graph(self, params: TutorialModelParams) -> 'GraphBase':
         return TutorialGraph(params)
-    
+
     def _loss(self, inputs_targets, outputs) -> Dict[str, AnyTensor]:
         return {'loss': tf.keras.layers.Lambda(
             lambda x: tf.keras.metrics.sparse_categorical_crossentropy(*x, from_logits=True), name='loss')(

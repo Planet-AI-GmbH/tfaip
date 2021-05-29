@@ -35,7 +35,7 @@ def run():
     main(*parse_args())
 
 
-def main(scenario: Type['ScenarioBase'], trainer_params: TrainerParams):
+def main(scenario: Type["ScenarioBase"], trainer_params: TrainerParams):
     with ExitStack() as stack:
         if trainer_params.output_dir:
             stack.enter_context(WriteToLogFile(trainer_params.output_dir, append=False))
@@ -53,26 +53,27 @@ class ScenarioSelectionAction(Action):
 
         # Now pass the real args of the scenario
         default_trainer_params = scenario.default_trainer_params()
-        parser.add_root_argument('trainer', default_trainer_params.__class__, default=default_trainer_params)
+        parser.add_root_argument("trainer", default_trainer_params.__class__, default=default_trainer_params)
         setattr(namespace, self.dest, scenario)
 
 
 def parse_args(args=None):
     parser = TFAIPArgumentParser()
 
-    parser.add_argument('scenario_selection',
-                        help="Select the scenario by providing the module path which must be in the PYTHONPATH. "
-                             "Since a module is expected, separate with dots '.' not slashes. "
-                             "The module must either comprise a 'scenario.py' file with one "
-                             "scenario, else provide the full path to the Scenario class by separating the class name "
-                             "with a ':'. E.g. 'tfaip.scenario.tutorial.min', or "
-                             "'tfaip.scenario.tutorial.min.scenario:TutorialScenario'",
-                        action=ScenarioSelectionAction,
-                        )
+    parser.add_argument(
+        "scenario_selection",
+        help="Select the scenario by providing the module path which must be in the PYTHONPATH. "
+        "Since a module is expected, separate with dots '.' not slashes. "
+        "The module must either comprise a 'scenario.py' file with one "
+        "scenario, else provide the full path to the Scenario class by separating the class name "
+        "with a ':'. E.g. 'tfaip.scenario.tutorial.min', or "
+        "'tfaip.scenario.tutorial.min.scenario:TutorialScenario'",
+        action=ScenarioSelectionAction,
+    )
 
     args = parser.parse_args(args=args)
     return args.scenario_selection, args.trainer
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

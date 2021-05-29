@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ListMixDefinition:
     """Definition of how to mix the content of several list files"""
+
     list_filenames: List[str]
     mixing_ratio: List[float]
 
@@ -62,8 +63,8 @@ class FileListProviderFn:
 
     def _load_list(self):
         retval = []
-        with open(self._file_name, 'r') as list_file:
-            for fn in [line.rstrip('\n ') for line in list_file]:
+        with open(self._file_name, "r") as list_file:
+            for fn in [line.rstrip("\n ") for line in list_file]:
                 if fn is not None and len(fn) > 0:
                     retval.append(fn)
         return retval
@@ -74,7 +75,7 @@ class FileListProviderFn:
         if self._file_list is None:
             self._file_list = self._load_list()
         else:
-            self._logger.info('reusing: %s', self._file_name)
+            self._logger.info("reusing: %s", self._file_name)
         return self._file_list
 
 

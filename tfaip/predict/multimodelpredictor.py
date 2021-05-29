@@ -71,9 +71,16 @@ class MultiModelPredictor(PredictorBase):
     """
 
     @classmethod
-    def from_paths(cls, paths: List[str], params: PredictorParams, scenario: Type['ScenarioBase'],
-                   use_first_params=False, model_paths: List[str] = None, models: List[keras.models.Model] = None,
-                   predictor_args=None) -> 'MultiModelPredictor':
+    def from_paths(
+        cls,
+        paths: List[str],
+        params: PredictorParams,
+        scenario: Type["ScenarioBase"],
+        use_first_params=False,
+        model_paths: List[str] = None,
+        models: List[keras.models.Model] = None,
+        predictor_args=None,
+    ) -> "MultiModelPredictor":
         """
         Create a MultiModePredictor. The data of the first model (in paths) will be used as the defining scenario and
         data (i.e. the post-processing). All data pre-procs must be identical.
@@ -92,45 +99,44 @@ class MultiModelPredictor(PredictorBase):
         """
         predictor_args = predictor_args or {}
         if len(paths) == 0:
-            raise ValueError('No paths provided')
+            raise ValueError("No paths provided")
         # load scenario params from path, check that the pre proc and post proc pipelines are identical
         scenarios = [scenario.params_from_path(path) for path in paths]
         data_params = scenarios[0].data
         if not use_first_params:
             for p in scenarios[1:]:
                 if p.data.pre_proc != data_params.pre_proc:
-                    raise ValueError(f'The preprocessors differ {p.data.pre_proc} and {data_params.pre_proc}')
+                    raise ValueError(f"The preprocessors differ {p.data.pre_proc} and {data_params.pre_proc}")
 
         predictor = cls(params=params, data=scenario.data_cls()(data_params), **predictor_args)
 
         if not models:
-            model_paths = model_paths or [os.path.join(model, 'serve') for model in paths]
-            models = [keras.models.load_model(model,
-                                              compile=False,
-                                              custom_objects=scenario.model_cls().all_custom_objects())
-                      for model in model_paths
-                      ]
+            model_paths = model_paths or [os.path.join(model, "serve") for model in paths]
+            models = [
+                keras.models.load_model(model, compile=False, custom_objects=scenario.model_cls().all_custom_objects())
+                for model in model_paths
+            ]
         predictor.set_models(models, [scenario.data_cls()(s.data) for s in scenarios])
         return predictor
 
-    def __init__(self, params: PredictorParams, data: 'DataBase'):
+    def __init__(self, params: PredictorParams, data: "DataBase"):
         super().__init__(params, data)
-        self._datas: List['DataBase'] = []
+        self._datas: List["DataBase"] = []
         self.params.pipeline.mode = PipelineMode.EVALUATION if self.params.include_targets else PipelineMode.PREDICTION
 
     @abstractmethod
-    def create_voter(self, data_params: 'DataBaseParams') -> MultiModelVoter:
+    def create_voter(self, data_params: "DataBaseParams") -> MultiModelVoter:
         raise NotImplementedError
 
-    def set_models(self, models: List[Union[str, keras.Model]], datas: List['DataBase']):
+    def set_models(self, models: List[Union[str, keras.Model]], datas: List["DataBase"]):
         # Set the multiple models
         # the Function will create one large joined keras Model that applies all given models in parallel
         # and thus produces a list of dictionaries as output.
-        assert len(models) == len(datas), 'The number of models and DataBases must coincide'
+        assert len(models) == len(datas), "The number of models and DataBases must coincide"
         models = [self._load_model(model) for model in models]
 
         for i, model in enumerate(models):
-            model._name = f'{i}_{model.name}'  # Forced renaming, pylint: disable=protected-access
+            model._name = f"{i}_{model.name}"  # Forced renaming, pylint: disable=protected-access
 
         class JoinedModel(keras.Model):
             def call(self, inputs, training=None, mask=None):
@@ -143,51 +149,65 @@ class MultiModelPredictor(PredictorBase):
         self._datas = datas
 
     @property
-    def datas(self) -> List['DataBase']:
+    def datas(self) -> List["DataBase"]:
         return self._datas
 
     def _unwrap_batch(self, inputs, targets, outputs, meta) -> Iterable[Sample]:
         try:
             batch_size = next(iter(inputs.values())).shape[0]
         except StopIteration as e:
-            raise ValueError(f'Empty inputs {inputs}') from e
+            raise ValueError(f"Empty inputs {inputs}") from e
         for i in range(batch_size):
             un_batched_outputs = [{k: v[i] for k, v in output.items()} for output in outputs]
             un_batched_inputs = {k: v[i] for k, v in inputs.items()}
             un_batched_targets = {k: v[i] for k, v in targets.items()}
             un_batched_meta = {k: v[i] for k, v in meta.items()}
-            parsed_meta = json.loads(un_batched_meta['meta'][0].decode('utf-8'), cls=TFAIPJsonDecoder)
-            sample = Sample(inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets,
-                            meta=parsed_meta)
+            parsed_meta = json.loads(un_batched_meta["meta"][0].decode("utf-8"), cls=TFAIPJsonDecoder)
+            sample = Sample(
+                inputs=un_batched_inputs, outputs=un_batched_outputs, targets=un_batched_targets, meta=parsed_meta
+            )
 
             yield sample
 
     def _print_prediction(self, sample: Sample, print_fn):
         for i, output in enumerate(sample.outputs):
-            print_fn(f'\n     PREDICTION {i:02d}:\n' + '\n'.join(
-                [f'        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}' for k, v in output.items()]))
+            print_fn(
+                f"\n     PREDICTION {i:02d}:\n"
+                + "\n".join(
+                    [f"        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}" for k, v in output.items()]
+                )
+            )
 
     def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[Sample]:
         # The pipeline prediction is overwritten since the batched results must be splitted into a single non-batched
         # sample that comprised all individual prediction outputs as outputs.
         voter = self.create_voter(self._data.params)
         post_processors = [
-            d.get_or_create_pipeline(self.params.pipeline, pipeline.generator_params).create_output_pipeline() for d in
-            self._datas]
+            d.get_or_create_pipeline(self.params.pipeline, pipeline.generator_params).create_output_pipeline()
+            for d in self._datas
+        ]
         with pipeline as rd:
+
             def split(sample: Sample):
-                return [Sample(inputs=sample.inputs, outputs=output, targets=sample.targets, meta=sample.meta) for
-                        output in sample.outputs]
+                return [
+                    Sample(inputs=sample.inputs, outputs=output, targets=sample.targets, meta=sample.meta)
+                    for output in sample.outputs
+                ]
 
             def join(samples: List[Sample]):
-                return Sample(inputs=samples[0].inputs, targets=samples[0].targets,
-                              outputs=[s.outputs for s in samples], meta=[s.meta for s in samples])
+                return Sample(
+                    inputs=samples[0].inputs,
+                    targets=samples[0].targets,
+                    outputs=[s.outputs for s in samples],
+                    meta=[s.meta for s in samples],
+                )
 
-            results = tqdm_wrapper(self.predict_dataset(rd.input_dataset()),
-                                   progress_bar=self._params.progress_bar,
-                                   desc='Prediction',
-                                   total=len(rd),
-                                   )
+            results = tqdm_wrapper(
+                self.predict_dataset(rd.input_dataset()),
+                progress_bar=self._params.progress_bar,
+                desc="Prediction",
+                total=len(rd),
+            )
             split_results = map(split, results)
             for split_result in split_results:
                 r = [list(pp.apply([r]))[0] for r, pp in zip(split_result, post_processors)]

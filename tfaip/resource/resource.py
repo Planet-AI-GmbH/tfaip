@@ -23,9 +23,9 @@ from dataclasses_json import config
 
 
 def resource_field(*, resource_id: Optional[str] = None, **kwargs):
-    kwargs['metadata'] = {**kwargs.get('metadata', {}), **config(encoder=Resource.encode, decoder=Resource.decode)}
+    kwargs["metadata"] = {**kwargs.get("metadata", {}), **config(encoder=Resource.encode, decoder=Resource.decode)}
     if resource_id:
-        kwargs['resource_id'] = resource_id
+        kwargs["resource_id"] = resource_id
     return field(**kwargs)
 
 
@@ -45,7 +45,7 @@ class Resource:
     """
 
     @staticmethod
-    def encode(r: 'Resource'):
+    def encode(r: "Resource"):
         if r is None:
             return None
         return r.initial_path
@@ -62,7 +62,7 @@ class Resource:
         self.rel_path: str = initial_path
 
         self.initialized: bool = False
-        self.dump_dir: str = ''
+        self.dump_dir: str = ""
 
         # These values will be specified from the resource manager
         self.abs_dump_path: Optional[str] = None
@@ -72,4 +72,4 @@ class Resource:
 
     def __str__(self) -> str:
         assert self.initialized
-        return self.abs_path or 'Not initialized'
+        return self.abs_path or "Not initialized"

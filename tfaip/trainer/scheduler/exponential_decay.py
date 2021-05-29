@@ -27,12 +27,15 @@ class ExponentialDecaySchedule(LearningRateSchedule):
 
     This class simply wraps keras.optimizers.schedules.ExponentialDecay
     """
-    def __init__(self,
-                 params: ExponentialDecayParams,
-                 ):
+
+    def __init__(
+        self,
+        params: ExponentialDecayParams,
+    ):
         super().__init__(params)
         self.exp_decay = keras.optimizers.schedules.ExponentialDecay(
-            params.lr, params.learning_circle, params.lr_decay_rate, staircase=True, name=self.name)
+            params.lr, params.learning_circle, params.lr_decay_rate, staircase=True, name=self.name
+        )
 
     def lr(self, epoch):
         return self.exp_decay(epoch)

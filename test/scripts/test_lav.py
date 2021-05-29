@@ -21,51 +21,94 @@ import unittest
 
 from test.util.workdir import call_in_root
 
-work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tutorial', 'workdir'))
+work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tutorial", "workdir"))
 
 
 class TestLAVScript(unittest.TestCase):
     def test_lav_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            call_in_root(['tfaip-train', 'examples.tutorial.full',
-                          '--trainer.samples_per_epoch', '10',
-                          '--trainer.epochs', '1',
-                          '--trainer.output_dir', d,
-                          '--train.batch_size', '2',
-                          '--val.limit', '10',
-                          ])
-            call_in_root(['tfaip-lav',
-                          '--export_dir', os.path.join(d, 'best'),
-                          '--pipeline.limit', '10',
-                          ])
-            call_in_root(['tfaip-lav',
-                          '--export_dir', os.path.join(d, 'best'),
-                          '--pipeline.limit', '10',
-                          '--data',
-                          'examples.tutorial.full.data.prediction_data_generation:TutorialPredictionGeneratorParams',
-                          '--data.files', os.path.join(work_dir, 'data', '*.png'),
-                          ])
-            call_in_root(['tfaip-lav',
-                          '--export_dir', os.path.join(d, 'best'),
-                          '--pipeline.limit', '10',
-                          '--data',
-                          'examples.tutorial.full.data.prediction_data_generation:TutorialPredictionGeneratorParams',
-                          '--data.files', os.path.join(work_dir, 'data', '*.png'),
-                          '--run_eagerly',
-                          '--dump', os.path.join(d, 'dump.pkl'),
-                          ])
+            call_in_root(
+                [
+                    "tfaip-train",
+                    "examples.tutorial.full",
+                    "--trainer.samples_per_epoch",
+                    "10",
+                    "--trainer.epochs",
+                    "1",
+                    "--trainer.output_dir",
+                    d,
+                    "--train.batch_size",
+                    "2",
+                    "--val.limit",
+                    "10",
+                ]
+            )
+            call_in_root(
+                [
+                    "tfaip-lav",
+                    "--export_dir",
+                    os.path.join(d, "best"),
+                    "--pipeline.limit",
+                    "10",
+                ]
+            )
+            call_in_root(
+                [
+                    "tfaip-lav",
+                    "--export_dir",
+                    os.path.join(d, "best"),
+                    "--pipeline.limit",
+                    "10",
+                    "--data",
+                    "examples.tutorial.full.data.prediction_data_generation:TutorialPredictionGeneratorParams",
+                    "--data.files",
+                    os.path.join(work_dir, "data", "*.png"),
+                ]
+            )
+            call_in_root(
+                [
+                    "tfaip-lav",
+                    "--export_dir",
+                    os.path.join(d, "best"),
+                    "--pipeline.limit",
+                    "10",
+                    "--data",
+                    "examples.tutorial.full.data.prediction_data_generation:TutorialPredictionGeneratorParams",
+                    "--data.files",
+                    os.path.join(work_dir, "data", "*.png"),
+                    "--run_eagerly",
+                    "--dump",
+                    os.path.join(d, "dump.pkl"),
+                ]
+            )
 
     def test_multi_lav_tutorial(self):
         with tempfile.TemporaryDirectory() as d:
-            call_in_root(['tfaip-train', 'examples.tutorial.full',
-                          '--trainer.samples_per_epoch', '10',
-                          '--trainer.epochs', '1',
-                          '--trainer.output_dir', d,
-                          '--train.batch_size', '2',
-                          '--val.limit', '10',
-                          ])
-            call_in_root(['tfaip-multi-lav',
-                          '--export_dirs', os.path.join(d, 'best'), os.path.join(d, 'best'),
-                          '--data.files', os.path.join(work_dir, 'data', '*.png'),
-                          '--pipeline.limit', '10',
-                          ])
+            call_in_root(
+                [
+                    "tfaip-train",
+                    "examples.tutorial.full",
+                    "--trainer.samples_per_epoch",
+                    "10",
+                    "--trainer.epochs",
+                    "1",
+                    "--trainer.output_dir",
+                    d,
+                    "--train.batch_size",
+                    "2",
+                    "--val.limit",
+                    "10",
+                ]
+            )
+            call_in_root(
+                [
+                    "tfaip-multi-lav",
+                    "--export_dirs",
+                    os.path.join(d, "best"),
+                    os.path.join(d, "best"),
+                    "--data.files",
+                    os.path.join(work_dir, "data", "*.png"),
+                    "--pipeline.limit",
+                    "10",
+                ]
+            )

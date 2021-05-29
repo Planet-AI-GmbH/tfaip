@@ -27,18 +27,19 @@ from examples.tutorial.full.graphs.backend import TutorialBackendParams, Tutoria
 from tfaip.model.tensorboardwriter import TensorboardWriter
 
 
-@pai_dataclass(alt='CNN')
+@pai_dataclass(alt="CNN")
 @dataclass
 class ConvGraphParams(TutorialBackendParams):
-    filters: List[int] = field(default_factory=lambda: [16, 32], metadata=pai_meta(
-        help="List of filters to set up the conv layers. Each conv layer is followed by a max pooling layer."
-    ))
-    dense: List[int] = field(default_factory=lambda: [128], metadata=pai_meta(
-        help="Definition of the hidden dense layers after the conv"
-    ))
-    activation: str = field(default='relu', metadata=pai_meta(
-        help="Activation function of the hidden layers"
-    ))
+    filters: List[int] = field(
+        default_factory=lambda: [16, 32],
+        metadata=pai_meta(
+            help="List of filters to set up the conv layers. Each conv layer is followed by a max pooling layer."
+        ),
+    )
+    dense: List[int] = field(
+        default_factory=lambda: [128], metadata=pai_meta(help="Definition of the hidden dense layers after the conv")
+    )
+    activation: str = field(default="relu", metadata=pai_meta(help="Activation function of the hidden layers"))
 
     def cls(self):
         return ConvLayers(self)
@@ -52,22 +53,23 @@ def handle(name: str, value: np.ndarray, step: int):
     for i in range(c):
         x = i % ax_dims
         y = i // ax_dims
-        out_conv_v[:, x * w:(x + 1) * w, y * h:(y + 1) * h, 0] = value[:, :, :, i]
+        out_conv_v[:, x * w : (x + 1) * w, y * h : (y + 1) * h, 0] = value[:, :, :, i]
 
     # Write the image (use 'name_for_tb' and step)
     tf.summary.image(name, out_conv_v, step=step)
 
 
 class ConvLayers(TutorialBackend[ConvGraphParams]):
-    def __init__(self, params: ConvGraphParams, name='conv', **kwargs):
+    def __init__(self, params: ConvGraphParams, name="conv", **kwargs):
         super(ConvLayers, self).__init__(params, name=name, **kwargs)
         self.conv_layers = [
-            Conv2D(filters=filters, kernel_size=(2, 2), strides=(1, 1), padding='same', activation='relu')
-            for filters in params.filters]
+            Conv2D(filters=filters, kernel_size=(2, 2), strides=(1, 1), padding="same", activation="relu")
+            for filters in params.filters
+        ]
         self.pool_layers = [MaxPool2D(pool_size=(2, 2), strides=(2, 2)) for _ in params.filters]
         self.flatten = Flatten()
-        self.dense_layers = [Dense(nodes, activation='relu') for nodes in params.dense]
-        self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype='float32', name='conv_mat')
+        self.dense_layers = [Dense(nodes, activation="relu") for nodes in params.dense]
+        self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype="float32", name="conv_mat")
 
     def call(self, images, **kwargs):
         conv_out = images
@@ -79,6 +81,6 @@ class ConvLayers(TutorialBackend[ConvGraphParams]):
 
         self.add_tensorboard(self.conv_mat_tb_writer, conv_out)
         return {
-            'out': dense_out,
-            'conv_out': conv_out,
+            "out": dense_out,
+            "conv_out": conv_out,
         }
