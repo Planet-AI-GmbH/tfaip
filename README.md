@@ -84,3 +84,47 @@ Furthermore, *tfaip* supports additional common techniques for improving the per
 * Early-Stopping
 * Weight-Decay
 * various optimizers and learning-rate schedules
+
+## Contributing
+
+We highly encourage users to contribute own scenarios and improvements of _tfaip_.
+Please read the [contribution guidelines](https://tfaip.readthedocs.io/en/latest/doc.development.html).
+
+## Benchmarks
+
+All timings were obtained on a Intel Core i7, 10th Gen CPU.
+
+### MNIST
+
+The following Table compares the MNIST Tutorial of Keras to the [Minimum Tutorial](examples/tutorial/min).
+The keras code was adopted to use the same network architecture and hyperparemter settings (batch size of 16, 10 epochs of training).
+
+Code | Time Per Epoch | Train Acc | Val Acc | Best Val Acc
+:---- | --------------: | ---------: | -------: | ------------: 
+Keras |  16 s | 99.65% | 98.24% | 98.60% 
+_tfaip_ | 18 s |  99.76% | 98.66% | 98.66% 
+
+_tfaip_ and Keras result in comparable accuracies, as to be expected since the actual code for training the graph is fundamentally identical.
+_tfaip_ is however a bit slower due some overhead in the input pipeline and additional functionality (e.g., benchmarks, or automatic tracking of the best model).
+This overhead is negligible for almost any real-world scenario because due to a clearly larger network architecture, the computation times for inference and backpropagation become the bottleneck. 
+
+### Data Pipeline
+
+Integrating pure-python operations (e.g., numpy) into a `tf.data.Dataset `to apply high-level preprocessing is slow by default since [tf.data.Dataset.map](https://www.tensorflow.org/api_docs/python/tf/data/Dataset#map) in cooperation with [tf.py_function](https://www.tensorflow.org/api_docs/python/tf/py_function) does not run in parallel and is therefore blocked by Python's GIL.
+_tfaip_ curcumvents this issue by providing an (optional) parallelizable input pipeline.
+The following table shows the time in seconds for two different tasks:
+
+* PYTHON: applying some pure python functions on the data
+* NUMPY: applying several numpy operations on the data
+
+
+|         Mode        |     Task     |     Threads 1      |     Threads 2      |     Threads 4      |     Threads 6      |
+|:---------------------|:--------------|--------------------:|--------------------:|--------------------:|--------------------:|
+| tf.py_function |    PYTHON    | 23.47| 22.78 | 24.38  | 25.76  |
+|     _tfaip_    |    PYTHON    | 26.68| 14.48 |  8.11  | 8.13  |
+| tf.py_function |    NUMPY     | 104.10 | 82.78  | 76.33  | 77.56  |
+|     _tfaip_    |    NUMPY     | 97.07  | 56.93  | 43.78 | 42.73  |
+
+The PYTHON task clearly shows that `tf.data.Dataset.map` is not able to utilize multiple threads.
+The speed-up in the NUMPY tasks occurs possibly due to paralization in the numpy API to C.
+

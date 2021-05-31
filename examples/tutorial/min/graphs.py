@@ -37,7 +37,9 @@ class TutorialGraph(GraphBase[TutorialModelParams]):
 
     def build_graph(self, inputs, training=None):
         # Connect all layers and return a dict of the outputs
-        rescaled_img = K.expand_dims(K.cast(inputs["img"], dtype="float32") / 255, -1)
+        rescaled_img = K.cast(inputs["img"], dtype="float32") / 255
+        if len(rescaled_img.shape) == 3:
+            rescaled_img = K.expand_dims(rescaled_img, axis=-1)  # add missing channels dimension
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))
         logits = self.logits(self.ff(self.flatten(conv_out)))
         pred = K.softmax(logits, axis=-1)

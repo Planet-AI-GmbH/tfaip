@@ -1,0 +1,403 @@
+{
+  "predictions": [
+    {
+      "id": "voted",
+      "sentence": "KALLIANPUR",
+      "labels": [
+        42,
+        32,
+        43,
+        43,
+        40,
+        32,
+        45,
+        47,
+        52,
+        49
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "K",
+              "label": 42,
+              "probability": 0.999971866607666
+            }
+          ],
+          "local_start": 6,
+          "local_end": 7,
+          "global_start": 23,
+          "global_end": 27
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.9999297857284546
+            }
+          ],
+          "local_start": 11,
+          "local_end": 12,
+          "global_start": 43,
+          "global_end": 47
+        },
+        {
+          "chars": [
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.9975590705871582
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.06125897169113159
+            },
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.0023982960265129805
+            },
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.00018662189540918916
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.9999474287033081
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0005944572039879858
+            }
+          ],
+          "local_start": 19,
+          "local_end": 21,
+          "global_start": 74,
+          "global_end": 82
+        },
+        {
+          "chars": [
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.999982476234436
+            }
+          ],
+          "local_start": 25,
+          "local_end": 26,
+          "global_start": 98,
+          "global_end": 102
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.999998927116394
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.24655966460704803
+            }
+          ],
+          "local_start": 28,
+          "local_end": 30,
+          "global_start": 110,
+          "global_end": 118
+        },
+        {
+          "chars": [
+            {
+              "char": "N",
+              "label": 45,
+              "probability": 0.9999954700469971
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0028886243235319853
+            }
+          ],
+          "local_start": 32,
+          "local_end": 34,
+          "global_start": 126,
+          "global_end": 134
+        },
+        {
+          "chars": [
+            {
+              "char": "P",
+              "label": 47,
+              "probability": 0.9999364614486694
+            }
+          ],
+          "local_start": 39,
+          "local_end": 40,
+          "global_start": 153,
+          "global_end": 157
+        },
+        {
+          "chars": [
+            {
+              "char": "U",
+              "label": 52,
+              "probability": 0.9999974966049194
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.11928623914718628
+            },
+            {
+              "char": "O",
+              "label": 46,
+              "probability": 0.0036460133269429207
+            }
+          ],
+          "local_start": 42,
+          "local_end": 44,
+          "global_start": 165,
+          "global_end": 173
+        },
+        {
+          "chars": [
+            {
+              "char": "R",
+              "label": 49,
+              "probability": 0.9999984502792358
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00035590530023910105
+            }
+          ],
+          "local_start": 47,
+          "local_end": 49,
+          "global_start": 185,
+          "global_end": 193
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9997317433357239,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    },
+    {
+      "id": "fold_0",
+      "sentence": "KALLIANPUR",
+      "labels": [
+        42,
+        32,
+        43,
+        43,
+        40,
+        32,
+        45,
+        47,
+        52,
+        49
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "K",
+              "label": 42,
+              "probability": 0.999971866607666
+            }
+          ],
+          "local_start": 6,
+          "local_end": 7,
+          "global_start": 23,
+          "global_end": 27
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.9999297857284546
+            }
+          ],
+          "local_start": 11,
+          "local_end": 12,
+          "global_start": 43,
+          "global_end": 47
+        },
+        {
+          "chars": [
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.9975590705871582
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.06125897169113159
+            },
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.0023982960265129805
+            },
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.00018662189540918916
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.9999474287033081
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0005944572039879858
+            }
+          ],
+          "local_start": 19,
+          "local_end": 21,
+          "global_start": 74,
+          "global_end": 82
+        },
+        {
+          "chars": [
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.999982476234436
+            }
+          ],
+          "local_start": 25,
+          "local_end": 26,
+          "global_start": 98,
+          "global_end": 102
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.999998927116394
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.24655966460704803
+            }
+          ],
+          "local_start": 28,
+          "local_end": 30,
+          "global_start": 110,
+          "global_end": 118
+        },
+        {
+          "chars": [
+            {
+              "char": "N",
+              "label": 45,
+              "probability": 0.9999954700469971
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0028886243235319853
+            }
+          ],
+          "local_start": 32,
+          "local_end": 34,
+          "global_start": 126,
+          "global_end": 134
+        },
+        {
+          "chars": [
+            {
+              "char": "P",
+              "label": 47,
+              "probability": 0.9999364614486694
+            }
+          ],
+          "local_start": 39,
+          "local_end": 40,
+          "global_start": 153,
+          "global_end": 157
+        },
+        {
+          "chars": [
+            {
+              "char": "U",
+              "label": 52,
+              "probability": 0.9999974966049194
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.11928623914718628
+            },
+            {
+              "char": "O",
+              "label": 46,
+              "probability": 0.0036460133269429207
+            }
+          ],
+          "local_start": 42,
+          "local_end": 44,
+          "global_start": 165,
+          "global_end": 173
+        },
+        {
+          "chars": [
+            {
+              "char": "R",
+              "label": 49,
+              "probability": 0.9999984502792358
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00035590530023910105
+            }
+          ],
+          "local_start": 47,
+          "local_end": 49,
+          "global_start": 185,
+          "global_end": 193
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9997317433357239,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    }
+  ],
+  "line_path": "/home/cwick/Documents/Projects/calamari/calamari_ocr/test/data/uw3_50lines/test/010011.bin.png"
+}

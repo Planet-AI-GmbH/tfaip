@@ -1,0 +1,341 @@
+{
+  "predictions": [
+    {
+      "id": "voted",
+      "sentence": "Fig. 1",
+      "labels": [
+        37,
+        68,
+        66,
+        13,
+        1,
+        16
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "F",
+              "label": 37,
+              "probability": 0.9999815225601196
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0036197397857904434
+            }
+          ],
+          "local_start": 6,
+          "local_end": 8,
+          "global_start": 23,
+          "global_end": 31
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999994039535522
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.022622475400567055
+            }
+          ],
+          "local_start": 10,
+          "local_end": 12,
+          "global_start": 39,
+          "global_end": 47
+        },
+        {
+          "chars": [
+            {
+              "char": "g",
+              "label": 66,
+              "probability": 0.9999901056289673
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.08996225893497467
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": ".",
+              "label": 13,
+              "probability": 0.9955516457557678
+            },
+            {
+              "char": ",",
+              "label": 11,
+              "probability": 0.003133650403469801
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0009670400759205222
+            },
+            {
+              "char": ":",
+              "label": 25,
+              "probability": 0.0001734303223202005
+            }
+          ],
+          "local_start": 20,
+          "local_end": 21,
+          "global_start": 79,
+          "global_end": 83
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9804506301879883
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.07097601890563965
+            }
+          ],
+          "local_start": 24,
+          "local_end": 26,
+          "global_start": 95,
+          "global_end": 103
+        },
+        {
+          "chars": [
+            {
+              "char": "1",
+              "label": 16,
+              "probability": 0.9932762384414673
+            },
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.0036607172805815935
+            },
+            {
+              "char": "4",
+              "label": 19,
+              "probability": 0.0010100433137267828
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0009309491142630577
+            },
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.0003935226995963603
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00023017403145786375
+            },
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.000165212681167759
+            },
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.00014952520723454654
+            }
+          ],
+          "local_start": 29,
+          "local_end": 30,
+          "global_start": 115,
+          "global_end": 119
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9948749244213104,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    },
+    {
+      "id": "fold_0",
+      "sentence": "Fig. 1",
+      "labels": [
+        37,
+        68,
+        66,
+        13,
+        1,
+        16
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "F",
+              "label": 37,
+              "probability": 0.9999815225601196
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0036197397857904434
+            }
+          ],
+          "local_start": 6,
+          "local_end": 8,
+          "global_start": 23,
+          "global_end": 31
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999994039535522
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.022622475400567055
+            }
+          ],
+          "local_start": 10,
+          "local_end": 12,
+          "global_start": 39,
+          "global_end": 47
+        },
+        {
+          "chars": [
+            {
+              "char": "g",
+              "label": 66,
+              "probability": 0.9999901056289673
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.08996225893497467
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": ".",
+              "label": 13,
+              "probability": 0.9955516457557678
+            },
+            {
+              "char": ",",
+              "label": 11,
+              "probability": 0.003133650403469801
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0009670400759205222
+            },
+            {
+              "char": ":",
+              "label": 25,
+              "probability": 0.0001734303223202005
+            }
+          ],
+          "local_start": 20,
+          "local_end": 21,
+          "global_start": 79,
+          "global_end": 83
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9804506301879883
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.07097601890563965
+            }
+          ],
+          "local_start": 24,
+          "local_end": 26,
+          "global_start": 95,
+          "global_end": 103
+        },
+        {
+          "chars": [
+            {
+              "char": "1",
+              "label": 16,
+              "probability": 0.9932762384414673
+            },
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.0036607172805815935
+            },
+            {
+              "char": "4",
+              "label": 19,
+              "probability": 0.0010100433137267828
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0009309491142630577
+            },
+            {
+              "char": "L",
+              "label": 43,
+              "probability": 0.0003935226995963603
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00023017403145786375
+            },
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.000165212681167759
+            },
+            {
+              "char": "I",
+              "label": 40,
+              "probability": 0.00014952520723454654
+            }
+          ],
+          "local_start": 29,
+          "local_end": 30,
+          "global_start": 115,
+          "global_end": 119
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9948749244213104,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    }
+  ],
+  "line_path": "/home/cwick/Documents/Projects/calamari/calamari_ocr/test/data/uw3_50lines/test/010008.bin.png"
+}

@@ -86,10 +86,11 @@ class DataProcessorPipeline:
                     data_processors.append(p)
                 else:
                     logger.debug(
-                        "{} should not be created since the pipeline mode {} is not in its modes {}",
-                        p.__class__.__name__,
-                        mode,
-                        [m.value for m in p.modes],
+                        "{} was not created since the pipeline mode {} is not in its modes {}".format(
+                            p.__class__.__name__,
+                            mode,
+                            [m.value for m in p.modes],
+                        )
                     )
 
             if len(data_processors) == 0:

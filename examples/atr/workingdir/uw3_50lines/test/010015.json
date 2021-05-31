@@ -1,0 +1,2849 @@
+{
+  "predictions": [
+    {
+      "id": "voted",
+      "sentence": "GPS-derived ellipsoid heights, the remainder is a measure of the offset of the AHD",
+      "labels": [
+        38,
+        47,
+        50,
+        12,
+        63,
+        64,
+        77,
+        68,
+        81,
+        64,
+        63,
+        1,
+        64,
+        71,
+        71,
+        68,
+        75,
+        78,
+        74,
+        68,
+        63,
+        1,
+        67,
+        64,
+        68,
+        66,
+        67,
+        79,
+        78,
+        11,
+        1,
+        79,
+        67,
+        64,
+        1,
+        77,
+        64,
+        72,
+        60,
+        68,
+        73,
+        63,
+        64,
+        77,
+        1,
+        68,
+        78,
+        1,
+        60,
+        1,
+        72,
+        64,
+        60,
+        78,
+        80,
+        77,
+        64,
+        1,
+        74,
+        65,
+        1,
+        79,
+        67,
+        64,
+        1,
+        74,
+        65,
+        65,
+        78,
+        64,
+        79,
+        1,
+        74,
+        65,
+        1,
+        79,
+        67,
+        64,
+        1,
+        32,
+        39,
+        35
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "G",
+              "label": 38,
+              "probability": 0.9999535083770752
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.03934483975172043
+            }
+          ],
+          "local_start": 8,
+          "local_end": 10,
+          "global_start": 31,
+          "global_end": 39
+        },
+        {
+          "chars": [
+            {
+              "char": "P",
+              "label": 47,
+              "probability": 0.999453604221344
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.32345154881477356
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": "S",
+              "label": 50,
+              "probability": 0.9996026158332825
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00037070043617859483
+            }
+          ],
+          "local_start": 22,
+          "local_end": 23,
+          "global_start": 87,
+          "global_end": 91
+        },
+        {
+          "chars": [
+            {
+              "char": "-",
+              "label": 12,
+              "probability": 0.9996656179428101
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00031713119824416935
+            }
+          ],
+          "local_start": 26,
+          "local_end": 27,
+          "global_start": 103,
+          "global_end": 107
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9970245957374573
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.08481442183256149
+            }
+          ],
+          "local_start": 32,
+          "local_end": 34,
+          "global_start": 127,
+          "global_end": 135
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999499320983887
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.008032071404159069
+            }
+          ],
+          "local_start": 36,
+          "local_end": 38,
+          "global_start": 143,
+          "global_end": 151
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999980926513672
+            }
+          ],
+          "local_start": 41,
+          "local_end": 42,
+          "global_start": 163,
+          "global_end": 167
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999995231628418
+            }
+          ],
+          "local_start": 44,
+          "local_end": 45,
+          "global_start": 175,
+          "global_end": 179
+        },
+        {
+          "chars": [
+            {
+              "char": "v",
+              "label": 81,
+              "probability": 0.9999785423278809
+            }
+          ],
+          "local_start": 48,
+          "local_end": 49,
+          "global_start": 191,
+          "global_end": 195
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999995231628418
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.05961009860038757
+            }
+          ],
+          "local_start": 52,
+          "local_end": 54,
+          "global_start": 207,
+          "global_end": 215
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9999804496765137
+            }
+          ],
+          "local_start": 60,
+          "local_end": 61,
+          "global_start": 239,
+          "global_end": 243
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9999083280563354
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.42405059933662415
+            }
+          ],
+          "local_start": 62,
+          "local_end": 65,
+          "global_start": 247,
+          "global_end": 259
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999990463256836
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.41762515902519226
+            }
+          ],
+          "local_start": 67,
+          "local_end": 69,
+          "global_start": 267,
+          "global_end": 275
+        },
+        {
+          "chars": [
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.9988805651664734
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0009786494774743915
+            }
+          ],
+          "local_start": 72,
+          "local_end": 73,
+          "global_start": 287,
+          "global_end": 291
+        },
+        {
+          "chars": [
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.9999327659606934
+            }
+          ],
+          "local_start": 74,
+          "local_end": 75,
+          "global_start": 295,
+          "global_end": 299
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999986886978149
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.006619064603000879
+            }
+          ],
+          "local_start": 76,
+          "local_end": 78,
+          "global_start": 303,
+          "global_end": 311
+        },
+        {
+          "chars": [
+            {
+              "char": "p",
+              "label": 75,
+              "probability": 0.9998155236244202
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.20743711292743683
+            },
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.00030042222351767123
+            }
+          ],
+          "local_start": 79,
+          "local_end": 81,
+          "global_start": 315,
+          "global_end": 323
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999998807907104
+            }
+          ],
+          "local_start": 86,
+          "local_end": 87,
+          "global_start": 343,
+          "global_end": 347
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999790191650391
+            }
+          ],
+          "local_start": 91,
+          "local_end": 92,
+          "global_start": 363,
+          "global_end": 367
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999899864196777
+            }
+          ],
+          "local_start": 95,
+          "local_end": 96,
+          "global_start": 379,
+          "global_end": 383
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9997530579566956
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0006504254997707903
+            }
+          ],
+          "local_start": 100,
+          "local_end": 102,
+          "global_start": 399,
+          "global_end": 407
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9997197985649109
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.001469214679673314
+            }
+          ],
+          "local_start": 103,
+          "local_end": 105,
+          "global_start": 411,
+          "global_end": 419
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.999987006187439
+            }
+          ],
+          "local_start": 107,
+          "local_end": 108,
+          "global_start": 427,
+          "global_end": 431
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.999998927116394
+            }
+          ],
+          "local_start": 114,
+          "local_end": 115,
+          "global_start": 455,
+          "global_end": 459
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 118,
+          "local_end": 119,
+          "global_start": 471,
+          "global_end": 475
+        },
+        {
+          "chars": [
+            {
+              "char": "g",
+              "label": 66,
+              "probability": 0.9999902248382568
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.09616126120090485
+            }
+          ],
+          "local_start": 121,
+          "local_end": 123,
+          "global_start": 483,
+          "global_end": 491
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999171495437622
+            }
+          ],
+          "local_start": 126,
+          "local_end": 127,
+          "global_start": 503,
+          "global_end": 507
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999961853027344
+            }
+          ],
+          "local_start": 132,
+          "local_end": 133,
+          "global_start": 527,
+          "global_end": 531
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999991655349731
+            }
+          ],
+          "local_start": 136,
+          "local_end": 137,
+          "global_start": 543,
+          "global_end": 547
+        },
+        {
+          "chars": [
+            {
+              "char": ",",
+              "label": 11,
+              "probability": 0.9983320832252502
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0016524542588740587
+            }
+          ],
+          "local_start": 140,
+          "local_end": 141,
+          "global_start": 559,
+          "global_end": 563
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998149275779724
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.04328027740120888
+            }
+          ],
+          "local_start": 143,
+          "local_end": 145,
+          "global_start": 571,
+          "global_end": 579
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999990463256836
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2130698710680008
+            }
+          ],
+          "local_start": 146,
+          "local_end": 148,
+          "global_start": 583,
+          "global_end": 591
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999933242797852
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.01888420432806015
+            }
+          ],
+          "local_start": 149,
+          "local_end": 151,
+          "global_start": 595,
+          "global_end": 603
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999468326568604
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0003366078017279506
+            }
+          ],
+          "local_start": 156,
+          "local_end": 158,
+          "global_start": 623,
+          "global_end": 631
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9992623925209045
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.005181243643164635
+            }
+          ],
+          "local_start": 161,
+          "local_end": 163,
+          "global_start": 643,
+          "global_end": 651
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999953508377075
+            }
+          ],
+          "local_start": 165,
+          "local_end": 166,
+          "global_start": 659,
+          "global_end": 663
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999959468841553
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0023397973272949457
+            }
+          ],
+          "local_start": 169,
+          "local_end": 171,
+          "global_start": 675,
+          "global_end": 683
+        },
+        {
+          "chars": [
+            {
+              "char": "m",
+              "label": 72,
+              "probability": 0.9999980926513672
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.17433573305606842
+            }
+          ],
+          "local_start": 173,
+          "local_end": 175,
+          "global_start": 691,
+          "global_end": 699
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999991655349731
+            }
+          ],
+          "local_start": 183,
+          "local_end": 184,
+          "global_start": 731,
+          "global_end": 735
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999314546585083
+            }
+          ],
+          "local_start": 187,
+          "local_end": 188,
+          "global_start": 747,
+          "global_end": 751
+        },
+        {
+          "chars": [
+            {
+              "char": "n",
+              "label": 73,
+              "probability": 0.9999971389770508
+            }
+          ],
+          "local_start": 190,
+          "local_end": 191,
+          "global_start": 759,
+          "global_end": 763
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9999847412109375
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0034338615369051695
+            }
+          ],
+          "local_start": 198,
+          "local_end": 200,
+          "global_start": 791,
+          "global_end": 799
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.99991774559021
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00022169460135046393
+            }
+          ],
+          "local_start": 202,
+          "local_end": 204,
+          "global_start": 807,
+          "global_end": 815
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999760389328003
+            }
+          ],
+          "local_start": 207,
+          "local_end": 208,
+          "global_start": 827,
+          "global_end": 831
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9982120990753174
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0032516997307538986
+            }
+          ],
+          "local_start": 210,
+          "local_end": 212,
+          "global_start": 839,
+          "global_end": 847
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999674558639526
+            }
+          ],
+          "local_start": 214,
+          "local_end": 215,
+          "global_start": 855,
+          "global_end": 859
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999984502792358
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00919288955628872
+            }
+          ],
+          "local_start": 217,
+          "local_end": 219,
+          "global_start": 867,
+          "global_end": 875
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9996974468231201
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.006788651458919048
+            }
+          ],
+          "local_start": 222,
+          "local_end": 224,
+          "global_start": 887,
+          "global_end": 895
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999711513519287
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.09198824316263199
+            }
+          ],
+          "local_start": 226,
+          "local_end": 228,
+          "global_start": 903,
+          "global_end": 911
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9993477463722229
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0006522138719446957
+            }
+          ],
+          "local_start": 232,
+          "local_end": 233,
+          "global_start": 927,
+          "global_end": 931
+        },
+        {
+          "chars": [
+            {
+              "char": "m",
+              "label": 72,
+              "probability": 0.9999699592590332
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2674819231033325
+            }
+          ],
+          "local_start": 235,
+          "local_end": 237,
+          "global_start": 939,
+          "global_end": 947
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999946355819702
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.13614696264266968
+            }
+          ],
+          "local_start": 244,
+          "local_end": 246,
+          "global_start": 975,
+          "global_end": 983
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999971389770508
+            }
+          ],
+          "local_start": 250,
+          "local_end": 251,
+          "global_start": 999,
+          "global_end": 1003
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999959468841553
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.002245741430670023
+            }
+          ],
+          "local_start": 255,
+          "local_end": 257,
+          "global_start": 1019,
+          "global_end": 1027
+        },
+        {
+          "chars": [
+            {
+              "char": "u",
+              "label": 80,
+              "probability": 0.9998553991317749
+            }
+          ],
+          "local_start": 260,
+          "local_end": 261,
+          "global_start": 1039,
+          "global_end": 1043
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999818801879883
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.060483794659376144
+            }
+          ],
+          "local_start": 265,
+          "local_end": 267,
+          "global_start": 1059,
+          "global_end": 1067
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999985694885254
+            }
+          ],
+          "local_start": 270,
+          "local_end": 271,
+          "global_start": 1079,
+          "global_end": 1083
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9999420642852783
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.1211954727768898
+            }
+          ],
+          "local_start": 274,
+          "local_end": 276,
+          "global_start": 1095,
+          "global_end": 1103
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999710321426392
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0028074998408555984
+            }
+          ],
+          "local_start": 279,
+          "local_end": 281,
+          "global_start": 1115,
+          "global_end": 1123
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999995231628418
+            }
+          ],
+          "local_start": 284,
+          "local_end": 285,
+          "global_start": 1135,
+          "global_end": 1139
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9996953010559082
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00616456987336278
+            }
+          ],
+          "local_start": 287,
+          "local_end": 289,
+          "global_start": 1147,
+          "global_end": 1155
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999996423721313
+            }
+          ],
+          "local_start": 291,
+          "local_end": 292,
+          "global_start": 1163,
+          "global_end": 1167
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999969005584717
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0009829958435148
+            }
+          ],
+          "local_start": 293,
+          "local_end": 295,
+          "global_start": 1171,
+          "global_end": 1179
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999978542327881
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0024521145969629288
+            }
+          ],
+          "local_start": 300,
+          "local_end": 302,
+          "global_start": 1199,
+          "global_end": 1207
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998767375946045
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.004402597434818745
+            }
+          ],
+          "local_start": 305,
+          "local_end": 307,
+          "global_start": 1219,
+          "global_end": 1227
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.99997878074646
+            }
+          ],
+          "local_start": 310,
+          "local_end": 311,
+          "global_start": 1239,
+          "global_end": 1243
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999910593032837
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.004030668642371893
+            }
+          ],
+          "local_start": 314,
+          "local_end": 316,
+          "global_start": 1255,
+          "global_end": 1263
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.991358757019043
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.032074134796857834
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0038459189236164093
+            },
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.0018777657533064485
+            }
+          ],
+          "local_start": 317,
+          "local_end": 319,
+          "global_start": 1267,
+          "global_end": 1275
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9991533756256104
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0022411097306758165
+            }
+          ],
+          "local_start": 321,
+          "local_end": 323,
+          "global_start": 1283,
+          "global_end": 1291
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999973773956299
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.15166068077087402
+            }
+          ],
+          "local_start": 326,
+          "local_end": 328,
+          "global_start": 1303,
+          "global_end": 1311
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999892711639404
+            }
+          ],
+          "local_start": 331,
+          "local_end": 332,
+          "global_start": 1323,
+          "global_end": 1327
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998704195022583
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2831863462924957
+            }
+          ],
+          "local_start": 334,
+          "local_end": 336,
+          "global_start": 1335,
+          "global_end": 1343
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999933242797852
+            }
+          ],
+          "local_start": 339,
+          "local_end": 340,
+          "global_start": 1355,
+          "global_end": 1359
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999009370803833
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00011836480553029105
+            }
+          ],
+          "local_start": 343,
+          "local_end": 345,
+          "global_start": 1371,
+          "global_end": 1379
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998995065689087
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.052148740738630295
+            }
+          ],
+          "local_start": 347,
+          "local_end": 349,
+          "global_start": 1387,
+          "global_end": 1395
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 350,
+          "local_end": 351,
+          "global_start": 1399,
+          "global_end": 1403
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999985694885254
+            }
+          ],
+          "local_start": 353,
+          "local_end": 354,
+          "global_start": 1411,
+          "global_end": 1415
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999996423721313
+            }
+          ],
+          "local_start": 360,
+          "local_end": 361,
+          "global_start": 1439,
+          "global_end": 1443
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9993705153465271
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0017280194442719221
+            }
+          ],
+          "local_start": 365,
+          "local_end": 367,
+          "global_start": 1459,
+          "global_end": 1467
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 369,
+          "local_end": 371,
+          "global_start": 1475,
+          "global_end": 1483
+        },
+        {
+          "chars": [
+            {
+              "char": "H",
+              "label": 39,
+              "probability": 0.9999264478683472
+            }
+          ],
+          "local_start": 375,
+          "local_end": 376,
+          "global_start": 1499,
+          "global_end": 1503
+        },
+        {
+          "chars": [
+            {
+              "char": "D",
+              "label": 35,
+              "probability": 0.9999603033065796
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00010844654752872884
+            }
+          ],
+          "local_start": 383,
+          "local_end": 385,
+          "global_start": 1531,
+          "global_end": 1539
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9997130501561049,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    },
+    {
+      "id": "fold_0",
+      "sentence": "GPS-derived ellipsoid heights, the remainder is a measure of the offset of the AHD",
+      "labels": [
+        38,
+        47,
+        50,
+        12,
+        63,
+        64,
+        77,
+        68,
+        81,
+        64,
+        63,
+        1,
+        64,
+        71,
+        71,
+        68,
+        75,
+        78,
+        74,
+        68,
+        63,
+        1,
+        67,
+        64,
+        68,
+        66,
+        67,
+        79,
+        78,
+        11,
+        1,
+        79,
+        67,
+        64,
+        1,
+        77,
+        64,
+        72,
+        60,
+        68,
+        73,
+        63,
+        64,
+        77,
+        1,
+        68,
+        78,
+        1,
+        60,
+        1,
+        72,
+        64,
+        60,
+        78,
+        80,
+        77,
+        64,
+        1,
+        74,
+        65,
+        1,
+        79,
+        67,
+        64,
+        1,
+        74,
+        65,
+        65,
+        78,
+        64,
+        79,
+        1,
+        74,
+        65,
+        1,
+        79,
+        67,
+        64,
+        1,
+        32,
+        39,
+        35
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "G",
+              "label": 38,
+              "probability": 0.9999535083770752
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.03934483975172043
+            }
+          ],
+          "local_start": 8,
+          "local_end": 10,
+          "global_start": 31,
+          "global_end": 39
+        },
+        {
+          "chars": [
+            {
+              "char": "P",
+              "label": 47,
+              "probability": 0.999453604221344
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.32345154881477356
+            }
+          ],
+          "local_start": 15,
+          "local_end": 17,
+          "global_start": 59,
+          "global_end": 67
+        },
+        {
+          "chars": [
+            {
+              "char": "S",
+              "label": 50,
+              "probability": 0.9996026158332825
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00037070043617859483
+            }
+          ],
+          "local_start": 22,
+          "local_end": 23,
+          "global_start": 87,
+          "global_end": 91
+        },
+        {
+          "chars": [
+            {
+              "char": "-",
+              "label": 12,
+              "probability": 0.9996656179428101
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00031713119824416935
+            }
+          ],
+          "local_start": 26,
+          "local_end": 27,
+          "global_start": 103,
+          "global_end": 107
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9970245957374573
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.08481442183256149
+            }
+          ],
+          "local_start": 32,
+          "local_end": 34,
+          "global_start": 127,
+          "global_end": 135
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999499320983887
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.008032071404159069
+            }
+          ],
+          "local_start": 36,
+          "local_end": 38,
+          "global_start": 143,
+          "global_end": 151
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999980926513672
+            }
+          ],
+          "local_start": 41,
+          "local_end": 42,
+          "global_start": 163,
+          "global_end": 167
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999995231628418
+            }
+          ],
+          "local_start": 44,
+          "local_end": 45,
+          "global_start": 175,
+          "global_end": 179
+        },
+        {
+          "chars": [
+            {
+              "char": "v",
+              "label": 81,
+              "probability": 0.9999785423278809
+            }
+          ],
+          "local_start": 48,
+          "local_end": 49,
+          "global_start": 191,
+          "global_end": 195
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999995231628418
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.05961009860038757
+            }
+          ],
+          "local_start": 52,
+          "local_end": 54,
+          "global_start": 207,
+          "global_end": 215
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9999804496765137
+            }
+          ],
+          "local_start": 60,
+          "local_end": 61,
+          "global_start": 239,
+          "global_end": 243
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9999083280563354
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.42405059933662415
+            }
+          ],
+          "local_start": 62,
+          "local_end": 65,
+          "global_start": 247,
+          "global_end": 259
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999990463256836
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.41762515902519226
+            }
+          ],
+          "local_start": 67,
+          "local_end": 69,
+          "global_start": 267,
+          "global_end": 275
+        },
+        {
+          "chars": [
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.9988805651664734
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0009786494774743915
+            }
+          ],
+          "local_start": 72,
+          "local_end": 73,
+          "global_start": 287,
+          "global_end": 291
+        },
+        {
+          "chars": [
+            {
+              "char": "l",
+              "label": 71,
+              "probability": 0.9999327659606934
+            }
+          ],
+          "local_start": 74,
+          "local_end": 75,
+          "global_start": 295,
+          "global_end": 299
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999986886978149
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.006619064603000879
+            }
+          ],
+          "local_start": 76,
+          "local_end": 78,
+          "global_start": 303,
+          "global_end": 311
+        },
+        {
+          "chars": [
+            {
+              "char": "p",
+              "label": 75,
+              "probability": 0.9998155236244202
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.20743711292743683
+            },
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.00030042222351767123
+            }
+          ],
+          "local_start": 79,
+          "local_end": 81,
+          "global_start": 315,
+          "global_end": 323
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999998807907104
+            }
+          ],
+          "local_start": 86,
+          "local_end": 87,
+          "global_start": 343,
+          "global_end": 347
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999790191650391
+            }
+          ],
+          "local_start": 91,
+          "local_end": 92,
+          "global_start": 363,
+          "global_end": 367
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999899864196777
+            }
+          ],
+          "local_start": 95,
+          "local_end": 96,
+          "global_start": 379,
+          "global_end": 383
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9997530579566956
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0006504254997707903
+            }
+          ],
+          "local_start": 100,
+          "local_end": 102,
+          "global_start": 399,
+          "global_end": 407
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9997197985649109
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.001469214679673314
+            }
+          ],
+          "local_start": 103,
+          "local_end": 105,
+          "global_start": 411,
+          "global_end": 419
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.999987006187439
+            }
+          ],
+          "local_start": 107,
+          "local_end": 108,
+          "global_start": 427,
+          "global_end": 431
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.999998927116394
+            }
+          ],
+          "local_start": 114,
+          "local_end": 115,
+          "global_start": 455,
+          "global_end": 459
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 118,
+          "local_end": 119,
+          "global_start": 471,
+          "global_end": 475
+        },
+        {
+          "chars": [
+            {
+              "char": "g",
+              "label": 66,
+              "probability": 0.9999902248382568
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.09616126120090485
+            }
+          ],
+          "local_start": 121,
+          "local_end": 123,
+          "global_start": 483,
+          "global_end": 491
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999171495437622
+            }
+          ],
+          "local_start": 126,
+          "local_end": 127,
+          "global_start": 503,
+          "global_end": 507
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999961853027344
+            }
+          ],
+          "local_start": 132,
+          "local_end": 133,
+          "global_start": 527,
+          "global_end": 531
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999991655349731
+            }
+          ],
+          "local_start": 136,
+          "local_end": 137,
+          "global_start": 543,
+          "global_end": 547
+        },
+        {
+          "chars": [
+            {
+              "char": ",",
+              "label": 11,
+              "probability": 0.9983320832252502
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0016524542588740587
+            }
+          ],
+          "local_start": 140,
+          "local_end": 141,
+          "global_start": 559,
+          "global_end": 563
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998149275779724
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.04328027740120888
+            }
+          ],
+          "local_start": 143,
+          "local_end": 145,
+          "global_start": 571,
+          "global_end": 579
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999990463256836
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2130698710680008
+            }
+          ],
+          "local_start": 146,
+          "local_end": 148,
+          "global_start": 583,
+          "global_end": 591
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999933242797852
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.01888420432806015
+            }
+          ],
+          "local_start": 149,
+          "local_end": 151,
+          "global_start": 595,
+          "global_end": 603
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999468326568604
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0003366078017279506
+            }
+          ],
+          "local_start": 156,
+          "local_end": 158,
+          "global_start": 623,
+          "global_end": 631
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9992623925209045
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.005181243643164635
+            }
+          ],
+          "local_start": 161,
+          "local_end": 163,
+          "global_start": 643,
+          "global_end": 651
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999953508377075
+            }
+          ],
+          "local_start": 165,
+          "local_end": 166,
+          "global_start": 659,
+          "global_end": 663
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999959468841553
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0023397973272949457
+            }
+          ],
+          "local_start": 169,
+          "local_end": 171,
+          "global_start": 675,
+          "global_end": 683
+        },
+        {
+          "chars": [
+            {
+              "char": "m",
+              "label": 72,
+              "probability": 0.9999980926513672
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.17433573305606842
+            }
+          ],
+          "local_start": 173,
+          "local_end": 175,
+          "global_start": 691,
+          "global_end": 699
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999991655349731
+            }
+          ],
+          "local_start": 183,
+          "local_end": 184,
+          "global_start": 731,
+          "global_end": 735
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999314546585083
+            }
+          ],
+          "local_start": 187,
+          "local_end": 188,
+          "global_start": 747,
+          "global_end": 751
+        },
+        {
+          "chars": [
+            {
+              "char": "n",
+              "label": 73,
+              "probability": 0.9999971389770508
+            }
+          ],
+          "local_start": 190,
+          "local_end": 191,
+          "global_start": 759,
+          "global_end": 763
+        },
+        {
+          "chars": [
+            {
+              "char": "d",
+              "label": 63,
+              "probability": 0.9999847412109375
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0034338615369051695
+            }
+          ],
+          "local_start": 198,
+          "local_end": 200,
+          "global_start": 791,
+          "global_end": 799
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.99991774559021
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00022169460135046393
+            }
+          ],
+          "local_start": 202,
+          "local_end": 204,
+          "global_start": 807,
+          "global_end": 815
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999760389328003
+            }
+          ],
+          "local_start": 207,
+          "local_end": 208,
+          "global_start": 827,
+          "global_end": 831
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9982120990753174
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0032516997307538986
+            }
+          ],
+          "local_start": 210,
+          "local_end": 212,
+          "global_start": 839,
+          "global_end": 847
+        },
+        {
+          "chars": [
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.9999674558639526
+            }
+          ],
+          "local_start": 214,
+          "local_end": 215,
+          "global_start": 855,
+          "global_end": 859
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999984502792358
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00919288955628872
+            }
+          ],
+          "local_start": 217,
+          "local_end": 219,
+          "global_start": 867,
+          "global_end": 875
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9996974468231201
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.006788651458919048
+            }
+          ],
+          "local_start": 222,
+          "local_end": 224,
+          "global_start": 887,
+          "global_end": 895
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999711513519287
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.09198824316263199
+            }
+          ],
+          "local_start": 226,
+          "local_end": 228,
+          "global_start": 903,
+          "global_end": 911
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9993477463722229
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0006522138719446957
+            }
+          ],
+          "local_start": 232,
+          "local_end": 233,
+          "global_start": 927,
+          "global_end": 931
+        },
+        {
+          "chars": [
+            {
+              "char": "m",
+              "label": 72,
+              "probability": 0.9999699592590332
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2674819231033325
+            }
+          ],
+          "local_start": 235,
+          "local_end": 237,
+          "global_start": 939,
+          "global_end": 947
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999946355819702
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.13614696264266968
+            }
+          ],
+          "local_start": 244,
+          "local_end": 246,
+          "global_start": 975,
+          "global_end": 983
+        },
+        {
+          "chars": [
+            {
+              "char": "a",
+              "label": 60,
+              "probability": 0.9999971389770508
+            }
+          ],
+          "local_start": 250,
+          "local_end": 251,
+          "global_start": 999,
+          "global_end": 1003
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9999959468841553
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.002245741430670023
+            }
+          ],
+          "local_start": 255,
+          "local_end": 257,
+          "global_start": 1019,
+          "global_end": 1027
+        },
+        {
+          "chars": [
+            {
+              "char": "u",
+              "label": 80,
+              "probability": 0.9998553991317749
+            }
+          ],
+          "local_start": 260,
+          "local_end": 261,
+          "global_start": 1039,
+          "global_end": 1043
+        },
+        {
+          "chars": [
+            {
+              "char": "r",
+              "label": 77,
+              "probability": 0.9999818801879883
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.060483794659376144
+            }
+          ],
+          "local_start": 265,
+          "local_end": 267,
+          "global_start": 1059,
+          "global_end": 1067
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999985694885254
+            }
+          ],
+          "local_start": 270,
+          "local_end": 271,
+          "global_start": 1079,
+          "global_end": 1083
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9999420642852783
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.1211954727768898
+            }
+          ],
+          "local_start": 274,
+          "local_end": 276,
+          "global_start": 1095,
+          "global_end": 1103
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999710321426392
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0028074998408555984
+            }
+          ],
+          "local_start": 279,
+          "local_end": 281,
+          "global_start": 1115,
+          "global_end": 1123
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999995231628418
+            }
+          ],
+          "local_start": 284,
+          "local_end": 285,
+          "global_start": 1135,
+          "global_end": 1139
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9996953010559082
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00616456987336278
+            }
+          ],
+          "local_start": 287,
+          "local_end": 289,
+          "global_start": 1147,
+          "global_end": 1155
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999996423721313
+            }
+          ],
+          "local_start": 291,
+          "local_end": 292,
+          "global_start": 1163,
+          "global_end": 1167
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999969005584717
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0009829958435148
+            }
+          ],
+          "local_start": 293,
+          "local_end": 295,
+          "global_start": 1171,
+          "global_end": 1179
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999978542327881
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0024521145969629288
+            }
+          ],
+          "local_start": 300,
+          "local_end": 302,
+          "global_start": 1199,
+          "global_end": 1207
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998767375946045
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.004402597434818745
+            }
+          ],
+          "local_start": 305,
+          "local_end": 307,
+          "global_start": 1219,
+          "global_end": 1227
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.99997878074646
+            }
+          ],
+          "local_start": 310,
+          "local_end": 311,
+          "global_start": 1239,
+          "global_end": 1243
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999910593032837
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.004030668642371893
+            }
+          ],
+          "local_start": 314,
+          "local_end": 316,
+          "global_start": 1255,
+          "global_end": 1263
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.991358757019043
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.032074134796857834
+            },
+            {
+              "char": "i",
+              "label": 68,
+              "probability": 0.0038459189236164093
+            },
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.0018777657533064485
+            }
+          ],
+          "local_start": 317,
+          "local_end": 319,
+          "global_start": 1267,
+          "global_end": 1275
+        },
+        {
+          "chars": [
+            {
+              "char": "s",
+              "label": 78,
+              "probability": 0.9991533756256104
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0022411097306758165
+            }
+          ],
+          "local_start": 321,
+          "local_end": 323,
+          "global_start": 1283,
+          "global_end": 1291
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999973773956299
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.15166068077087402
+            }
+          ],
+          "local_start": 326,
+          "local_end": 328,
+          "global_start": 1303,
+          "global_end": 1311
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999892711639404
+            }
+          ],
+          "local_start": 331,
+          "local_end": 332,
+          "global_start": 1323,
+          "global_end": 1327
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998704195022583
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.2831863462924957
+            }
+          ],
+          "local_start": 334,
+          "local_end": 336,
+          "global_start": 1335,
+          "global_end": 1343
+        },
+        {
+          "chars": [
+            {
+              "char": "o",
+              "label": 74,
+              "probability": 0.9999933242797852
+            }
+          ],
+          "local_start": 339,
+          "local_end": 340,
+          "global_start": 1355,
+          "global_end": 1359
+        },
+        {
+          "chars": [
+            {
+              "char": "f",
+              "label": 65,
+              "probability": 0.9999009370803833
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00011836480553029105
+            }
+          ],
+          "local_start": 343,
+          "local_end": 345,
+          "global_start": 1371,
+          "global_end": 1379
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9998995065689087
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.052148740738630295
+            }
+          ],
+          "local_start": 347,
+          "local_end": 349,
+          "global_start": 1387,
+          "global_end": 1395
+        },
+        {
+          "chars": [
+            {
+              "char": "t",
+              "label": 79,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 350,
+          "local_end": 351,
+          "global_start": 1399,
+          "global_end": 1403
+        },
+        {
+          "chars": [
+            {
+              "char": "h",
+              "label": 67,
+              "probability": 0.9999985694885254
+            }
+          ],
+          "local_start": 353,
+          "local_end": 354,
+          "global_start": 1411,
+          "global_end": 1415
+        },
+        {
+          "chars": [
+            {
+              "char": "e",
+              "label": 64,
+              "probability": 0.9999996423721313
+            }
+          ],
+          "local_start": 360,
+          "local_end": 361,
+          "global_start": 1439,
+          "global_end": 1443
+        },
+        {
+          "chars": [
+            {
+              "char": " ",
+              "label": 1,
+              "probability": 0.9993705153465271
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.0017280194442719221
+            }
+          ],
+          "local_start": 365,
+          "local_end": 367,
+          "global_start": 1459,
+          "global_end": 1467
+        },
+        {
+          "chars": [
+            {
+              "char": "A",
+              "label": 32,
+              "probability": 0.9999997615814209
+            }
+          ],
+          "local_start": 369,
+          "local_end": 371,
+          "global_start": 1475,
+          "global_end": 1483
+        },
+        {
+          "chars": [
+            {
+              "char": "H",
+              "label": 39,
+              "probability": 0.9999264478683472
+            }
+          ],
+          "local_start": 375,
+          "local_end": 376,
+          "global_start": 1499,
+          "global_end": 1503
+        },
+        {
+          "chars": [
+            {
+              "char": "D",
+              "label": 35,
+              "probability": 0.9999603033065796
+            },
+            {
+              "char": "",
+              "label": 0,
+              "probability": 0.00010844654752872884
+            }
+          ],
+          "local_start": 383,
+          "local_end": 385,
+          "global_start": 1531,
+          "global_end": 1539
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9997130501561049,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    }
+  ],
+  "line_path": "/home/cwick/Documents/Projects/calamari/calamari_ocr/test/data/uw3_50lines/test/010015.bin.png"
+}

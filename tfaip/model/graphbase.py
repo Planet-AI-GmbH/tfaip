@@ -18,22 +18,19 @@
 """Definition of GraphBase"""
 import logging
 from abc import ABC, abstractmethod
-from typing import TypeVar, NamedTuple, Any, TYPE_CHECKING, Callable
+from typing import TypeVar, TYPE_CHECKING
 
 import tensorflow as tf
-from attr import dataclass
 
 from tfaip import ModelBaseParams
 from tfaip.model.layerbase import LayerBase
 from tfaip.model.modelbase import ModelBase
 from tfaip.model.print_evaluate_layer import PrintEvaluateLayer, PrintEvaluateLayerInput
-from tfaip.util.typing import GraphData
 
 if TYPE_CHECKING:
     from tfaip.scenario.scenariobase import ScenarioBase
 
 logger = logging.getLogger(__name__)
-
 
 TMP = TypeVar("TMP", bound=ModelBaseParams)
 

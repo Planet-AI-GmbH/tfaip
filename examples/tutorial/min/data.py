@@ -17,7 +17,7 @@
 # ==============================================================================
 import logging
 from dataclasses import dataclass, field
-from typing import Type, Optional, Iterable
+from typing import Type, Optional, Iterable, List
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -80,6 +80,8 @@ def to_samples(samples):
 @pai_dataclass
 @dataclass
 class TutorialDataParams(DataBaseParams):
+    input_shape: List[int] = field(default_factory=lambda: [28, 28])
+
     @staticmethod
     def cls() -> Type["DataBase"]:
         return TutorialData
@@ -88,7 +90,7 @@ class TutorialDataParams(DataBaseParams):
 class TutorialData(DataBase[TutorialDataParams]):
     def _input_layer_specs(self):
         # Shape and type of the input data for the graph
-        return {"img": tf.TensorSpec(shape=(28, 28), dtype="uint8")}
+        return {"img": tf.TensorSpec(shape=self.params.input_shape, dtype="uint8")}
 
     def _target_layer_specs(self):
         # Shape and type of the target (ground truth) data for the graph

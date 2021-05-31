@@ -19,6 +19,7 @@
 import json
 from typing import Callable, Iterable, TYPE_CHECKING, TypeVar, Generic
 
+import numpy as np
 from tfaip import PipelineMode, Sample
 from tfaip.util.json_helper import TFAIPJsonEncoder
 
@@ -70,40 +71,37 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
         # Local input so that not imported in spawned processes
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
 
-        def wrap():
-            # map the generator function on a tf.data.Dataset
-            samples = generator_fn()
-            for sample in samples:
-                if isinstance(sample, Sample):
-                    meta = {"meta": [json.dumps(sample.meta, cls=TFAIPJsonEncoder)]}
-                    if self.mode == PipelineMode.PREDICTION:
-                        yield sample.inputs, meta
-                    elif self.mode == PipelineMode.TARGETS:
-                        yield sample.targets, meta
-                    else:
-                        yield sample.inputs, sample.targets, meta
+        def wrap(sample):
+            if isinstance(sample, Sample):
+                meta = {"meta": np.asarray([json.dumps(sample.meta, cls=TFAIPJsonEncoder)])}
+                if self.mode == PipelineMode.PREDICTION:
+                    return sample.inputs, meta
+                elif self.mode == PipelineMode.TARGETS:
+                    return sample.targets, meta
                 else:
-                    yield sample
-
-        # Determine the types and shapes
-        input_types = {k: v.dtype for k, v in self.input_layer_specs().items()}
-        target_types = {k: v.dtype for k, v in self.target_layer_specs().items()}
-        meta_types = {k: v.dtype for k, v in self.meta_layer_specs().items()}
-        input_shapes = {k: v.shape for k, v in self.input_layer_specs().items()}
-        target_shapes = {k: v.shape for k, v in self.target_layer_specs().items()}
-        meta_shapes = {k: v.shape for k, v in self.meta_layer_specs().items()}
+                    return sample.inputs, sample.targets, meta
+            else:
+                return sample
 
         if self.mode == PipelineMode.PREDICTION:
-            output_types = (input_types, meta_types)
-            output_shapes = (input_shapes, meta_shapes)
+            output_signature = (self.input_layer_specs(), self.meta_layer_specs())
         elif self.mode == PipelineMode.TARGETS:
-            output_types = (target_types, meta_types)
-            output_shapes = (target_shapes, meta_shapes)
+            output_signature = (self.target_layer_specs(), self.meta_layer_specs())
         else:
-            output_types = (input_types, target_types, meta_types)
-            output_shapes = (input_shapes, target_shapes, meta_shapes)
+            output_signature = (self.input_layer_specs(), self.target_layer_specs(), self.meta_layer_specs())
 
         # create the tf.data.Dataset and apply optional additional transformations (overwritten by implementations)
-        dataset = tf.data.Dataset.from_generator(wrap, output_types=output_types, output_shapes=output_shapes)
+
+        def flatten(x):
+            return tuple(tf.nest.flatten(x))
+
+        def unflatten(*args):
+            return tf.nest.pack_sequence_as(output_signature, args)
+
+        dataset = tf.data.Dataset.from_generator(
+            lambda: map(flatten, map(wrap, generator_fn())),
+            output_signature=flatten(output_signature),
+        )
+        dataset = dataset.map(unflatten)
         dataset = self._transform(dataset)
         return dataset

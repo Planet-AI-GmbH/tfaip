@@ -19,6 +19,4 @@ tensorflow-datasets~=3.0.0
 tqdm
 typeguard
 xlrd==1.2.0
-pdf_reports
-libsass
 pre-commit

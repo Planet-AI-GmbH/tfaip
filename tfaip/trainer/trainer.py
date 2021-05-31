@@ -24,9 +24,6 @@ from datetime import datetime
 from typing import Type, Tuple, Union, TypeVar, Generic, Optional, Dict
 
 import tensorflow as tf
-from tfaip.util.typing import AnyNumpy
-from typeguard import typechecked
-
 from tfaip import TrainerParams
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.scenario.scenariobase import ScenarioBase
@@ -47,6 +44,8 @@ from tfaip.trainer.scheduler.schedule_weightdecay import WeightDecaySchedule
 from tfaip.trainer.warmstart.warmstarter import WarmStarter
 from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.random import set_global_random_seed
+from tfaip.util.typing import AnyNumpy
+from typeguard import typechecked
 
 logger = logging.getLogger(__name__)
 

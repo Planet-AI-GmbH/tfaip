@@ -1,0 +1,61 @@
+{
+  "predictions": [
+    {
+      "id": "voted",
+      "sentence": "3",
+      "labels": [
+        18
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "3",
+              "label": 18,
+              "probability": 0.9999911785125732
+            }
+          ],
+          "local_start": 6,
+          "local_end": 7,
+          "global_start": 22,
+          "global_end": 26
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9999911785125732,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    },
+    {
+      "id": "fold_0",
+      "sentence": "3",
+      "labels": [
+        18
+      ],
+      "positions": [
+        {
+          "chars": [
+            {
+              "char": "3",
+              "label": 18,
+              "probability": 0.9999911785125732
+            }
+          ],
+          "local_start": 6,
+          "local_end": 7,
+          "global_start": 22,
+          "global_end": 26
+        }
+      ],
+      "logits": null,
+      "total_probability": 0,
+      "avg_char_probability": 0.9999911785125732,
+      "is_voted_result": false,
+      "line_path": "",
+      "voter_predictions": []
+    }
+  ],
+  "line_path": "/home/cwick/Documents/Projects/calamari/calamari_ocr/test/data/uw3_50lines/test/010017.bin.png"
+}
