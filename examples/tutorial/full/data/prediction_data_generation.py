@@ -20,6 +20,7 @@ import os
 from dataclasses import dataclass, field
 
 import cv2
+import numpy as np
 from paiargparse import pai_meta, pai_dataclass
 
 from tfaip import DataGeneratorParams
@@ -65,7 +66,7 @@ class TutorialPredictionGeneratorParams(DataGeneratorParams):
             gt_path = fn + ".txt"
             if os.path.exists(gt_path):
                 with open(gt_path) as f:
-                    gt = [int(f.read())]
+                    gt = np.asarray([int(f.read())])
             else:
                 gt = None
             return Sample(inputs={"img": img}, targets={"gt": gt}, meta={"fn": fn})
