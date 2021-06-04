@@ -38,7 +38,7 @@ bibliography: paper.bib
 # Summary
 
 _tfaip_ is a Python-based research framework for developing, structuring, and deploying Deep Learning projects powered by Tensorflow [@tensorflow2015-whitepaper] and is intended for scientists of universities or organizations who research, develop, and optionally deploy Deep Learning models.
-_tfaip_ enables to implement both simple and complex scenarios, such as image classification, object detection, text recognition, natural language processing, or speech recognition.
+_tfaip_ enables both simple and complex implementation scenarios, such as image classification, object detection, text recognition, natural language processing, or speech recognition.
 Each scenario is highly configurable by parameters that can directly be modified by the command line or the API.
 
 # Statement of Need
