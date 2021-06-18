@@ -21,8 +21,9 @@ import os
 import sys
 
 import tensorflow.keras as keras
-from tensorflow.python.keras.utils import tf_utils
 import logging
+
+from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
         # Override save model to either store weights or the params
         if self.store_params:
             if isinstance(self.save_freq, int) or self.epochs_since_last_save >= self.period:
-                logs = tf_utils.to_numpy_or_python_type(logs)
+                logs = sync_to_numpy_or_python_type(logs)
                 # Crop variables/variables of the path
                 filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, logs), "..", ".."))
                 self.train_params.current_epoch = epoch + 1

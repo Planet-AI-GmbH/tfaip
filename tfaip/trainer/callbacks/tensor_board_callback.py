@@ -25,8 +25,6 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.python.ops import summary_ops_v2
 
-from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
-
 if TYPE_CHECKING:
     from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 
@@ -68,16 +66,14 @@ class TensorBoardCallback(TensorBoard):
         logs = logs or {}
         super().on_epoch_begin(epoch, logs)
 
-    def on_epoch_end(self, epoch, logs=None):
-        logs = logs or {}
-        logs.update({"lr": K.eval(self.model.optimizer.lr(epoch * self.steps_per_epoch))})
-        super().on_epoch_end(epoch, logs)
-
     def _log_epoch_metrics(self, epoch, logs):
         # custom override, to enable lav logging and applying the TensorBoardDataHandler
         if not logs:
             return
 
+        logs = logs.copy()
+
+        logs.update({"lr": K.eval(self.model.optimizer.lr(epoch * self.steps_per_epoch))})
         if self.extracted_logs_cb:
             logs.update(self.extracted_logs_cb.extracted_logs)
 

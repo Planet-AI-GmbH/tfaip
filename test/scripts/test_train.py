@@ -20,7 +20,6 @@ import os
 import platform
 import tempfile
 import unittest
-from subprocess import check_call
 
 from test.util.workdir import call_in_root
 

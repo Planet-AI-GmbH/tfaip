@@ -76,7 +76,7 @@ def single_train_iter(
     test: unittest.TestCase,
     scenario: Type[ScenarioBase],
     debug=debug_test,
-    lav_every_n=1,
+    lav_every_n=2,
 ):
     with tempfile.TemporaryDirectory() as tmp_dir:  # To write best model
         trainer_params = scenario.default_trainer_params()

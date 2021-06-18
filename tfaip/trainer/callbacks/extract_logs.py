@@ -19,6 +19,7 @@
 from typing import Optional
 
 import tensorflow.keras.callbacks as cb
+from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 
@@ -33,6 +34,10 @@ class ExtractLogsCallback(cb.Callback):
 
     Thereto, all logs are extracted and stored in a separated data structure which is cleared on the begin of the
     training. The TensorBoardCallback has then access to the extracted logs.
+
+    The ``extracted_logs`` will be passed to the tensorboard handler.
+    The ``shadow_logs`` will only be stored. They are for example used to store the "counts" of batches which are
+    required by the BenchmarkCallback.
     """
 
     def __init__(self, test_prefix="val_"):
@@ -40,6 +45,7 @@ class ExtractLogsCallback(cb.Callback):
         self._supports_tf_logs = True
         self.tensorboard_data_handler: Optional[TensorBoardDataHandler] = None
         self.extracted_logs = {}
+        self.shadow_logs = {}
         self.test_prefix = test_prefix
 
     def set_model(self, model):
@@ -48,9 +54,11 @@ class ExtractLogsCallback(cb.Callback):
 
     def on_train_begin(self, logs=None):
         self.extracted_logs = {}
+        self.shadow_logs = {}
 
     def on_epoch_begin(self, epoch, logs=None):
         self.extracted_logs = {}
+        self.shadow_logs = {}
 
     def on_epoch_end(self, epoch, logs=None):
         self.extract(logs)
@@ -72,6 +80,9 @@ class ExtractLogsCallback(cb.Callback):
     def extract(self, logs, prefix=""):
         if logs is None:
             return
+        if "count" in logs:
+            self.shadow_logs["count"] = sync_to_numpy_or_python_type(logs["count"])
+            del logs["count"]
         for k in list(logs.keys()):
             if self.tensorboard_data_handler.is_tensorboard_only(k, logs[k]):
                 self.extracted_logs[prefix + k] = logs[k].numpy() if hasattr(logs[k], "numpy") else logs[k]

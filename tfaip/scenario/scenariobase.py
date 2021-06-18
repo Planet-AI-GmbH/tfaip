@@ -45,6 +45,7 @@ from tfaip.model.graphbase import create_training_graph, RootGraph
 from tfaip.model.modelbase import ModelBase
 from tfaip.scenario.scenariobaseparams import NetConfigParamsBase, NetConfigNodeSpec
 from tfaip.scenario.util.print_model_structure import print_all_layers
+from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.tfaipargparse import post_init
 from tfaip.util.tftyping import AnyTensor
@@ -118,7 +119,6 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         scenario_params = cls.params_cls()()
         scenario_params.scenario_base_path = inspect.getfile(cls)
         scenario_params.scenario_id = cls.__module__ + ":" + cls.__name__
-        scenario_params.model = cls.model_cls().params_cls()()
         scenario_params.data = cls.data_cls().default_params()
         scenario_params.evaluator = cls.evaluator_cls().default_params()
         return scenario_params
@@ -300,7 +300,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         return cls.lav_cls()(
             lav_params,
             data_fn=lambda: cls.data_cls()(scenario_params.data),
-            model_fn=lambda: scenario_params.model.create(),
+            model_fn=lambda: cls.model_cls().root_graph_cls()(scenario_params.model).create_model(),
             evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
         )
 
@@ -348,7 +348,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         post_init(params)
         if cls.evaluator_cls() is None:
             raise NotImplementedError
-        return cls.evaluator_cls()(params)
+        return cls.evaluator_cls()(params=params)
 
     @classmethod
     def params_cls(cls) -> Type[TScenarioParams]:
@@ -450,7 +450,11 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                 else:
                     path_serve = os.path.join(path, self._params.additional_serve_dir, label)
                 os.makedirs(os.path.dirname(path_serve), exist_ok=True)
-                export_graph.save(path_serve, include_optimizer=False)
+                export_graph.save(
+                    path_serve,
+                    include_optimizer=False,
+                    options=tf.saved_model.SaveOptions(namespace_whitelist=["Addons"]),
+                )
 
         # Export the NetConfigBaseParams
         if self._params.export_net_config:
@@ -541,6 +545,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         real_inputs = self.data.create_input_layers()
         real_targets = self.data.create_target_as_input_layers()
         real_meta = self.data.create_meta_as_input_layers()
+        wrapped_targets = real_targets.copy()
+        wrapped_targets["step"] = tf.keras.layers.Input(shape=[1], dtype="int64", name="step")
+        wrapped_targets["epoch"] = tf.keras.layers.Input(shape=[1], dtype="int64", name="epoch")
 
         # This regroups all inputs/targets as input to allow to access the complete data during training
         # This is required to allow for custom loss functions that require multiple inputs (e.g., ctc)
@@ -567,14 +574,24 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         self._keras_train_model = create_training_graph(self, self.graph.model, self.graph)
         logger.info("Attempting to set no train scope")
         self._set_no_train_scope(no_train_scope)  # exclude layers from training
+        logger.info("Compiling training model including optimization")
+        self._keras_train_model.compile(optimizer=optimizer, run_eagerly=run_eagerly)
+        if run_eagerly:
+            # one debug step
+            logger.info("Running evaluation on one training example for debugging.")
+            with self.data.pipeline_by_mode(PipelineMode.TRAINING) as rd:
+                self._keras_train_model.evaluate(
+                    self._wrap_data(
+                        rd.input_dataset(auto_repeat=False), rd.data_pipeline.pipeline_params.batch_size
+                    ).take(1),
+                    callbacks=[ExtractLogsCallback()],  # extract logs (must be first logger, so verbose=0)
+                    verbose=0,  # Disable progress bar logger
+                )
 
         logger.info("Building prediction/export keras model (for export and decoding)")
         pred_outputs = self.graph.predict(real_inputs)
-        self._export_graphs = self.graph.model.export_graphs(real_inputs, pred_outputs, real_targets)
+        self._export_graphs = self.graph.model.export_graphs(real_inputs, pred_outputs, wrapped_targets)
         self._keras_predict_model = self._export_graphs["default"]
-
-        logger.info("Compiling training model including optimization")
-        self._keras_train_model.compile(optimizer=optimizer, run_eagerly=run_eagerly)
         logger.info("Compiling prediction model graph")
         self._keras_predict_model.compile(run_eagerly=run_eagerly)
 
@@ -584,7 +601,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         if not skip_model_load_test and not run_eagerly:
             logger.info("Checking if model can be saved")
             with tempfile.TemporaryDirectory() as tmp:
-                self._keras_predict_model.save(tmp)
+                self._keras_predict_model.save(
+                    tmp, include_optimizer=False, options=tf.saved_model.SaveOptions(namespace_whitelist=["Addons"])
+                )
                 logger.info("Prediction model successfully saved. Attempting to load it")
                 keras.models.load_model(tmp, custom_objects=self.model.all_custom_objects())
             logger.info("Model can be successfully loaded")
@@ -740,7 +759,8 @@ def import_scenario(module_name: str) -> Type["ScenarioBase"]:
             sys.path.append(os.getcwd())
         try:
             return importlib.import_module(module_path_or_name.replace("/", "."))
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
+            logger.exception(e)
             raise ModuleNotFoundError(
                 f"No module named '{module_path_or_name}'. Please specify the full module to "
                 f"import or a relative path of the working directory. "

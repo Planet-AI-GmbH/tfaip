@@ -23,6 +23,7 @@ from dataclasses import dataclass
 import prettytable
 from tensorflow.keras.callbacks import Callback
 
+from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.profiling import MeasureTime
 
 logger = logging.getLogger(__name__)
@@ -77,9 +78,10 @@ class BenchmarkCallback(Callback):
     The BenchmarkCallback will trace the training and validation times per patch, epoch, and in total.
     """
 
-    def __init__(self):
+    def __init__(self, extracted_logs_cb: ExtractLogsCallback):
         super().__init__()
         self._supports_tf_logs = True  # Any Callback before LAV callback must act on raw tf logs only
+        self.extracted_logs_cb = extracted_logs_cb
 
         self.total_train_time = MeasureTime()
         self.total_epoch_time = MeasureTime()
@@ -148,7 +150,7 @@ class BenchmarkCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.total_epoch_time.__exit__(None, None, None)
-        count = logs["count"].numpy()
+        count = self.extracted_logs_cb.shadow_logs["count"]
         self.last_train_results.finish_epoch(self.total_epoch_time.duration, count)
         self.avg_train_results.n_samples += count
         self.print()
@@ -169,10 +171,11 @@ class BenchmarkCallback(Callback):
         self.last_test_results = BenchmarkResults()
 
     def on_test_end(self, logs=None):
+        count = self.extracted_logs_cb.shadow_logs["count"]
         self.total_test_time.__exit__(None, None, None)
-        self.last_test_results.finish_epoch(self.total_test_time.duration, logs["count"])
+        self.last_test_results.finish_epoch(self.total_test_time.duration, count)
         self.avg_test_results.total_time += self.total_test_time.duration
-        self.avg_test_results.n_samples += logs["count"]
+        self.avg_test_results.n_samples += count
 
     def on_test_batch_begin(self, batch, logs=None):
         self.batch_time.__enter__()

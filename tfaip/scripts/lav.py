@@ -33,6 +33,10 @@ def run():
 
 
 def main(args, scenario_meta, scenario_params):
+    import tensorflow_addons as tfa
+
+    tfa.register_all()
+
     callbacks = []
     if args.dump:
         callbacks.append(DumpResultsCallback(args.dump))

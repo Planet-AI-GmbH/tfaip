@@ -90,6 +90,7 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         self._params = params
         self.resources = ResourceManager(params.resource_base_path)
         self.resources.register_all(params)
+        post_init(params)
 
         self._pipelines: Dict[PipelineMode, DataPipeline] = {}
 

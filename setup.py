@@ -15,12 +15,17 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-from setuptools import setup, find_packages
 import os
-from tfaip import __version__
+
+from setuptools import setup, find_packages
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
+# Parse version
+main_ns = {}
+with open(os.path.join(this_dir, "tfaip", "version.py")) as f:
+    exec(f.read(), main_ns)
+    __version__ = main_ns["__version__"]
 
 setup(
     name="tfaip",

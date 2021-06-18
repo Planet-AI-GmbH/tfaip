@@ -43,22 +43,36 @@ Each scenario is highly configurable by parameters that can directly be modified
 
 # Statement of Need
 
-An application of _tfaip_ resolves recurrent obstacles of research and development in an elegant and robust way.
+The implementation of a scenario during research and development typically comprises several tasks, for example setting up the graph (e.g., the network architecture), the training (e.g., the optimizer or learning rate schedule), and the data pipeline (e.g., the data sources).
+In most current frameworks such as Tensorflow or Keras (see next Section), the implementation is realized by one or several (unstructured) files in Python which can become difficult to maintain and read for bigger scenarios.
+Furthermore, comparable frameworks also only provide basic functionality which is why recurrent obstacles during research and development are typically redundant for each scenario.
+_tfaip_ resolves the following different aspects in an elegant and robust way.
 
-A complete scenario including the graph (e.g., the network architecture), the training (e.g., the optimizer or learning rate schedule), and the data pipeline (e.g., the data sources) are fully parameterizable by the command line or the API.
-This simplifies hyper-parameter-optimization but also testing of novel ideas.
-Each scenario is created by implementing predefined interfaces (e.g., loss-function or the graph construction).
-This leads to a clean, structured, modularized, and readable code preventing bad code style and facilitates maintenance.
+During research, a scenario is usually configured via a command line interface (CLI) which usually must be implemented by the user itself.
+_tfaip_ already provides a powerful CLI which is dynamically created upon runtime by parsing a nested dataclass hierarchy.
+To add a new parameter or even a new set of sub parameters, a user simply has to add a new field to the respective dataclass.
+Compared to other approached where all possible parameters are simultaneously available in the CLI, the dynamic approach of _tfaip_ only shows and parsed the available arguments.
+This prevents users from making mistakes by setting parameters without effect for the current configuration (e.g, setting the factor for an Adam optimizer even though RMSprop was selected).
+The default CLI of _tfaip_ provides commands to adapt various hyper-parameters such as the learning rate and its schedule, the optimizer, logging, debugging, profiling, or early stopping.
+Furthermore, each component of the scenario can itself be fully customized which allows, for example, to dynamically configure the network architecture, e.g., by inserting layers or changing their parameters.
+This feature helps researchers to set up various experiments for example to optimize hyper-parameters or test novel ideas.
 
-_tfaip_ provides a simple API to deploy a scenario.
-The corresponding module will automatically apply pre-processing, infer the trained model, and optionally transform the output by a post-processing pipeline.
+In comparison to other frameworks such as Tensorflow, _tfaip_ requires users to implement their scenarios in object-oriented programming and encourages them to annotate their code with types.
+This is particularly sensible if the scenarios and thus their code basis becomes larger since it leads to a clean, structured, modularized, and readable code preventing bad code style and facilitates maintenance.
+In practice, each scenario is created by implementing predefined interfaces (e.g., loss-function or the graph construction).
+
+During research and development, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
+The Tensorflow-backed of _tfaip_ allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
+To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, partly even impossible, and complicates debugging.
+_tfaip_ tackles this issue by providing a sophisticated pipeline setup based on so-called data processors which apply simple transformation operations in pure Python code and are automatically executed in parallel.
+
+Another important step which is simplified by _tfaip_ is the deployment of a scenario.
+Other frameworks such as plain Tensorflow or Keras allow to easily load a trained model for prediction which does however not include data processing.
+The prediction API of _tfaip_ instead automatically applies pre-processing, infer the trained model, and optionally transform the output by a post-processing pipeline in one step.
 The information about the pipeline-construction is embedded within the model which enables to store and load models with a different data pipeline even for the same scenario.
 This is handy if, for example, certain pre-processing steps are not required for one specific model or other inputs are expected.
 
-During research, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
-Tensorflow allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
-To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, partly even impossible, and complicates debugging.
-_tfaip_ tackles this issue by providing a sophisticated pipeline setup based on so-called data processors which apply simple transformation operations in pure Python code and are automatically executed in parallel.
+Finally, _tfaip_ will automatically log the training process using the Tensorboard and provides utility scripts to resume a crashed or stopped training, or to set up an array of training configurations via an Excel sheet.
 
 # State of the Field
 

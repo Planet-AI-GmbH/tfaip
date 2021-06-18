@@ -15,22 +15,4 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-"""Definitions of types requiring Tensorflow
-
-Note: typing and tf-typing are split so that tensorflow is only imported in this file
-This is required so that the data pipeline (Data, DataProcessors, ...) can import typing without importing tensorflow.
-
-"""
-from typing import Union
-
-import tensorflow as tf
-from tensorflow.python.keras.engine.keras_tensor import KerasTensor
-
-AnyTensor = Union[tf.Tensor, KerasTensor]
-
-try:
-    # tf 2.5.x
-    from tensorflow.python.keras.utils.tf_utils import sync_to_numpy_or_python_type
-except ImportError:
-    # tf 2.4.x
-    from tensorflow.python.keras.utils.tf_utils import to_numpy_or_python_type as sync_to_numpy_or_python_type
+__version__ = "1.2.1"

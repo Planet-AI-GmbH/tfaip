@@ -18,14 +18,11 @@
 """Definition of the PredictorBase"""
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Type, Iterable, Union, Optional, Any
 
-import prettytable
 from tensorflow import keras
 import tensorflow as tf
 from tensorflow.python.keras.engine import data_adapter
-from tensorflow.python.keras.utils import tf_utils
 
 from tfaip.data.databaseparams import DataGeneratorParams, DataPipelineParams
 from tfaip import PipelineMode, Sample
@@ -37,6 +34,7 @@ from tfaip.trainer.callbacks.benchmark_callback import BenchmarkResults
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 from tfaip.util.profiling import MeasureTime
 from tfaip.util.tfaipargparse import post_init
+from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 if TYPE_CHECKING:
     from tfaip.data.data import DataBase
@@ -255,9 +253,9 @@ class PredictorBase(ABC):
 
                                 # If targets are included, the return value differs
                                 if self._params.include_targets:
-                                    inputs, targets, outputs, meta = tf_utils.to_numpy_or_python_type(r)
+                                    inputs, targets, outputs, meta = sync_to_numpy_or_python_type(r)
                                 else:
-                                    inputs, outputs, meta = tf_utils.to_numpy_or_python_type(r)
+                                    inputs, outputs, meta = sync_to_numpy_or_python_type(r)
                                     targets = {}  # No targets in normal prediction
 
                                 # split into single samples

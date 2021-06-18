@@ -60,7 +60,7 @@ class ModelBase(Generic[TMP], ABC):
             "TensorboardWriter": TensorboardWriter,
         }
 
-    def __init__(self, params: TMP):
+    def __init__(self, params: TMP, **kwargs):
         self._params: TMP = params
         self._count_metric = Count()
 
@@ -229,6 +229,9 @@ class ModelBase(Generic[TMP], ABC):
             sample_weights = self.sample_weights(inputs, targets)
             for t, o, m in model.target_output_metrics:
                 model.add_metric(m(targets[t], outputs[o], sample_weights.get(m.name, None)))
+
+    def pre_proc_targets(self, inputs, targets):
+        return targets
 
     def post_proc_targets(self, inputs, targets, outputs):
         return targets

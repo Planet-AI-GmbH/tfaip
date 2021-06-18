@@ -201,6 +201,7 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
             "LAV uses --data_params lav_lists"
         ),
     )
+    lav_silent: bool = field(default=True, metadata=pai_meta(help="Do not print the predictions of lav."))
     lav_min_epoch: int = field(
         default=0,
         metadata=pai_meta(

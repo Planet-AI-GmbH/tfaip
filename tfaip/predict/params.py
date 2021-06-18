@@ -30,7 +30,7 @@ class PredictorParams:
     Parameters for the PredictorBase.
     """
 
-    device: DeviceConfigParams = field(default_factory=DeviceConfigParams)
+    device: DeviceConfigParams = field(default_factory=DeviceConfigParams, metadata=pai_meta(fix_dc=True))
     pipeline: DataPipelineParams = field(
         default_factory=DataPipelineParams, metadata=pai_meta(fix_dc=True, mode="ssnake")
     )

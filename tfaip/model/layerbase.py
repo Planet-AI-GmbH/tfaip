@@ -50,8 +50,8 @@ class LayerBaseParams(ABC):
     def cls() -> Type["LayerBase"]:
         raise NotImplementedError
 
-    def create(self):
-        return self.cls()(params=self)
+    def create(self, **kwargs):
+        return self.cls()(params=self, **kwargs)
 
 
 TLP = TypeVar("TLP", bound=LayerBaseParams)

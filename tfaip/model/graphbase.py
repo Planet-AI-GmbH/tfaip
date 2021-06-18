@@ -62,7 +62,7 @@ class TrainingGraph(tf.keras.models.Model):
 
     def call(self, inputs, training=None, mask=None):
         inputs, targets, meta = inputs
-        pre_proc_targets = self.graph.pre_proc_targets(inputs, targets)
+        pre_proc_targets = self.model.pre_proc_targets(inputs, targets)
         outputs = self.graph.train(inputs, pre_proc_targets)
         self.model.wrap_model_with_loss_and_metric(self, inputs, pre_proc_targets, outputs)
         if self.print_eval_layer is not None:
@@ -95,9 +95,10 @@ class LAVGraph(tf.keras.models.Model):
             raise KeyError("Missing lav in inputs. Call graph.lav(inputs) instead of graph(inputs).")
 
         inputs, targets = inputs["lav"]
+        targets = self.model.pre_proc_targets(inputs, targets)
         outputs = self.prediction_model(inputs)
         self.model.wrap_model_with_loss_and_metric(self, inputs, targets, outputs, with_losses=False)
-        return outputs
+        return outputs, targets
 
     def lav(self, inputs, targets):
         return self({"lav": (inputs, targets)})
@@ -125,8 +126,14 @@ class RootGraph(tf.keras.layers.Layer):
     def __init__(self, params: ModelBaseParams, name="root", **kwargs):
         super().__init__(name=name, **kwargs)
         self._params = params
-        self._model = params.create()
-        self._graph: GraphBase = params.create_graph()
+        self._model = self.create_model()
+        self._graph: GraphBase = self.create_graph()
+
+    def create_model(self):
+        return self.params.create()
+
+    def create_graph(self):
+        return self.params.create_graph()
 
     @property
     def params(self) -> TMP:
@@ -189,9 +196,6 @@ class GenericGraphBase(LayerBase[TMP], ABC):
 
     def build_prediction_graph(self, inputs):
         return self.build_train_graph(inputs)
-
-    def pre_proc_targets(self, inputs, targets):
-        return targets
 
 
 class GraphBase(GenericGraphBase[TMP], ABC):

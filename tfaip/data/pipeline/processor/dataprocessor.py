@@ -96,7 +96,7 @@ class DataProcessorParams(ABC, metaclass=DataProcessorParamsMeta):
     def cls() -> Type["DataProcessorBase"]:
         raise NotImplementedError
 
-    def create(self, data_params: "DataBaseParams", mode: PipelineMode) -> "DataProcessorBase":
+    def create(self, data_params: "DataBaseParams", mode: PipelineMode, **kwargs) -> "DataProcessorBase":
         """
         Create the actual DataProcessor
         """
@@ -106,7 +106,7 @@ class DataProcessorParams(ABC, metaclass=DataProcessorParamsMeta):
                 f"modes {[m.value for m in self.modes]}"
             )
         try:
-            return self.cls()(self, data_params, mode)
+            return self.cls()(params=self, data_params=data_params, mode=mode, **kwargs)
         except TypeError as e:
             logger.exception(e)
             raise TypeError(
@@ -130,13 +130,9 @@ class DataProcessorBase(Generic[T], ABC):
         GeneratingDataProcessor
     """
 
-    def __init__(
-        self,
-        params: T,
-        data_params: "DataBaseParams",
-        mode: PipelineMode,
-    ):
+    def __init__(self, params: T, data_params: "DataBaseParams", mode: PipelineMode, **kwargs):
         super().__init__()
+        assert len(kwargs) == 0, kwargs
         assert isinstance(params, DataProcessorParams)
         self.params: T = params
         self.data_params = data_params

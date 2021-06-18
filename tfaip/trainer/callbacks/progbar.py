@@ -19,7 +19,7 @@
 import time
 
 from tensorflow.python.keras.callbacks import ProgbarLogger
-from tensorflow.python.keras.utils.tf_utils import to_numpy_or_python_type
+from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 
 class TFAIPProgbarLogger(ProgbarLogger):
@@ -47,7 +47,7 @@ class TFAIPProgbarLogger(ProgbarLogger):
                 self._time_remaining += self._delta_time
                 self._last_time = time.time()
                 # Only block async when verbose = 1.
-                logs = to_numpy_or_python_type(logs)
+                logs = sync_to_numpy_or_python_type(logs)
                 self.progbar.update(self.seen, list(logs.items()), finalize=True)
             else:
                 new_time = time.time()

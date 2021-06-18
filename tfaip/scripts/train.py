@@ -21,7 +21,6 @@ from contextlib import ExitStack
 from typing import Type, TYPE_CHECKING
 
 from tfaip import TrainerParams
-from tfaip.scenario.scenariobase import import_scenario
 from tfaip.util.logging import WriteToLogFile
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
@@ -49,6 +48,8 @@ def main(scenario: Type["ScenarioBase"], trainer_params: TrainerParams):
 
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        from tfaip.scenario.scenariobase import import_scenario
+
         scenario = import_scenario(values)
 
         # Now pass the real args of the scenario

@@ -20,9 +20,8 @@ import logging
 import os
 from argparse import ArgumentParser
 
-from tensorflow import keras
-
 from tfaip.imports import Trainer, WarmStartParams, WarmStarter
+from tfaip_addons.seq2seq.decoder import BeamSearchDecoderParams, BasicDecoderParams
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -35,37 +34,40 @@ def main():
 
     args = parser.parse_args()
 
+    # reset gpu usage
     with open(os.path.join(args.output_dir, "trainer_params.json")) as f:
         d = json.load(f)
         d.get("device", {})["gpus"] = []
 
-    trainer = Trainer.restore_trainer(d)
+    trainer_params, scenario = Trainer.parse_trainer_params(d)
+    # trainer_params.scenario.model.inference_decoder = BeamSearchDecoderParams(beam_width=5)
+    # trainer_params.scenario.model.ctc_decoder_weight = 0
+    # trainer_params.scenario.model.length_bonus = 0.6
+    trainer_params.scenario.model.inference_decoder = BasicDecoderParams()
+    trainer = scenario.create_trainer(trainer_params, restore=True)
     scenario = trainer.scenario
-    data = scenario.create_data()
-    model = scenario.create_model()
 
-    inputs = data.create_input_layers()
-    outputs = model.build(inputs)
-    keras_model = keras.models.Model(inputs=inputs, outputs=outputs)
-    scenario._keras_predict_model = keras_model
-    scenario._export_graphs = model.export_graphs(inputs, outputs, data.create_target_as_input_layers())
+    # setup training and prediction graph with dummy settings
+    scenario.params.print_eval_limit = 0
+    scenario.setup_training("adam", skip_model_load_test=True)
 
-    def store(path):
-        print(f"Converting {path}")
+    def store(path, to_path):
+        print(f"Converting from {path} to {to_path}")
         if os.path.exists(path):
-            warmstart_params = WarmStartParams(
-                model=os.path.join(path, "serve"),
-                rename_targets=[f"BLSTM_{i}->BLSTM{i + 1}" for i in range(3)],
-            )
-            warmstarter = WarmStarter(warmstart_params)
-            warmstarter.warmstart(scenario.keras_predict_model)
-            scenario.export(path, export_resources=False)
-            print(f"{path} successfully written.")
+            # warmstart_params = WarmStartParams(
+            #     model=os.path.join(path, 'serve'),
+            #     rename_targets=[f"BLSTM_{i}->BLSTM{i + 1}" for i in range(3)],
+            # )
+            # warmstarter = WarmStarter(warmstart_params)
+            # warmstarter.warmstart(scenario.keras_predict_model)
+            scenario.keras_predict_model.load_weights(os.path.join(path, "serve", "variables", "variables"))
+            scenario.export(to_path, trainer_params=trainer_params, export_resources=False)
+            print(f"{to_path} successfully written.")
         else:
             print(f"{path} not found. Skipping")
 
-    for p in ["best", "export"]:
-        store(os.path.join(args.output_dir, p))
+    for p, to_p in [("best", "best_path")]:
+        store(os.path.join(args.output_dir, p), os.path.join(args.output_dir, to_p))
 
 
 if __name__ == "__main__":

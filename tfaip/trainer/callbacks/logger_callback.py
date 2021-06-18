@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class LoggerCallback(Callback):
     """
-    The logger callback prints usefule information about the training process:
+    The logger callback prints useful information about the training process:
     - log at the end of a epoch a
     - Write the current epoch
     - Store the logs of the previous epoch

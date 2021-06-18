@@ -18,18 +18,14 @@
 """Implementation of LAV"""
 import logging
 import os
-import time
 from abc import ABC
 from queue import Queue
 from threading import Thread
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Optional, Iterable
-import threading
 
 import tensorflow.keras as keras
-from tensorflow.python.keras.callbacks import Callback, ProgbarLogger
+from tensorflow.python.keras.callbacks import Callback, ProgbarLogger, CallbackList
 from tensorflow.python.keras.engine import data_adapter
-from tensorflow.python.keras.utils.tf_utils import to_numpy_or_python_type
-
 from tfaip import LAVParams, DataGeneratorParams
 from tfaip import Sample
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
@@ -40,6 +36,7 @@ from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback, Benchm
 from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.file.oshelper import ChDir
 from tfaip.util.shape_utils import to_unbatched_samples
+from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 if TYPE_CHECKING:
     from tfaip.data.data import DataBase
@@ -84,6 +81,21 @@ class MetricsAccumulator:
         return {k: v / self.running_weight[k] for k, v in self.running_sum.items()}
 
 
+class InplaceCallbackList(CallbackList):
+    """Callback list that does not create new log objects
+
+    This is required in Tensorflow 2.5.x to support adding and removing of log entries
+    """
+
+    def _process_logs(self, logs, is_batch_hook=False):
+        new_logs = super()._process_logs(logs, is_batch_hook).copy()
+        if logs is not None:
+            logs.clear()
+            logs.update(new_logs)
+            new_logs = logs
+        return new_logs
+
+
 class EvaluationCallback(Callback):
     """Callback to run the post-proc pipeline and call the evaluator
     run post proc pipeline in a separate thread so that it is instantiated only once
@@ -112,13 +124,13 @@ class EvaluationCallback(Callback):
         self.post_proc_runner.start()
 
     def on_test_batch_end(self, batch, logs=None):
-        (inputs, targets, meta), _, outputs = to_numpy_or_python_type(logs["__outputs__"])
+        (inputs, targets, meta), _, outputs = sync_to_numpy_or_python_type(logs["__outputs__"])
 
         samples = to_unbatched_samples(inputs, targets, outputs, meta)
         for sample in samples:
             self.write_queue.put(sample)
 
-        logs.update(self.evaluator.result())  # not up to date, since running asynchron!
+        # logs.update(self.evaluator.result())  # not up to date, since running asynchron!
         del logs["__outputs__"]
 
     def on_test_end(self, logs=None):
@@ -208,14 +220,16 @@ class LAV(ABC):
             def test_step(self, data):
                 data = data_adapter.expand_1d(data)
                 x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+                inputs, _, meta = x
 
-                y_pred = self(x, training=False)
+                y_pred, pre_proc_targets = self(x, training=False)
+
                 # Updates stateful loss metrics.
                 self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
 
                 self.compiled_metrics.update_state(y, y_pred, sample_weight)
                 logs = {m.name: m.result() for m in self.metrics}
-                logs["__outputs__"] = (x, y, y_pred)
+                logs["__outputs__"] = ((inputs, pre_proc_targets, meta), y, y_pred)
                 return logs
 
             def get_config(self):
@@ -235,14 +249,14 @@ class LAV(ABC):
             with evaluator:
                 with val_data as rd:
                     extract_logs_callback = ExtractLogsCallback(test_prefix="")
-                    benchmark_callback = BenchmarkCallback()
+                    benchmark_callback = BenchmarkCallback(extract_logs_callback)
                     eval_callbacks = [EvaluationCallback(evaluator, rd), extract_logs_callback, benchmark_callback]
                     if not self._params.silent:
                         eval_callbacks.append(ProgbarLogger(count_mode="steps"))
 
                     r = lav_model.evaluate(
                         rd.input_dataset().map(regroup),
-                        callbacks=eval_callbacks,
+                        callbacks=InplaceCallbackList(eval_callbacks, model=lav_model),
                         return_dict=True,
                         verbose=0 if self._params.silent else 1,
                     )
@@ -253,6 +267,9 @@ class LAV(ABC):
                     self._on_lav_end(params, r)
                     for cb in callbacks:
                         cb.on_lav_end(params, r)
+
+                    if not self._params.silent:
+                        logger.info("LAV results: \n" + "\n    ".join([f"{k} = {v}" for k, v in r.items()]))
                     yield r
 
     def _on_sample_end(self, data_generator_params: DataGeneratorParams, sample: Sample):

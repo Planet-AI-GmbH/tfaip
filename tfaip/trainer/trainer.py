@@ -236,7 +236,7 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         callbacks.append(extract_logs_cb)
         callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode="steps"))
         callbacks.append(TensorflowFix())
-        callbacks.append(BenchmarkCallback())
+        callbacks.append(BenchmarkCallback(extract_logs_cb))
         # split storing of parameters and weights
         # first store the actual checkpoint (non EMA weights)
         # after the EarlyStoppingCallback which must be listed after EMACallback we can store the updated trainer

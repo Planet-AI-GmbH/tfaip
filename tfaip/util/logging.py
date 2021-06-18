@@ -35,7 +35,7 @@ for handler in logging.getLogger("tensorflow").handlers:
 
 # Define a custom extension handler so that the exceptions are logged to logging
 def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
+    if exc_type is not None and issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
@@ -70,6 +70,7 @@ class WriteToLogFile:
         this_logger.info(f"Logging to '{self.filename}'")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        handle_exception(exc_type, exc_val, exc_tb)  # Log exception before log gets closed
         logging.getLogger().removeHandler(self.file_handler)
         self.file_handler.flush()
         self.file_handler.close()
