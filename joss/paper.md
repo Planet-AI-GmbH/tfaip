@@ -51,20 +51,20 @@ _tfaip_ resolves the following different aspects in an elegant and robust way.
 During research, a scenario is usually configured via a command line interface (CLI) which usually must be implemented by the user itself.
 _tfaip_ already provides a powerful CLI which is dynamically created upon runtime by parsing a nested dataclass hierarchy.
 To add a new parameter or even a new set of sub parameters, a user simply has to add a new field to the respective dataclass.
-Compared to other approached where all possible parameters are simultaneously available in the CLI, the dynamic approach of _tfaip_ only shows and parsed the available arguments.
-This prevents users from making mistakes by setting parameters without effect for the current configuration (e.g, setting the factor for an Adam optimizer even though RMSprop was selected).
+Compared to other approached where all possible parameters are simultaneously available in the CLI, the dynamic approach of _tfaip_ only shows the available arguments.
+This prevents users from making mistakes by setting parameters without effect for the current configuration (e.g., setting the factor for an Adam optimizer even though RMSprop was selected).
 The default CLI of _tfaip_ provides commands to adapt various hyper-parameters such as the learning rate and its schedule, the optimizer, logging, debugging, profiling, or early stopping.
 Furthermore, each component of the scenario can itself be fully customized which allows, for example, to dynamically configure the network architecture, e.g., by inserting layers or changing their parameters.
 This feature helps researchers to set up various experiments for example to optimize hyper-parameters or test novel ideas.
 
-In comparison to other frameworks such as Tensorflow, _tfaip_ requires users to implement their scenarios in object-oriented programming and encourages them to annotate their code with types.
-This is particularly sensible if the scenarios and thus their code basis becomes larger since it leads to a clean, structured, modularized, and readable code preventing bad code style and facilitates maintenance.
+In comparison to other frameworks such as Tensorflow, _tfaip_ requires users to implement their scenarios in an object-oriented way and encourages them to annotate their code with types.
+This is particularly advantageous for larger, more complex scenarios where the codebase grows accordingly. Using _tfaip_ leads to a clean, structured, modularized, and readable code limiting poor coding styles and facilitating maintenance.
 In practice, each scenario is created by implementing predefined interfaces (e.g., loss-function or the graph construction).
 
 During research and development, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
-The Tensorflow-backed of _tfaip_ allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
-To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, partly even impossible, and complicates debugging.
-_tfaip_ tackles this issue by providing a sophisticated pipeline setup based on so-called data processors which apply simple transformation operations in pure Python code and are automatically executed in parallel.
+The Tensorflow-backed _tfaip_ allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
+To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, and sometimes even impossible, and complicates debugging.
+_tfaip_ tackles this issue by providing a sophisticated pipeline setup based on "data processors" which apply simple transformation operations in pure Python code and are automatically executed in parallel.
 
 Another important step which is simplified by _tfaip_ is the deployment of a scenario.
 Other frameworks such as plain Tensorflow or Keras allow to easily load a trained model for prediction which does however not include data processing.
@@ -78,13 +78,13 @@ Finally, _tfaip_ will automatically log the training process using the Tensorboa
 
 Efficient research in the area of Deep Learning requires the integration of highly sophisticated Open-Source frameworks such as Tensorflow [@tensorflow2015-whitepaper], PyTorch [@pytorch_2019], Caffe [@jia2014caffe], CNTK [@cntk2016], or Trax [@trax2021].
 These frameworks provide efficient tools to freely design Deep Learning scenario of any size and complexity.
-However, as the number of code lines rises, a project has to be structured into meaningful components to be maintainable.
+However, as the number of lines of code grows, a project has to be structured into meaningful components to be maintainable.
 These components are almost identical for each Deep Learning scenario: there are modules for the graph, the model, the data, the training, the validation, and the prediction (i.e., the application of a trained model).
 Furthermore, support for dynamic parameter adaption for instance via the command line is desirable for efficient research.
 Therefore, to obtain a clean code base, it is highly desirable to only implement abstract templates that already set up the interaction among the modules by providing basic functionality that is required in any use-case.
 _tfaip_ which is an extension to Tensorflow solves this and thus helps developers to efficiently handle and maintain small but also large-scale projects in research environments.
 
-Recently, several AutoML approaches emerged, e.g., by Google Cloud or Microsoft Azure.
+Recently, several AutoML approaches have emerged, e.g., by Google Cloud or Microsoft Azure.
 AutoML targets developers with limited machine learning expertise and enables them to train their own models by automating processes like network construction, feature engineering, or hyperparameter tuning. 
 In contrast, _tfaip_ targets researchers with expertise in deep learning who actually design new network architectures, data processing pipelines, and setup training, but with only limited experience in or capacity for software engineering.
 _tfaip_ helps to structure and maintain the code bases, and hereby also solves some recurrent problems that will likely occur during development (see next Section).
