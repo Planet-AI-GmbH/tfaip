@@ -64,7 +64,7 @@ In practice, each scenario is created by implementing predefined interfaces (e.g
 During research and development, a tedious step is data preparation which often comprises the conversion of data into the format required by the framework.
 The Tensorflow-backed _tfaip_ allows integrating Python code in the data pipeline which is however not run (truly) in parallel by multiple processes and results quite often in a bottleneck.
 To speed-up Tensorflow, a user has to transform Python into Tensorflow operations which is laborious, and sometimes even impossible, and complicates debugging.
-_tfaip_ tackles this issue by providing a sophisticated pipeline setup based of 'data processors' which apply simple transformation operations in pure Python code and are automatically executed in parallel.
+_tfaip_ tackles this issue by providing a sophisticated pipeline setup based on "data processors" which apply simple transformation operations in pure Python code and are automatically executed in parallel.
 
 Another important step which is simplified by _tfaip_ is the deployment of a scenario.
 Other frameworks such as plain Tensorflow or Keras allow to easily load a trained model for prediction which does however not include data processing.
