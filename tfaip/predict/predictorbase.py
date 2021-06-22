@@ -30,6 +30,7 @@ from tfaip import PredictorParams
 from tfaip.data.pipeline.datagenerator import DataGenerator
 from tfaip.data.pipeline.datapipeline import DataPipeline
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
+from tfaip.predict.raw_predictor import RawPredictor
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkResults
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 from tfaip.util.profiling import MeasureTime
@@ -95,6 +96,27 @@ class PredictorBase(ABC):
 
         return model
 
+    def raw(self) -> RawPredictor:
+        """Create a raw predictor from this predictor that allows to asynchronly predict raw samples.
+
+        Usage:
+
+        Either call
+
+        with predictor.raw() as raw_pred:
+            raw_pred(sample1)
+            raw_pred(sample2)
+            ...
+
+        or
+
+        raw_pred = predictor.raw().__enter__()
+        raw_pred(sample1)
+        raw_pred(sample2)
+
+        """
+        return RawPredictor(self)
+
     def predict(self, params: DataGeneratorParams) -> Iterable[Sample]:
         """
         Predict a DataGenerator based on its params.
@@ -134,6 +156,7 @@ class PredictorBase(ABC):
             - predict_pipeline
             - predict_dataset
             - predict
+            - raw
         """
         if size is None:
             # Automatically compute the size (number of samples)
@@ -159,10 +182,11 @@ class PredictorBase(ABC):
                 return RawGenerator(mode=self.mode, params=self.generator_params)
 
         pipeline = RawInputsPipeline(
-            DataPipelineParams(mode=PipelineMode.PREDICTION),
+            self.params.pipeline,
             self._data,
             DataGeneratorParams(),
         )
+
         return self.predict_pipeline(pipeline)
 
     def predict_pipeline(self, pipeline: DataPipeline) -> Iterable[Sample]:
