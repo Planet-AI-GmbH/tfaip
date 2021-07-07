@@ -53,19 +53,13 @@ class TensorboardWriter(keras.metrics.Metric):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        assert func is not None
         self.initial_input_shape = input_shape
         self.n_storage = n_storage
         self.handle_fn = func
-        self.store_w = None
-        assert func is not None
-        if self.initial_input_shape is not None:
-            self.setup(self.initial_input_shape)
-
-    def setup(self, input_shape):
-        initial_value = np.zeros([0 if s is None else s for s in input_shape])
         self.store_w = tf.Variable(
-            initial_value=initial_value,
-            shape=input_shape,
+            initial_value=[],
+            shape=tf.TensorShape(None),  # dynamic shape
             trainable=False,
             validate_shape=False,
             name="store",
@@ -73,9 +67,6 @@ class TensorboardWriter(keras.metrics.Metric):
         )
 
     def update_state(self, y_true, y_pred, **kwargs):
-        if self.store_w is None:
-            self.setup(y_pred.shape)
-
         del y_true  # not used, the actual data is in y_pred, y_true is dummy data
         return self.store_w.assign(y_pred)
 
@@ -84,7 +75,7 @@ class TensorboardWriter(keras.metrics.Metric):
         return tf.stack(self.store_w)
 
     def reset_states(self):
-        self.store_w.assign_sub(self.store_w)  # set to zero
+        self.store_w.assign([])
 
     def handle(self, name: str, value: np.ndarray, step: int):
         return self.handle_fn(name, value, step)

@@ -39,8 +39,8 @@ class TutorialModelParams(ModelBaseParams):
     def cls():
         return TutorialModel
 
-    @staticmethod
-    def graph_cls():
+    @classmethod
+    def graph_cls(cls):
         return TutorialGraph
 
     n_classes: int = field(

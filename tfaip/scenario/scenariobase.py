@@ -327,11 +327,13 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         data_params = cls.params_from_path(model).data
         post_init(data_params)
         predictor = cls.predictor_cls()(params, cls.data_cls()(data_params))
+        model_cls = cls.model_cls()
+        run_eagerly = params.run_eagerly
         if isinstance(model, str):
             model = keras.models.load_model(
                 os.path.join(model, "serve"),
                 compile=False,
-                custom_objects=cls.model_cls().all_custom_objects() if params.run_eagerly else None,
+                custom_objects=model_cls.all_custom_objects() if run_eagerly else model_cls.base_custom_objects(),
             )
 
         predictor.set_model(model)
@@ -605,7 +607,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                     tmp, include_optimizer=False, options=tf.saved_model.SaveOptions(namespace_whitelist=["Addons"])
                 )
                 logger.info("Prediction model successfully saved. Attempting to load it")
-                keras.models.load_model(tmp, custom_objects=self.model.all_custom_objects())
+                keras.models.load_model(tmp, custom_objects=self._model.base_custom_objects())
             logger.info("Model can be successfully loaded")
 
     def _wrap_data(

@@ -5,6 +5,7 @@ GitPython
 imageio
 nptyping
 opencv-python-headless
+openpyxl
 paiargparse==1.1.1
 pandas
 pillow

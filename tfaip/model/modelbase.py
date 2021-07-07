@@ -53,10 +53,17 @@ class ModelBase(Generic[TMP], ABC):
 
     @classmethod
     def all_custom_objects(cls) -> Dict[str, Type[tf.keras.layers.Layer]]:
-        """Custom objects required to instantiate saved keras models"""
+        """Custom objects required to instantiate saved keras models in eager mode (reinstantiation)"""
         root_graph = cls.root_graph_cls()
         return {
             root_graph.__name__: root_graph,
+            **cls.base_custom_objects(),
+        }
+
+    @classmethod
+    def base_custom_objects(cls) -> Dict[str, Type[tf.keras.layers.Layer]]:
+        """Custom objects required to instantiate saved keras models even in graph mode"""
+        return {
             "TensorboardWriter": TensorboardWriter,
         }
 

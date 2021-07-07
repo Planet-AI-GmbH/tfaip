@@ -30,6 +30,7 @@ from tfaip import PredictorParams
 from tfaip.data.pipeline.datagenerator import DataGenerator
 from tfaip.data.pipeline.datapipeline import DataPipeline
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
+from tfaip.model.modelbase import ModelBase
 from tfaip.predict.raw_predictor import RawPredictor
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkResults
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
@@ -92,7 +93,7 @@ class PredictorBase(ABC):
 
     def _load_model(self, model: Union[str, keras.Model]):
         if isinstance(model, str):
-            model = keras.models.load_model(model, compile=False)
+            model = keras.models.load_model(model, compile=False, custom_objects=ModelBase.base_custom_objects())
 
         return model
 
