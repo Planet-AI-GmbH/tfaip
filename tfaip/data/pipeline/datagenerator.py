@@ -18,7 +18,7 @@
 """Definition of the DataGenerator"""
 from abc import ABC, abstractmethod
 from random import shuffle
-from typing import Iterable, List, TypeVar, Generic
+from typing import Iterable, List, TypeVar, Generic, Union
 
 from tfaip import DataGeneratorParams
 from tfaip import PipelineMode, Sample
@@ -32,6 +32,9 @@ class DataGenerator(Generic[T], ABC):
     A Generator is constructed by is DataGeneratorParams
 
     An implemented DataGenerator must implement generate and __len__.
+
+    The generate function can return either single Samples or batches of Samples which provides support for custom
+    dynamic batching.
     """
 
     def __init__(self, mode: PipelineMode, params: T):
@@ -43,8 +46,20 @@ class DataGenerator(Generic[T], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate(self) -> Iterable[Sample]:
+    def generate(self) -> Iterable[Union[Sample, List[Sample]]]:
+        """Function to yield the samples
+
+        The default case is to yield individual Samples or to return a list of samples.
+
+        Alternatively, you can yield already batched samples which allows to define custom dynamic batch sizes.
+        For example, return a ``List[List[Sample]]`` or yield a `List[Sample]`.
+        NOTE: Overwrite ``yield_batches`` and return ``True`` to enable this mode.
+        """
         raise NotImplementedError
+
+    def yields_batches(self) -> bool:
+        """Function to define if generate() returns Samples or batches of Samples"""
+        return False
 
 
 class RawDataGenerator(DataGenerator[T]):

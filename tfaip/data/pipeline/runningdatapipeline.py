@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Iterable, List, Optional
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.data.experimental import bucket_by_sequence_length
+from tfaip.util.json_helper import TFAIPJsonEncoder
 
 from tfaip import Sample, PipelineMode
 from tfaip.data.pipeline.processor.dataprocessor import is_valid_sample
@@ -111,7 +112,9 @@ class RunningDataPipeline:
             return None
 
         tf_dataset_generator = self.data_pipeline.create_tf_dataset_generator()
-        dataset = tf_dataset_generator.create(lambda: self.generate_input_samples(auto_repeat))
+        dataset = tf_dataset_generator.create(
+            lambda: self.generate_input_samples(auto_repeat), self.data_generator.yields_batches()
+        )
         return self._wrap_dataset(dataset)
 
     def preload_input_samples(self, progress_bar=True, non_preloadable_params: Optional[List] = None) -> List[Sample]:
@@ -175,8 +178,16 @@ class RunningDataPipeline:
 
             # Generate the samples (skip invalid samples)
             for s in generate:
-                if is_valid_sample(s, self.mode):
-                    yield s
+                if self.data_generator.yields_batches():
+                    assert isinstance(s, list), f"Batched mode. Invalid type. Expected List[Sample] but got {type(s)}"
+                    # batched, filter invalid samples in batch, and yield the remainder, if something remains
+                    s = list(filter(lambda x: is_valid_sample(x, self.mode), s))
+                    if len(s) > 0:
+                        yield self._pad_batched_samples(s)
+                else:
+                    assert isinstance(s, Sample), f"Sample mode. Invalid type. Expected Sample but got {type(s)}."
+                    if is_valid_sample(s, self.mode):
+                        yield s
 
             if not auto_repeat:
                 # Stop of auto repeat is false
@@ -276,9 +287,80 @@ class RunningDataPipeline:
         pipeline_params = self.data_pipeline.pipeline_params
         if pipeline_params.shuffle_buffer_size > 1:
             dataset = dataset.shuffle(pipeline_params.shuffle_buffer_size)
-        if self.data_pipeline.auto_batch:
+        if self.data_pipeline.auto_batch and not self.data_generator.yields_batches():
             dataset = self._wrap_padded_batch(dataset)
         if pipeline_params.prefetch > 0:
             dataset = dataset.prefetch(pipeline_params.prefetch)
         dataset = dataset.take(compute_limit(pipeline_params.limit, pipeline_params.batch_size))
         return dataset
+
+    def _pad_batched_samples(self, samples: List[Sample]) -> Sample:
+        """Batches and pads the content of samples"""
+        data = self.data_pipeline.data
+
+        def pack_meta(meta):
+            return {"meta": np.asarray([json.dumps(meta, cls=TFAIPJsonEncoder)])}
+
+        if self.mode == PipelineMode.PREDICTION:
+            output_signature = (data.input_layer_specs(), data.meta_layer_specs())
+            extract = lambda s: (s.inputs, pack_meta(s.meta))
+            to_sample = lambda i, m: Sample(inputs=i, meta=m)
+        elif self.mode == PipelineMode.TARGETS:
+            output_signature = (data.target_layer_specs(), data.meta_layer_specs())
+            extract = lambda s: (s.targets, pack_meta(s.meta))
+            to_sample = lambda t, m: Sample(targets=t, meta=m)
+        else:
+            output_signature = (data.input_layer_specs(), data.target_layer_specs(), data.meta_layer_specs())
+            extract = lambda s: (s.inputs, s.targets, pack_meta(s.meta))
+            to_sample = lambda i, t, m: Sample(inputs=i, targets=t, meta=m)
+
+        flat_samples = []
+        for sample in samples:
+            sample = extract(sample)
+            tf.nest.assert_same_structure(sample, output_signature)
+            flat_samples.append(tf.nest.flatten(sample))
+
+        def default(dtype):
+            if dtype == tf.bool:
+                return False
+            return "" if dtype == tf.string else 0
+
+        def pad(struct):
+            struct, signature = struct
+            padding_value = data.padding_values().get(signature.name, default(signature.dtype))
+            if signature.dtype == "string":
+                return np.stack(struct, axis=0)
+
+            # assert shapes
+            for i, axis_dim in enumerate(signature.shape):
+                if axis_dim is None:
+                    continue
+                for s in struct:
+                    assert s.shape[i] == axis_dim, f"Shape mismatch. Sample shape {s.shape[i]} but must be {axis_dim}"
+
+            # pad all None axis
+            for i, axis_dim in enumerate(signature.shape):
+                if axis_dim is not None:
+                    continue
+
+                max_dim = max(s.shape[i] for s in struct)
+
+                def pad_shape_for_sample(s):
+                    shape = []
+                    for i_ax, ax in enumerate(s.shape):
+                        if i_ax == i:
+                            shape.append((0, max_dim - ax))
+                        else:
+                            shape.append((0, 0))
+                    return shape
+
+                struct = [np.pad(s, pad_shape_for_sample(s), constant_values=padding_value) for s in struct]
+
+            struct = np.stack(struct, axis=0)
+            return struct
+
+        flat_signature = tf.nest.flatten(output_signature)
+        batched_samples = zip(*flat_samples)
+        batched = list(map(pad, zip(batched_samples, flat_signature)))
+        batched = tf.nest.pack_sequence_as(output_signature, batched)
+        return to_sample(*batched)

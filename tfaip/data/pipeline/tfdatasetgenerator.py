@@ -17,7 +17,8 @@
 # ==============================================================================
 """Implementation of TFDatasetGenerator"""
 import json
-from typing import Callable, Iterable, TYPE_CHECKING, TypeVar, Generic
+from functools import partial
+from typing import Callable, Iterable, TYPE_CHECKING, TypeVar, Generic, Union, List
 
 import numpy as np
 from tfaip import PipelineMode, Sample
@@ -67,13 +68,25 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
     def meta_layer_specs(self):
         return self.data_pipeline.data.meta_layer_specs()
 
-    def create(self, generator_fn: Callable[[], Iterable[Sample]]) -> "tf.data.Dataset":
+    def create(self, generator_fn: Callable[[], Iterable[Sample]], yields_batches=False) -> "tf.data.Dataset":
+        """
+
+        Args:
+            generator_fn: Callable that creates the actual generator
+            yields_batches: True if the samples comprise already batched data
+
+        Returns:
+            The tf.data.Dataset
+        """
         # Local input so that not imported in spawned processes
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
 
         def wrap(sample):
             if isinstance(sample, Sample):
-                meta = {"meta": np.asarray([json.dumps(sample.meta, cls=TFAIPJsonEncoder)])}
+                if yields_batches:
+                    meta = sample.meta
+                else:
+                    meta = {"meta": np.asarray([json.dumps(sample.meta, cls=TFAIPJsonEncoder)])}
                 if self.mode == PipelineMode.PREDICTION:
                     return sample.inputs, meta
                 elif self.mode == PipelineMode.TARGETS:
@@ -90,8 +103,12 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
         else:
             output_signature = (self.input_layer_specs(), self.target_layer_specs(), self.meta_layer_specs())
 
-        # create the tf.data.Dataset and apply optional additional transformations (overwritten by implementations)
+        if yields_batches:
+            output_signature = tf.nest.map_structure(
+                lambda x: tf.TensorSpec(shape=(None,) + x.shape, dtype=x.dtype, name=x.name), output_signature
+            )
 
+        # create the tf.data.Dataset and apply optional additional transformations (overwritten by implementations)
         def flatten(x):
             return tuple(tf.nest.flatten(x))
 

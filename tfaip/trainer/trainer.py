@@ -180,8 +180,9 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             if self._params.warmstart.model:
                 logger.warning("Ignoring warmstart since training is resumed from a checkpoint")
         else:
+            # Use the "predict" model here since it only comprises relevant weights (no metrics, etc.)
             custom_objects = self._model.all_custom_objects()
-            self.create_warmstarter().warmstart(self._scenario.keras_train_model, custom_objects)
+            self.create_warmstarter().warmstart(self._scenario.keras_predict_model, custom_objects)
 
         callbacks = self.setup_callbacks(optimizer, callbacks)
         logger_callback = next(c for c in callbacks if isinstance(c, LoggerCallback))  # get the logger callback

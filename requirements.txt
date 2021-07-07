@@ -5,7 +5,7 @@ GitPython
 imageio
 nptyping
 opencv-python-headless
-paiargparse==1.1.0
+paiargparse==1.1.1
 pandas
 pillow
 prettytable

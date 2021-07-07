@@ -43,7 +43,11 @@ class MappingDataProcessorWorker(DataWorker):
         self.processors = self.data_processor_fn()
 
     def process(self, *args, **kwargs):
-        return self.processors.apply_on_sample(args[0])
+        sample = args[0]
+        if isinstance(sample, list):
+            return [self.processors.apply_on_sample(s) for s in sample]
+        else:
+            return self.processors.apply_on_sample(sample)
 
 
 class GeneratingDataProcessorWorker(DataWorker):

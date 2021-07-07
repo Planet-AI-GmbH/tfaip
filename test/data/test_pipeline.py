@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, Dict, Type, List
 
 import tensorflow as tf
+import numpy as np
 from paiargparse import pai_dataclass
 
 from tfaip import DataGeneratorParams, DataBaseParams
@@ -34,6 +35,20 @@ from tfaip.data.pipeline.processor.dataprocessor import (
     GeneratingDataProcessor,
 )
 from tfaip.data.pipeline.processor.params import SequentialProcessorPipelineParams, ComposedProcessorPipelineParams
+
+
+@pai_dataclass
+@dataclass
+class PrepareParams(DataProcessorParams):
+    @staticmethod
+    def cls() -> Type["DataProcessorBase"]:
+        class Prepare(MappingDataProcessor):
+            def apply(self, sample: Sample) -> Sample:
+                return sample.new_inputs({"n": np.asarray([sample.inputs])}).new_targets(
+                    {"n": np.asarray([sample.targets])}
+                )
+
+        return Prepare
 
 
 @pai_dataclass

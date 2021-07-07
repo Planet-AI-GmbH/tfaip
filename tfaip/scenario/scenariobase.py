@@ -331,7 +331,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             model = keras.models.load_model(
                 os.path.join(model, "serve"),
                 compile=False,
-                custom_objects=cls.model_cls().all_custom_objects(),
+                custom_objects=cls.model_cls().all_custom_objects() if params.run_eagerly else None,
             )
 
         predictor.set_model(model)
@@ -765,7 +765,7 @@ def import_scenario(module_name: str) -> Type["ScenarioBase"]:
                 f"No module named '{module_path_or_name}'. Please specify the full module to "
                 f"import or a relative path of the working directory. "
                 f"E.g.: tfaip.scenario.tutorial.full"
-            )
+            ) from e
 
     if ":" in module_name:
         module_path, scenario_class_name = module_name.split(":")

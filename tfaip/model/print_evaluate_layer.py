@@ -50,7 +50,7 @@ class PrintEvaluateLayer(tf.keras.layers.Layer):
         self.scenario = scenario
         self.limit_reached = False
         self.limit = limit
-        self._still_allowed = tf.Variable(self.limit, trainable=False, name="_print_limit")
+        self._still_allowed = tf.Variable(self.limit, trainable=False, name="print_limit")
         if scenario is None:
             logger.warning(
                 "You are instantiating a PrintEvaluateLayer without a scenario. This is not supported. "

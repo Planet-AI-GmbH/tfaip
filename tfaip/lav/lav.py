@@ -201,7 +201,9 @@ class LAV(ABC):
 
         if not keras_model:
             keras_model = keras.models.load_model(
-                os.path.join(self._params.model_path, "serve"), compile=False, custom_objects=model.all_custom_objects()
+                os.path.join(self._params.model_path, "serve"),
+                compile=False,
+                custom_objects=model.all_custom_objects() if run_eagerly else None,
             )
 
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the

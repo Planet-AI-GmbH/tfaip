@@ -20,6 +20,7 @@ import logging
 import re
 from typing import List, Optional, NoReturn
 
+import numpy as np
 import tensorflow as tf
 
 from tfaip import WarmStartParams
@@ -91,36 +92,19 @@ class WarmStarter:
             logger.debug("No warm start model provided")
             return
 
-        target_var_names = self._apply_renamings([w.name for w in target_model.weights], self._params.rename_targets)
-        target_weights = list(zip(target_var_names, target_model.weights, target_model.get_weights()))
-        all_trainable_target_weights = {name: weight for name, var, weight in target_weights if var.trainable}
-        trainable_name_to_target_var_name = {
-            k: v
-            for k, v in zip(
-                self._apply_renamings(all_trainable_target_weights.keys(), self._params.rename_targets),
-                all_trainable_target_weights.keys(),
-            )
-        }
-        target_var_name_to_trainable_name = {v: k for k, v in trainable_name_to_target_var_name.items()}
-        logger.info(f"Warm-starting from {self._params.model}")
-        try:
-            # First try to reinstantiate the model, and apply the renamings on the weights,
-            # if this fails, load the weights as checkpoints, apply additional renamings, and then try to match
-            # the source and target weights
-            model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
+        # Names that will be ignored in both the loaded and target model (no real weights)
+        names_to_ignore = {"print_limit:0", "count:0"}
 
-            loaded_var_names = self._apply_renamings([w.name for w in model.weights], self._params.rename)
-            model_to_load_var_names = [w.name for w in model.weights]
-            loaded_weights = list(zip(loaded_var_names, model.weights, model.get_weights()))
-            all_loaded_weights = {name: weight for name, var, weight in loaded_weights if var.trainable}
-            trainable_name_to_loaded_var_name = {
-                k: v
-                for k, v in zip(
-                    self._apply_renamings(all_loaded_weights.keys(), self._params.rename_targets),
-                    all_loaded_weights.keys(),
-                )
-            }
+        # 1. Load as saved model. if successful -> 3, if failed -> 2
+        # 2. If OSError (-> no saved model), load weights directly fron checkpoint -> 5
+        # 3. Load weights and assign (only works if the model is identical), if failed -> 4
+        # 4. Load weights by name -> 5
+        # 5. Apply renaming rules and match weights
+        try:
+            # 1. Load model
+            src_model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
         except OSError:
+            # 2. load as checkpoint, then go to 5.
             logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
             ckpt = tf.train.load_checkpoint(self._params.model)
             name_shapes = ckpt.get_variable_to_shape_map()
@@ -139,6 +123,66 @@ class WarmStarter:
             }
             all_loaded_weights = weights_ckpt
             trainable_name_to_loaded_var_name = {k: k for k in names}
+        else:
+            # 3. apply weights directly
+            logger.info("Source model successfully loaded for warmstart.")
+            skip_direct_apply = self._params.include or self._params.exclude
+            if not skip_direct_apply:
+                try:
+                    self.apply_weights(
+                        target_model, [np.asarray(w) for w in src_model.weights if w.name not in names_to_ignore]
+                    )
+                except Exception as e:
+                    # 4. Load and rename weights
+                    logger.exception(e)
+                    logger.warning(
+                        "Weights could not be copied directly. Retrying application of renaming rules to"
+                        "match variable names."
+                    )
+                else:
+                    # successful, nothing to do
+                    return
+
+            loaded_var_names = self._apply_renamings([w.name for w in src_model.weights], self._params.rename)
+            model_to_load_var_names = [w.name for w in src_model.weights]
+            loaded_weights = list(zip(loaded_var_names, src_model.weights, src_model.get_weights()))
+            all_loaded_weights = {name: weight for name, var, weight in loaded_weights if name not in names_to_ignore}
+            trainable_name_to_loaded_var_name = {
+                k: v
+                for k, v in zip(
+                    self._apply_renamings(all_loaded_weights.keys(), self._params.rename_targets),
+                    all_loaded_weights.keys(),
+                )
+            }
+
+        # 5. Apply names with renaming rules
+        target_var_names = self._apply_renamings([w.name for w in target_model.weights], self._params.rename_targets)
+        target_weights = list(zip(target_var_names, target_model.weights, target_model.get_weights()))
+        if len(set(name for name, var, weight in target_weights)) != len(target_weights):
+            logger.critical(
+                "Non unique names detected in model weight names. You can ignore this warning but the "
+                "model will not be initialized correctly!"
+            )
+        all_trainable_target_weights = {
+            name: weight for name, var, weight in target_weights if name not in names_to_ignore
+        }
+        # all_trainable_target_weights = {name: weight for name, var, weight in target_weights if var.trainable}
+        trainable_name_to_target_var_name = {
+            k: v
+            for k, v in zip(
+                self._apply_renamings(all_trainable_target_weights.keys(), self._params.rename_targets),
+                all_trainable_target_weights.keys(),
+            )
+        }
+        target_var_name_to_trainable_name = {v: k for k, v in trainable_name_to_target_var_name.items()}
+        logger.info(f"Warm-starting from {self._params.model}")
+        try:
+            # First try to reinstantiate the model, and apply the renamings on the weights,
+            # if this fails, load the weights as checkpoints, apply additional renamings, and then try to match
+            # the source and target weights
+            model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
+        except OSError:
+            logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
 
         # Filter the params and validate
         names_target = set(trainable_name_to_target_var_name.keys())

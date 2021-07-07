@@ -17,7 +17,7 @@
 # ==============================================================================
 """Different version of executing DataProcessors."""
 from abc import abstractmethod, ABC
-from typing import Optional, Callable, Iterable, TYPE_CHECKING, Union
+from typing import Optional, Callable, Iterable, TYPE_CHECKING, Union, List
 
 from tfaip import Sample, PipelineMode
 from tfaip.data.pipeline.processor.dataprocessor import SequenceProcessor, GeneratingDataProcessor
@@ -67,16 +67,24 @@ class MappingSampleProcessorPipeline(SampleProcessorPipelineBase):
     Implementation for MappingDataProcessors
     """
 
-    def _apply(self, samples: Iterable[Sample], run_parallel) -> Iterable[Sample]:
+    def _apply(
+        self, samples: Iterable[Union[Sample, List[Sample]]], run_parallel
+    ) -> Iterable[Union[Sample, List[Sample]]]:
         if not self.create_processor_fn:
             for sample in samples:
                 yield sample
         else:
             processor = self.create_processor_fn()
             for sample in samples:
-                r = processor.apply_on_sample(sample)
-                if r is not None:
-                    yield r
+                if isinstance(sample, list):
+                    # batched input
+                    r = list(filter(lambda x: x is not None, map(processor.apply_on_sample, sample)))
+                    if len(r) > 0:
+                        yield r
+                else:
+                    r = processor.apply_on_sample(sample)
+                    if r is not None:
+                        yield r
 
 
 class ParallelMappingSampleProcessingPipeline(MappingSampleProcessorPipeline):

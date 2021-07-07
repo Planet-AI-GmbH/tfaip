@@ -255,7 +255,7 @@ class PredictorBase(ABC):
 
         # wrap model so that it outputs inputs, meta and optionally the targets
         wrapped_model = WrappedModel(self.params.include_targets)
-        wrapped_model.compile(run_eagerly=True)
+        wrapped_model.compile(run_eagerly=self.params.run_eagerly)
 
         if self._params.include_targets:
             dataset = dataset.map(lambda i, t, m: ((i, t, m),))
