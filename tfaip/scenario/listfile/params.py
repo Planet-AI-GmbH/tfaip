@@ -44,6 +44,12 @@ class ListsFileGeneratorParams(DataGeneratorParams):
     list_ratios: Optional[List[float]] = field(
         default=None, metadata=pai_meta(help="Ratios of picking list files. Must be supported by the scenario")
     )
+    ignore_prefix: Optional[str] = field(
+        default="#",
+        metadata=pai_meta(
+            help="Ignore entries in the files that start with the corresponding sign. Default is '#' for commenting out samples."
+        ),
+    )
 
     def __post_init__(self):
         if self.lists:

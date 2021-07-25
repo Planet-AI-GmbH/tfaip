@@ -105,6 +105,7 @@ def lav_test_case(
     batch_size_test=True,
     ignore_binary_metric=False,
     ignore_array_metric=False,
+    instantiate_graph=False,
 ):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
@@ -133,7 +134,7 @@ def lav_test_case(
         clear_session()
         scenario_params = scenario.params_from_path(lav_params.model_path)
         lav = scenario.create_lav(lav_params, scenario_params)
-        lav.run([trainer_params.gen.val_gen()])
+        lav.run([trainer_params.gen.val_gen()], instantiate_graph=instantiate_graph)
         clear_session()
         set_global_random_seed(trainer_params.random_seed)
         lav_params.model_path = os.path.join(trainer_params.output_dir, "best")
@@ -141,7 +142,9 @@ def lav_test_case(
         lav_params.pipeline.batch_size = 1
         lav_params.pipeline.limit = batch_and_limit
         lav = scenario.create_lav(lav_params, scenario_params)
-        bs1_results = next(iter(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug)))
+        bs1_results = next(
+            iter(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug, instantiate_graph=instantiate_graph))
+        )
         lav.benchmark_results.pretty_print()
         if batch_size_test:
             clear_session()
@@ -151,7 +154,9 @@ def lav_test_case(
             lav_params.pipeline.batch_size = batch_and_limit
             lav_params.pipeline.limit = batch_and_limit
             lav = scenario.create_lav(lav_params, scenario_params)
-            bs5_results = next(iter(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug)))
+            bs5_results = next(
+                iter(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug, instantiate_graph=instantiate_graph))
+            )
             lav.benchmark_results.pretty_print()
             for k in bs1_results.keys():
                 if type(bs1_results[k]) == bytes:

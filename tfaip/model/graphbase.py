@@ -123,11 +123,11 @@ class RootGraph(tf.keras.layers.Layer):
         config["params"] = ModelBaseParams.from_dict(config["params"])
         return super().from_config(config)
 
-    def __init__(self, params: ModelBaseParams, name="root", **kwargs):
+    def __init__(self, params: ModelBaseParams, name="root", setup_graph=True, setup_model=True, **kwargs):
         super().__init__(name=name, **kwargs)
         self._params = params
-        self._model = self.create_model()
-        self._graph: GraphBase = self.create_graph()
+        self._model = self.create_model() if setup_model else None
+        self._graph: GraphBase = self.create_graph() if setup_graph else None
 
     def create_model(self):
         return self.params.create()

@@ -300,7 +300,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         return cls.lav_cls()(
             lav_params,
             data_fn=lambda: cls.data_cls()(scenario_params.data),
-            model_fn=lambda: cls.model_cls().root_graph_cls()(scenario_params.model).create_model(),
+            model_fn=lambda: cls.model_cls().root_graph_cls()(scenario_params.model, setup_graph=False).create_model(),
             evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
         )
 
@@ -582,13 +582,20 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             # one debug step
             logger.info("Running evaluation on one training example for debugging.")
             with self.data.pipeline_by_mode(PipelineMode.TRAINING) as rd:
-                self._keras_train_model.evaluate(
+                r = self._keras_train_model.evaluate(
                     self._wrap_data(
                         rd.input_dataset(auto_repeat=False), rd.data_pipeline.pipeline_params.batch_size
                     ).take(1),
                     callbacks=[ExtractLogsCallback()],  # extract logs (must be first logger, so verbose=0)
                     verbose=0,  # Disable progress bar logger
+                    return_dict=True,
                 )
+                logger.info(f"Results: {r}")
+        else:
+            # create graph, by calling it once, this ensures that the namings of the variables are those of the
+            # training and not of the prediction graph (i.e., excluding "beam_search_decoder" prefixes, et.c)
+            logger.info("Interference on the input shapes to build the graph.")
+            self._keras_train_model((real_inputs, wrapped_targets, real_meta))
 
         logger.info("Building prediction/export keras model (for export and decoding)")
         pred_outputs = self.graph.predict(real_inputs)
@@ -651,7 +658,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
 
         return dataset.map(regroup)
 
-    def fit(self, epochs, callbacks, steps_per_epoch, initial_epoch=0, **kwargs) -> NoReturn:
+    def fit(self, epochs, callbacks, steps_per_epoch, initial_epoch=0, validation_freq=1, **kwargs) -> NoReturn:
         """
         Train the scenario.
 
@@ -669,7 +676,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         with ExitStack() as stack:
             # Fill the exit stack that collects `__enter__` of all pipelines that are created.
             # This ensures that all subthreads are joined when training is finished.
-            train_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.TRAINING)).input_dataset()
+            train_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.TRAINING)).input_dataset(
+                auto_repeat=True
+            )
             if self.data.pipeline_by_mode(PipelineMode.EVALUATION) is not None:
                 val_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.EVALUATION)).input_dataset()
             else:
@@ -683,7 +692,8 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                 callbacks=callbacks,
                 steps_per_epoch=steps_per_epoch,
                 initial_epoch=initial_epoch,
-                validation_data=self._wrap_data(val_dataset, steps_per_epoch),
+                validation_data=self._wrap_data(val_dataset, steps_per_epoch) if validation_freq > 0 else None,
+                validation_freq=validation_freq,
                 shuffle=False,
                 **kwargs,
             )

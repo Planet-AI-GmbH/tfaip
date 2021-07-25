@@ -5,8 +5,8 @@ This documentation contains all necessary information to effectively work with |
 It depicts the structural concepts of |tfaip| and provides a step by step tour throughout all (necessary) components.
 
 |tfaip| offers two **tutorials**:
-If being new to |tfaip|, have a look at the `minimal tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/tutorial/min>`_ to get an impression how |tfaip| is structured.
-To quickly set up a new scenario copy either a `tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/tutorial>`_ or a `Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/tfaip/scenario/template>`_.
+If being new to |tfaip|, have a look at the `minimal tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/tutorial/min>`_ to get an impression how |tfaip| is structured.
+To quickly set up a new scenario copy either a `tutorial <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/tutorial>`_ or a `Template <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/template>`_.
 Templates show the most common functions that must be implemented (search for ``raise NotImplemented`` and comments written in squared brackets) to set up a custom scenario.
 
 .. toctree::

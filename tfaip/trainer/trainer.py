@@ -279,37 +279,38 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         return callbacks
 
     def setup_steps_per_epoch(self):
+        train_data_generator = self._params.gen.train_data(self._data).create_data_generator()
         if self._params.samples_per_epoch < 0:
             logger.info(
-                f"Setting samples per epoch relative to dataset size with a factor of "
-                f"{self._params.scale_epoch_size}. Note that this "
-                "requires the creation of the data generator once before training."
+                f"Setting samples per epoch relative to dataset size with a factor of {self._params.scale_epoch_size}."
             )
-            samples_per_epoch = len(self._params.gen.train_data(self._data).create_data_generator())
 
-            if self._params.scale_epoch_size != 1:
-                samples_per_epoch = int(samples_per_epoch * self._params.scale_epoch_size)
-
-            if samples_per_epoch <= 0:
+            if len(train_data_generator) <= 0:
                 raise ValueError(
                     "Could not compute the number of samples per epoch based on the size of the data "
-                    "generator. Please implement __len__ correctly."
+                    "generator. Please implement __len__ (or steps_per_epoch) correctly."
                 )
-            logger.info(f"Set samples per epoch to {samples_per_epoch}")
+            self._steps_per_epoch = train_data_generator.steps_per_epoch(
+                self.params.gen.setup.train.batch_size, self._params.scale_epoch_size
+            )
         else:
-            samples_per_epoch = self._params.samples_per_epoch
+            if train_data_generator.yields_batches():
+                raise ValueError(
+                    "Cannot set samples_per_epoch for a data generator that generates batches. Use scale_epoch_size instead."
+                )
+            self._steps_per_epoch = self._params.samples_per_epoch // self.params.gen.setup.train.batch_size
             if self._params.scale_epoch_size != 1:
                 logger.warning(
                     "Setting scale_epoch_size has no effect when using absolute values for samples_per_epoch."
                     "Set samples_per_epoch to the default (=-1) to use relative computation."
                 )
+            if self._params.samples_per_epoch < self.params.gen.setup.train.batch_size:
+                raise ValueError(
+                    f"Samples per epoch must be greater than the train batch size, but got "
+                    f"{self._params.samples_per_epoch} < {self.params.gen.setup.train.batch_size}"
+                )
 
-        self._steps_per_epoch = samples_per_epoch // self.params.gen.setup.train.batch_size
-        if self._steps_per_epoch <= 0:
-            raise ValueError(
-                f"Samples per epoch must be greater than the train batch size, but got "
-                f"{samples_per_epoch} < {self.params.gen.setup.train.batch_size}"
-            )
+        logger.info(f"Set steps per epoch to {self._steps_per_epoch}")
 
     def fit(self):
         self._scenario.fit(

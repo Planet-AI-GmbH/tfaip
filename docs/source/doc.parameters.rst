@@ -29,7 +29,7 @@ All parameters that shall be available during training or loading of a model (e.
 Custom Parameter Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-You are allowed to add additional parameter classes which must wrap ``@pai_dataclass`` and ``@dataclass``.
+You are allowed to add additional parameter classes which must be wrapped by ``@pai_dataclass`` and ``@dataclass``.
 Make sure to use a descriptive name for the name and the field storing that dataclass, e.g.:
 
 .. code-block::python

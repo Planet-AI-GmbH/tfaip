@@ -35,6 +35,7 @@ class ListMixDefinition:
 
     list_filenames: List[str]
     mixing_ratio: List[float]
+    ignore_prefix: Optional[str] = None
 
     def __post_init__(self):
         assert len(self.list_filenames) == len(self.mixing_ratio)
@@ -49,23 +50,29 @@ class ListMixDefinition:
             assert isinstance(part, Number)
 
     def as_generator(self, rnd: Random):
-        train_flis = [FileListIterablor(FileListProviderFn(train_list_fn)) for train_list_fn in self.list_filenames]
+        train_flis = [
+            FileListIterablor(FileListProviderFn(train_list_fn, ignore_prefix=self.ignore_prefix))
+            for train_list_fn in self.list_filenames
+        ]
         return ThreadSafeIterablor(BlendIterablor(train_flis, self.mixing_ratio, rnd))
 
 
 class FileListProviderFn:
     """Loader for a list file"""
 
-    def __init__(self, file_name: str):
+    def __init__(self, file_name: str, ignore_prefix: Optional[str] = None):
         self._file_name = file_name
         self._logger = logger.getChild(str(type(self)))
         self._file_list = None
+        self._ignore_prefix = ignore_prefix
 
     def _load_list(self):
         retval = []
         with open(self._file_name, "r") as list_file:
             for fn in [line.rstrip("\n ") for line in list_file]:
                 if fn is not None and len(fn) > 0:
+                    if self._ignore_prefix and fn.startswith(self._ignore_prefix):
+                        continue
                     retval.append(fn)
         return retval
 

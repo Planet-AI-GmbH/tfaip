@@ -45,6 +45,13 @@ class DataGenerator(Generic[T], ABC):
     def __len__(self):
         raise NotImplementedError
 
+    def steps_per_epoch(self, batch_size: int, scale_factor: float = 1):
+        """Returns the number of steps per epoch.
+
+        Overwrite this if the generator yields batches
+        """
+        return int(len(self) * scale_factor / batch_size)
+
     @abstractmethod
     def generate(self) -> Iterable[Union[Sample, List[Sample]]]:
         """Function to yield the samples

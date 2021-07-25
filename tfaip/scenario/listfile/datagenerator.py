@@ -45,7 +45,9 @@ class ListsFileDataGenerator(DataGenerator[ListsFileGeneratorParams]):
         if self.mode == PipelineMode.TRAINING:
             # shuffle data and pick of list ratios
             file_names_it = ListMixDefinition(
-                list_filenames=self.params.lists, mixing_ratio=self.params.list_ratios
+                list_filenames=self.params.lists,
+                mixing_ratio=self.params.list_ratios,
+                ignore_prefix=self.params.ignore_prefix,
             ).as_generator(Random())
         else:
             # Simply load all file names in order
@@ -55,7 +57,11 @@ class ListsFileDataGenerator(DataGenerator[ListsFileGeneratorParams]):
                     "Do not set list ratios to remove this warning."
                 )
             file_names_it = sum(
-                [FileListProviderFn(train_list_fn).get_list() for train_list_fn in self.params.lists], []
+                [
+                    FileListProviderFn(train_list_fn, ignore_prefix=self.params.ignore_prefix).get_list()
+                    for train_list_fn in self.params.lists
+                ],
+                [],
             )
 
         return file_names_it

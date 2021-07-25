@@ -182,7 +182,25 @@ class LAV(ABC):
         run_eagerly=False,
         callbacks: List[LAVCallback] = None,
         return_tensorboard_outputs=False,
+        instantiate_graph=False,
     ) -> Iterable[Dict[str, float]]:
+        """
+
+        Args:
+            generator_params:
+            keras_model:
+            run_eagerly: Run LAV in eager mode, also sets instantiate_graph=True
+            callbacks:
+            return_tensorboard_outputs:
+            instantiate_graph: Force to instantiate the real graph. This might lead to changed of the original graph
+                if there were changes in the code. Always True if run_eagerly
+
+        Returns:
+            Results for each DataGeneratorParams in generator_params
+
+        """
+        if run_eagerly:
+            instantiate_graph = True
         callbacks = callbacks or []
         with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
@@ -203,7 +221,7 @@ class LAV(ABC):
             keras_model = keras.models.load_model(
                 os.path.join(self._params.model_path, "serve"),
                 compile=False,
-                custom_objects=model.all_custom_objects() if run_eagerly else model.base_custom_objects(),
+                custom_objects=model.all_custom_objects() if instantiate_graph else model.base_custom_objects(),
             )
 
         # create a new keras model that uses the inputs and outputs of the loaded model but adds the targets of the

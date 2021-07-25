@@ -48,7 +48,14 @@ def main(args, scenario_meta, scenario_params):
 
     # create the lav and run it
     lav = scenario_meta.create_lav(lav_params, scenario_params)
-    for i, r in enumerate(lav.run([data_generator_params], run_eagerly=args.run_eagerly, callbacks=callbacks)):
+    for i, r in enumerate(
+        lav.run(
+            [data_generator_params],
+            run_eagerly=args.run_eagerly,
+            callbacks=callbacks,
+            instantiate_graph=args.instantiate_graph,
+        )
+    ):
         print(json.dumps(r, indent=2))
         lav.benchmark_results.pretty_print()
 
@@ -86,6 +93,11 @@ def parse_args(args=None):
         action="store_true",
         help="Run the graph in eager mode. This is helpful for debugging. "
         "Note that all custom layers must be added to ModelBase!",
+    )
+    parser.add_argument(
+        "--instantiate_graph",
+        action="store_true",
+        help="Recreate the original graph. This might be required in some edge cases.",
     )
     parser.add_argument("--dump", type=str, help="Dump the predictions and results to the given filepath")
 

@@ -19,40 +19,27 @@
 import json
 import os
 from abc import abstractmethod, ABC
+from dataclasses import dataclass
 from typing import Union, TYPE_CHECKING, List, Iterable, Type
+import threading
 
 from tensorflow import keras
 
 from tfaip import Sample, PipelineMode
 from tfaip import PredictorParams
 from tfaip.data.pipeline.datapipeline import DataPipeline
+from tfaip.data.pipeline.processor.dataprocessor import DataProcessorParams, MappingDataProcessor
+from tfaip.data.pipeline.processor.params import SequentialProcessorPipelineParams
+from tfaip.predict.multimodelpostprocessor import MultiModelPostProcessorParams
 from tfaip.predict.predictorbase import PredictorBase
 from tfaip.util.json_helper import TFAIPJsonDecoder
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
+from tfaip.data.databaseparams import DataBaseParams, DataPipelineParams
+from tfaip.predict.multimodelvoter import MultiModelVoter
 
 if TYPE_CHECKING:
     from tfaip.scenario.scenariobase import ScenarioBase
     from tfaip.data.data import DataBase
-    from tfaip.data.databaseparams import DataBaseParams
-
-
-class MultiModelVoter(ABC):
-    """
-    Class that defines how to vote a Sample produced by multiple predictors (MultiModelPredictor)
-    """
-
-    @abstractmethod
-    def vote(self, sample: Sample) -> Sample:
-        """
-        Vote a sample
-
-        Args:
-            sample: The multi-sample (sample.outputs is a list of individual predictions)
-
-        Returns:
-            A normal sample with the expected structure of sample.outputs
-        """
-        raise NotImplementedError
 
 
 class MultiModelPredictor(PredictorBase):
@@ -186,21 +173,12 @@ class MultiModelPredictor(PredictorBase):
             d.get_or_create_pipeline(self.params.pipeline, pipeline.generator_params).create_output_pipeline()
             for d in self._datas
         ]
+        post_proc_pipeline = SequentialProcessorPipelineParams(
+            processors=[MultiModelPostProcessorParams(voter=voter, post_processors=post_processors)]
+        )
+
         with pipeline as rd:
-
-            def split(sample: Sample):
-                return [
-                    Sample(inputs=sample.inputs, outputs=output, targets=sample.targets, meta=sample.meta)
-                    for output in sample.outputs
-                ]
-
-            def join(samples: List[Sample]):
-                return Sample(
-                    inputs=samples[0].inputs,
-                    targets=samples[0].targets,
-                    outputs=[s.outputs for s in samples],
-                    meta=[s.meta for s in samples],
-                )
+            post_proc_pipeline = post_proc_pipeline.create(pipeline.pipeline_params, self.data.params)
 
             results = tqdm_wrapper(
                 self.predict_dataset(rd.input_dataset()),
@@ -208,8 +186,5 @@ class MultiModelPredictor(PredictorBase):
                 desc="Prediction",
                 total=len(rd),
             )
-            split_results = map(split, results)
-            for split_result in split_results:
-                r = [list(pp.apply([r]))[0] for r, pp in zip(split_result, post_processors)]
-                r = join(r)
-                yield voter.vote(r)
+            for r in post_proc_pipeline.apply(results):
+                yield voter.finalize_sample(r)
