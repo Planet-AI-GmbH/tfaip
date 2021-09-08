@@ -36,6 +36,7 @@ To setup _tfaip_ create a virtual Python (at least 3.7) environment and install 
 virtualenv -p python3 venv
 source venv/bin/activate
 pip install tfaip
+pip install tfaip[devel]  # to install additional development/test requirements
 ```
 Have a look at the [wiki](https://tfaip.readthedocs.io/en/latest/doc.installation.html) for further setup instructions.
 

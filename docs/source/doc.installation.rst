@@ -79,4 +79,5 @@ For development support, clone the code, install the requirements in a fresh vir
     source venv/bin/activate
     pip install -U pip  # recommended to get the latest version of pip
     pip install -r requirements.txt
+    pip install -r devel_requirements.txt  # Requirements only required for testing and development
     python setup.py develop

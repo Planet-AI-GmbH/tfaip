@@ -54,6 +54,7 @@ setup(
     },
     python_requires=">=3.7",
     install_requires=open(os.path.join(this_dir, "requirements.txt")).read().split("\n"),
+    extra_requires={"devel": open(os.path.join(this_dir, "devel_requirements.txt")).read().split("\n")},
     keywords=["machine learning", "tensorflow", "framework"],
-    data_files=[("", [os.path.join(this_dir, "requirements.txt")])],
+    data_files=[("", [os.path.join(this_dir, "requirements.txt"), os.path.join(this_dir, "requirements.txt")])],
 )
