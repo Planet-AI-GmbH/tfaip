@@ -37,7 +37,7 @@ from tfaip.model.graphbase import create_lav_graph
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback, BenchmarkResults
 from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.file.oshelper import ChDir
-from tfaip.util.shape_utils import to_unbatched_samples
+from tfaip.util.sample.shape_utils import to_unbatched_samples
 from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 if TYPE_CHECKING:
