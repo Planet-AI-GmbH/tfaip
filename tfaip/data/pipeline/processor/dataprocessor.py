@@ -43,6 +43,7 @@ class Key(str):
     IMG = "img"
     IMG_SHAPE = "img_shape"
     IMG_PATH = "img_path"
+    IMG_ID = "img_id"
     MASK = "mask"
     GT_BOXES = "groundtruth_boxes"
     GT_CLASSES = "groundtruth_classes"
@@ -145,7 +146,7 @@ class DataProcessorBase(Generic[T], ABC):
         return is_valid_sample(sample, self.mode)
 
     @typechecked
-    def __call__(self, sample: Union[Sample, Iterable[Sample]]) -> Union[Sample, Iterable[Sample]]:
+    def __call__(self, sample: Union[Sample, Iterable[Sample]]) -> Union[Sample, Iterable[Sample], None]:
         if isinstance(self, MappingDataProcessor):
             return self.apply(sample)
         elif isinstance(self, GeneratingDataProcessor):

@@ -21,7 +21,7 @@ import platform
 import tempfile
 import unittest
 
-from test.util.workdir import call_in_root
+from tfaip.util.testing.workdir import call_in_root
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 root_dir = os.path.join(this_dir, "..", "..")
@@ -135,3 +135,7 @@ class TestTrainingScript(unittest.TestCase):
             )
 
             call_in_root(["tfaip-train-from-params", os.path.join(d, "trainer_params.json")])
+
+    def test_train_export_tutorial_graph(self):
+        with tempfile.TemporaryDirectory() as d:
+            call_in_root(["tfaip-train", "examples.tutorial.full", "--trainer.export_training_graph_path", d])

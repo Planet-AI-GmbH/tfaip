@@ -129,7 +129,7 @@ class SimpleDataGenerator(DataGenerator[SimpleDataGeneratorParams]):
         return len(self.params.numbers_to_generate)
 
     def generate(self) -> Iterable[Sample]:
-        return map(lambda s: Sample(inputs=s, targets=s), self.params.numbers_to_generate)
+        return map(lambda s: Sample(inputs=np.array([s]), targets=np.array([s])), self.params.numbers_to_generate)
 
 
 @pai_dataclass
@@ -196,19 +196,20 @@ class TestDataPipeline(unittest.TestCase):
                         num_threads=3,
                         processors=[
                             AddProcessorParams(v=1),
-                            AddProcessorParams(v=3),
                         ],
                     ),
                     SequentialProcessorPipelineParams(
                         num_threads=1,  # Deterministic
                         processors=[
+                            # Test that generator with pre- and post-processor works
+                            AddProcessorParams(v=3),
                             RepeatSampleProcessorParams(f=2, add_per_step=7),
+                            MultiplyProcessorParams(f=2),
                         ],
                     ),
                     SequentialProcessorPipelineParams(
                         run_parallel=True,
                         processors=[
-                            MultiplyProcessorParams(f=2),
                             AddProcessorParams(v=1),
                         ],
                     ),
@@ -223,7 +224,8 @@ class TestDataPipeline(unittest.TestCase):
         )
         data = data_params.create()
         with data.create_pipeline(
-            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+            DataPipelineParams(mode=PipelineMode.TRAINING, use_shared_memory=True),
+            SimpleDataGeneratorParams(numbers_to_generate=numbers),
         ) as pipeline:
             out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
             self.assertListEqual(target_numbers, out)

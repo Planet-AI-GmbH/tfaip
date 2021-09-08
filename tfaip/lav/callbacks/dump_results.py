@@ -35,11 +35,11 @@ class DumpResultsCallback(LAVCallback):
         self.filepath = filepath
         logger.info(f"Results dumper to {self.filepath} created.")
 
-    def on_sample_end(self, data_generator_params: DataGeneratorParams, sample):
+    def on_sample_end(self, sample):
         targets, prediction = self.lav.extract_dump_data(sample)
         self.target_prediction_pairs.append((targets, prediction))
 
-    def on_lav_end(self, data_generator_params: DataGeneratorParams, result):
+    def on_lav_end(self, result):
         logger.info(f"Dumping results {self.filepath}.")
         with open(self.filepath, "wb") as f:
             pickle.dump({"target_prediction_pairs": self.target_prediction_pairs, "result": result}, f)

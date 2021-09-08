@@ -70,7 +70,8 @@ class WriteToLogFile:
         this_logger.info(f"Logging to '{self.filename}'")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        handle_exception(exc_type, exc_val, exc_tb)  # Log exception before log gets closed
+        if exc_type is not None:
+            handle_exception(exc_type, exc_val, exc_tb)  # Log exception before log gets closed
         logging.getLogger().removeHandler(self.file_handler)
         self.file_handler.flush()
         self.file_handler.close()

@@ -22,6 +22,9 @@ The other classes can be imported from ``tfaip.imports``
 """
 from tfaip.version import __version__
 
+# JAVA-Training: export graph mode
+EXPORT_TENSORFLOW_1 = {"metric_aggregation": None}
+
 # IMPORTANT!!!
 # Global imports here must not import tensorflow (it won't crash but it is slow)
 # This leads to unnecessary imports in spawned sub-processes

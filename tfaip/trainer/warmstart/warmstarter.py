@@ -17,6 +17,7 @@
 # ==============================================================================
 """Definition of the WarmStarter"""
 import logging
+import os
 import re
 from typing import List, Optional, NoReturn
 
@@ -100,13 +101,14 @@ class WarmStarter:
         # 3. Load weights and assign (only works if the model is identical), if failed -> 4
         # 4. Load weights by name -> 5
         # 5. Apply renaming rules and match weights
+        abs_model_path = os.path.abspath(os.path.expanduser(self._params.model))
         try:
             # 1. Load model
-            src_model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
+            src_model = tf.keras.models.load_model(abs_model_path, compile=False, custom_objects=custom_objects)
         except OSError:
             # 2. load as checkpoint, then go to 5.
-            logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
-            ckpt = tf.train.load_checkpoint(self._params.model)
+            logger.debug(f"Could not load '{abs_model_path}' as saved model. Attempting to load as a checkpoint.")
+            ckpt = tf.train.load_checkpoint(abs_model_path)
             name_shapes = ckpt.get_variable_to_shape_map()
             model_to_load_var_names = name_shapes.keys()
 
@@ -175,14 +177,6 @@ class WarmStarter:
             )
         }
         target_var_name_to_trainable_name = {v: k for k, v in trainable_name_to_target_var_name.items()}
-        logger.info(f"Warm-starting from {self._params.model}")
-        try:
-            # First try to reinstantiate the model, and apply the renamings on the weights,
-            # if this fails, load the weights as checkpoints, apply additional renamings, and then try to match
-            # the source and target weights
-            model = tf.keras.models.load_model(self._params.model, compile=False, custom_objects=custom_objects)
-        except OSError:
-            logger.debug(f"Could not load '{self._params.model}' as saved model. Attempting to load as a checkpoint.")
 
         # Filter the params and validate
         names_target = set(trainable_name_to_target_var_name.keys())
@@ -202,6 +196,7 @@ class WarmStarter:
         elif self._params.allow_partial:
             names_to_load = names_target.intersection(names_loaded)
         else:
+            names_to_load = names_target
             diff_target = names_loaded.difference(names_target)
             diff_load = names_target.difference(names_loaded)
             if len(diff_target) > 0 or len(diff_load) > 0:
@@ -210,7 +205,6 @@ class WarmStarter:
                     f"\nUse allow_partial to allow partial loading"
                 )
 
-        names_to_load = names_target
         new_weights = []
         warm_weights_names = []
         cold_weights_names = []

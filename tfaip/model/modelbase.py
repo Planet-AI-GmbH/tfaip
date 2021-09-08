@@ -24,7 +24,7 @@ import tensorflow as tf
 from typeguard import typechecked
 
 from tfaip import ModelBaseParams
-from tfaip import Sample
+from tfaip import Sample, EXPORT_TENSORFLOW_1
 from tfaip.data.data import DataBase
 from tfaip.model.metric.count import Count
 from tfaip.model.metric.multi import MultiMetricDefinition
@@ -70,6 +70,8 @@ class ModelBase(Generic[TMP], ABC):
     def __init__(self, params: TMP, **kwargs):
         self._params: TMP = params
         self._count_metric = Count()
+        self.tensorboard_writer_metrics = []
+        self.metrics = None
 
     @staticmethod
     def root_graph_cls() -> Type["RootGraph"]:
@@ -203,6 +205,8 @@ class ModelBase(Generic[TMP], ABC):
         return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
 
     def add_all_losses(self, model, inputs, targets, outputs):
+        aggregation = EXPORT_TENSORFLOW_1["metric_aggregation"]  # JAVA-Training Workaround, remove if better solution
+
         loss_weights = self.loss_weights() or {}
         total_loss = 0
         for name, loss in self.loss(inputs, targets, outputs).items():
@@ -210,10 +214,10 @@ class ModelBase(Generic[TMP], ABC):
             loss_v = tf.reduce_mean(loss)
             extra_loss = loss_v * loss_weight
             total_loss += extra_loss
-            model.add_metric(loss_v, name=name)
+            model.add_metric(loss_v, name=name, aggregation=aggregation)
 
         model.add_loss(total_loss)
-        model.add_metric(total_loss, name="loss/mean_epoch")
+        model.add_metric(total_loss, name="loss/mean_epoch", aggregation=aggregation)
 
     def add_all_metrics(self, model, inputs, targets, outputs):
         for metric_v in self.metric(inputs, targets, outputs):

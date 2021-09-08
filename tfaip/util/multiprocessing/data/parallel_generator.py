@@ -16,18 +16,17 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Definition of a multiprocessing Pool for running generators in parallel"""
+import logging
 import threading
-from abc import ABC, abstractmethod
-import multiprocessing
-from multiprocessing.queues import Queue
 import time
+from abc import ABC, abstractmethod
+from multiprocessing.queues import Queue
 from queue import Empty
 from typing import Callable, Iterable, Any
-import logging
 
 from tfaip.util.multiprocessing import context as mp_context
 from tfaip.util.multiprocessing.data.worker import DataWorker
-from tfaip.util.multiprocessing.join import Joinable, JoinableHolder
+from tfaip.util.multiprocessing.sharedmemoryqueue import SharedMemoryQueue, SHARED_MEMORY_SUPPORT
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +91,7 @@ class ParallelGenerator(ABC):
         run_parallel: bool = True,  # Flag to warning and disable parallel run
         max_in_samples: int = -1,
         max_out_samples: int = -1,
+        use_shared_memory_queues: bool = SHARED_MEMORY_SUPPORT,
     ):
 
         self.limit = limit
@@ -103,8 +103,17 @@ class ParallelGenerator(ABC):
         self.running = False
 
         if run_parallel:
-            self.in_queue = mp_context().Queue(maxsize=self.max_in_samples)
-            self.out_queue = mp_context().Queue(maxsize=self.max_out_samples)
+            if use_shared_memory_queues and SHARED_MEMORY_SUPPORT:
+                self.in_queue = SharedMemoryQueue(maxsize=self.max_in_samples, context=mp_context())
+                self.out_queue = SharedMemoryQueue(maxsize=self.max_out_samples, context=mp_context())
+            else:
+                if use_shared_memory_queues:
+                    logger.warning(
+                        "Shared memory not supported. Python Version >= 3.8 required. Using default queues "
+                        "as fallback which might be significantly slower for large numpy arrays."
+                    )
+                self.in_queue = mp_context().Queue(maxsize=self.max_in_samples)
+                self.out_queue = mp_context().Queue(maxsize=self.max_out_samples)
             self.processes = []
             self.input_thread = threading.Thread(target=self._put_inputs, daemon=True)
             self.process_spawner = threading.Thread(target=self._spawn_processes, daemon=True)

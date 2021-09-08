@@ -20,7 +20,9 @@ import platform
 from subprocess import check_call
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
-root_dir = os.path.join(this_dir, "..", "..")
+root_dir = os.path.abspath(os.path.join(this_dir, "../../../test", ".."))
+
+assert os.path.exists(root_dir), f"Cannot import workdir due to missing test root at {root_dir}"
 
 
 def workdir_path(name: str, *args):

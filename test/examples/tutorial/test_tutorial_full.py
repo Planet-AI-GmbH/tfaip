@@ -19,10 +19,11 @@ import unittest
 
 from tensorflow.keras.backend import clear_session
 
-from test.util.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
+from examples.tutorial.full.data.data import TutorialData
+from examples.tutorial.full.graphs.cnn import ConvGraphParams
+from examples.tutorial.full.scenario import TutorialScenario
+from tfaip.util.testing.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
 from tfaip.data.databaseparams import DataPipelineParams
-from examples.tutorial.min.data import TutorialData
-from examples.tutorial.min.scenario import TutorialScenario
 
 
 class TutorialScenarioTest(TutorialScenario):
@@ -35,7 +36,18 @@ class TutorialScenarioTest(TutorialScenario):
         return p
 
 
+class TutorialWithConvScenarioTest(TutorialScenarioTest):
+    @classmethod
+    def default_trainer_params(cls):
+        p = super().default_trainer_params()
+        p.scenario.model.graph = ConvGraphParams()
+        return p
+
+
 class TestTutorialData(unittest.TestCase):
+    def setUp(self) -> None:
+        clear_session()
+
     def tearDown(self) -> None:
         clear_session()
 
@@ -48,11 +60,13 @@ class TestTutorialData(unittest.TestCase):
             val_data = next(rd.input_dataset().as_numpy_iterator())
 
         def check(data):
-            self.assertEqual(len(data), 3, "Expected (input, output) tuple")
+            self.assertEqual(len(data), 3, "Expected (input, output, meta) tuple")
             self.assertEqual(len(data[0]), 1, "Expected one inputs")
             self.assertEqual(len(data[1]), 1, "Expected one outputs")
+            self.assertEqual(len(data[2]), 1, "Expected one meta")
             self.assertTrue("img" in data[0])
             self.assertTrue("gt" in data[1])
+            self.assertTrue("meta" in data[2])
             self.assertTupleEqual(data[0]["img"].shape, (1, 28, 28))
             self.assertTupleEqual(data[1]["gt"].shape, (1, 1))
 
@@ -61,23 +75,22 @@ class TestTutorialData(unittest.TestCase):
 
 
 class TestTutorialTrain(unittest.TestCase):
+    scenario = TutorialWithConvScenarioTest
+
     def tearDown(self) -> None:
         clear_session()
 
     def test_single_train_iter(self):
-        single_train_iter(self, TutorialScenarioTest, debug=False)
-
-    def test_single_train_iter_debug(self):
-        single_train_iter(self, TutorialScenarioTest, debug=True)
+        single_train_iter(self, self.scenario, debug=False)
 
     def test_resume_training(self):
-        resume_training(self, TutorialScenarioTest)
+        resume_training(self, self.scenario)
 
     def test_lav(self):
-        lav_test_case(self, TutorialScenarioTest)
+        lav_test_case(self, self.scenario, debug=False)
 
     def test_warmstart(self):
-        warmstart_training_test_case(self, TutorialScenarioTest)
+        warmstart_training_test_case(self, self.scenario)
 
 
 if __name__ == "__main__":

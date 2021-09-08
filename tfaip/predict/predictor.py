@@ -19,6 +19,7 @@
 import json
 from typing import Union, Iterable
 
+import numpy as np
 from tensorflow import keras
 import tensorflow as tf
 
@@ -59,9 +60,18 @@ class Predictor(PredictorBase):
             yield sample
 
     def _print_prediction(self, sample: Sample, print_fn):
+        def format_str(v):
+            if isinstance(v, np.ndarray):
+                if v.size == 0:
+                    return ""
+                return f"mean = {v.mean()}, max = {v.max()}, min = {v.min()}"
+            else:
+                s = f"{v}"
+                if len(s) > 100:
+                    return s[:97] + "..."
+                else:
+                    return s
+
         print_fn(
-            "\n     PREDICTION:\n"
-            + "\n".join(
-                [f"        {k}: mean = {v.mean()}, max = {v.max()}, min = {v.min()}" for k, v in sample.outputs.items()]
-            )
+            "\n     PREDICTION:\n" + "\n".join([f"        {k}: {format_str(v)}" for k, v in sample.outputs.items()])
         )

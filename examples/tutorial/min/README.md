@@ -146,4 +146,4 @@ tfaip-train tutorial.min
 
 ## Further reading
 
-After having finished this Tutorial, have a look at the [full tutorial](../full) or the [wiki](../../../../wiki).
+After having finished this Tutorial, have a look at the [full tutorial](../full) or the [docs](https://tfaip.readthedocs.io/).

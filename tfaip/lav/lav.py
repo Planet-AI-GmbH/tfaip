@@ -21,10 +21,12 @@ import os
 from abc import ABC
 from queue import Queue
 from threading import Thread
+from packaging.version import Version
 from typing import TYPE_CHECKING, Type, Dict, List, Callable, Optional, Iterable
 
+import tensorflow
 import tensorflow.keras as keras
-from tensorflow.python.keras.callbacks import Callback, ProgbarLogger, CallbackList
+from tensorflow.python.keras.callbacks import Callback, ProgbarLogger
 from tensorflow.python.keras.engine import data_adapter
 from tfaip import LAVParams, DataGeneratorParams
 from tfaip import Sample
@@ -41,6 +43,12 @@ from tfaip.util.tftyping import sync_to_numpy_or_python_type
 if TYPE_CHECKING:
     from tfaip.data.data import DataBase
     from tfaip.model.modelbase import ModelBase
+
+
+if Version(tensorflow.version.VERSION) >= Version("2.6"):
+    from keras.callbacks import CallbackList
+else:
+    from tensorflow.keras.callbacks import CallbackList
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +111,7 @@ class EvaluationCallback(Callback):
     evaluating the result and writing it to the logs
     """
 
-    def __init__(self, evaluator: EvaluatorBase, runnable_data_pipeline):
+    def __init__(self, evaluator: EvaluatorBase, runnable_data_pipeline, callbacks: List[LAVCallback]):
         super().__init__()
         self._supports_tf_logs = True
         self.evaluator = evaluator
@@ -119,6 +127,8 @@ class EvaluationCallback(Callback):
 
             for sample in runnable_data_pipeline.process_output(read_fn()):
                 evaluator.update_state(sample)
+                for cb in callbacks:
+                    cb.on_sample_end(sample)
 
         self.post_proc_runner = Thread(target=post_proc_worker, daemon=True)
         self.post_proc_runner.start()
@@ -149,8 +159,7 @@ class LAV(ABC):
     on the model on the DataBase validation(!) set and fed to the metric to obtain results (MetricsAccumulator).
     During the prediction a models print_evaluate method is called to print informative text.
 
-    The first possibility to override LAV is to inherit and use _on_batch_end, _on_sample_end, _on_lav_end with custom
-    parameters. Thus is used for instance to support rendering of attention matrices in atr.transformer.
+    Override _custom_callbacks to "inject" logic for processing samples during LAV (e.g. saving or printing).
     """
 
     @classmethod
@@ -173,6 +182,10 @@ class LAV(ABC):
         self._data: Optional["DataBase"] = None
         self._model: Optional["ModelBase"] = None
         self.benchmark_results = BenchmarkResults()
+
+    @property
+    def params(self) -> LAVParams:
+        return self._params
 
     @distribute_strategy
     def run(
@@ -202,14 +215,12 @@ class LAV(ABC):
         if run_eagerly:
             instantiate_graph = True
         callbacks = callbacks or []
+        callbacks += self._custom_callbacks()
         with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
             self._data = self._data_fn()
         evaluator: EvaluatorBase = self._evaluator_fn()
         self._model = model = self._model_fn()
-
-        for cb in callbacks:
-            cb.lav, cb.data, cb.model = self, self._data, model
 
         if run_eagerly:
             logger.warning(
@@ -268,9 +279,17 @@ class LAV(ABC):
             val_data = self._data.create_pipeline(self._params.pipeline, params)
             with evaluator:
                 with val_data as rd:
+                    for cb in callbacks:
+                        cb.setup(params, self, self._data, model)
+                        cb.on_lav_start()
+
                     extract_logs_callback = ExtractLogsCallback(test_prefix="")
                     benchmark_callback = BenchmarkCallback(extract_logs_callback)
-                    eval_callbacks = [EvaluationCallback(evaluator, rd), extract_logs_callback, benchmark_callback]
+                    eval_callbacks = [
+                        EvaluationCallback(evaluator, rd, callbacks),
+                        extract_logs_callback,
+                        benchmark_callback,
+                    ]
                     if not self._params.silent:
                         eval_callbacks.append(ProgbarLogger(count_mode="steps"))
 
@@ -284,19 +303,20 @@ class LAV(ABC):
                     if return_tensorboard_outputs:
                         r.update(extract_logs_callback.extracted_logs)
 
-                    self._on_lav_end(params, r)
                     for cb in callbacks:
-                        cb.on_lav_end(params, r)
+                        cb.on_lav_end(r)
 
                     if not self._params.silent:
                         logger.info("LAV results: \n" + "\n    ".join([f"{k} = {v}" for k, v in r.items()]))
                     yield r
 
-    def _on_sample_end(self, data_generator_params: DataGeneratorParams, sample: Sample):
-        pass
+    def _custom_callbacks(self) -> List[LAVCallback]:
+        """Additional custom callbacks
 
-    def _on_lav_end(self, data_generator_params: DataGeneratorParams, result):
-        pass
+        This function is meant to be implemented by a subclassed LAV to provide custom LAVCallbacks for a scenario.
+        """
+
+        return []
 
     def extract_dump_data(self, sample: Sample):
         return sample.targets, sample.outputs

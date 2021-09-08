@@ -18,6 +18,7 @@
 from dataclasses import dataclass
 from typing import Type
 
+import numpy as np
 from paiargparse import pai_dataclass
 from tfaip import Sample
 from tfaip.data.pipeline.processor.dataprocessor import DataProcessorParams, MappingDataProcessor
@@ -37,6 +38,6 @@ class PrepareProcessor(MappingDataProcessor):
     def apply(self, sample: Sample) -> Sample:
         img = sample.inputs.transpose()
         encoded = [self.data_params.codec.index(c) for c in sample.targets]
-        return sample.new_inputs({Keys.Image: img, Keys.ImageLength: [img.shape[0]]}).new_targets(
-            {Keys.Targets: encoded, Keys.TargetsLength: [len(encoded)]}
+        return sample.new_inputs({Keys.Image: img, Keys.ImageLength: np.array([img.shape[0]])}).new_targets(
+            {Keys.Targets: np.array(encoded), Keys.TargetsLength: np.array([len(encoded)])}
         )

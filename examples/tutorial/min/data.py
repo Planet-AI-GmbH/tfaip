@@ -90,8 +90,8 @@ class TutorialDataParams(DataBaseParams):
 class TutorialData(DataBase[TutorialDataParams]):
     def _input_layer_specs(self):
         # Shape and type of the input data for the graph
-        return {"img": tf.TensorSpec(shape=self.params.input_shape, dtype="uint8")}
+        return {"img": tf.TensorSpec(shape=self.params.input_shape, dtype="int32")}
 
     def _target_layer_specs(self):
         # Shape and type of the target (ground truth) data for the graph
-        return {"gt": tf.TensorSpec(shape=[1], dtype="uint8")}
+        return {"gt": tf.TensorSpec(shape=[1], dtype="int32")}

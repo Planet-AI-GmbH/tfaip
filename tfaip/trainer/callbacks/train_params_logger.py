@@ -17,14 +17,15 @@
 # ==============================================================================
 """Definition of the TrainParamsLogger"""
 import json
+import logging
 import os
 import sys
+from packaging import version
 
+import tensorflow as tf
 import tensorflow.keras as keras
-import logging
 
 from tfaip.util.tftyping import sync_to_numpy_or_python_type
-
 
 logger = logging.getLogger(__name__)
 
@@ -61,19 +62,19 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
         self.store_weights = store_weights
         self.store_params = store_params
 
-    def _save_model(self, epoch, logs):
+    def _save_model(self, epoch, batch, logs):
         # Override save model to either store weights or the params
         if self.store_params:
             if isinstance(self.save_freq, int) or self.epochs_since_last_save >= self.period:
                 logs = sync_to_numpy_or_python_type(logs)
                 # Crop variables/variables of the path
-                filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, logs), "..", ".."))
+                filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, batch, logs), "..", ".."))
                 self.train_params.current_epoch = epoch + 1
                 self.train_params.saved_checkpoint_sub_dir = os.path.relpath(filepath, self.train_params.output_dir)
                 self._save_params(filepath)
 
         if self.store_weights:
-            super()._save_model(epoch, logs)
+            super()._save_model(epoch, batch, logs)
 
     def _save_params(self, filepath):
         # Save the params only
@@ -87,3 +88,23 @@ class TrainerCheckpointsCallback(keras.callbacks.ModelCheckpoint):
         # we ended an epoch, store that we ended it
         self.train_params.current_epoch = epoch + 1
         super().on_epoch_end(epoch, logs)
+
+
+# TODO(all): Drop code, if tf < 2.6.0 not supported anymore
+if version.parse(tf.__version__) < version.parse("2.6.0"):
+    # Overwrite _save_model with old code that has no "batch", yet
+    def _save_model(self, epoch, logs):
+        # Override save model to either store weights or the params
+        if self.store_params:
+            if isinstance(self.save_freq, int) or self.epochs_since_last_save >= self.period:
+                logs = sync_to_numpy_or_python_type(logs)
+                # Crop variables/variables of the path
+                filepath = os.path.abspath(os.path.join(self._get_file_path(epoch, logs), "..", ".."))
+                self.train_params.current_epoch = epoch + 1
+                self.train_params.saved_checkpoint_sub_dir = os.path.relpath(filepath, self.train_params.output_dir)
+                self._save_params(filepath)
+
+        if self.store_weights:
+            super(TrainerCheckpointsCallback, self)._save_model(epoch, logs)
+
+    setattr(TrainerCheckpointsCallback, "_save_model", _save_model)

@@ -18,7 +18,7 @@
 import sys
 import os
 
-from tfaip.util.testing import setup_test_init
+from tfaip.util.testing.setup import setup_test_init
 
 setup_test_init()
 

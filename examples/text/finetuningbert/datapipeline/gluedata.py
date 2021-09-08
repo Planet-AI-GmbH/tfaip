@@ -18,6 +18,7 @@
 from dataclasses import dataclass
 from typing import Optional, Type, Iterable
 
+import numpy as np
 import tensorflow_datasets as tfds
 from paiargparse import pai_dataclass
 from tfaip import TrainerPipelineParamsBase, DataGeneratorParams, Sample, PipelineMode
@@ -53,7 +54,7 @@ class GlueDataGenerator(DataGenerator[GlueGeneratorParams]):
                     Keys.InputSentence1: d["sentence1"].decode("utf-8"),
                     Keys.InputSentence2: d["sentence2"].decode("utf-8"),
                 },
-                targets={Keys.Target: [d["label"]]},
+                targets={Keys.Target: np.asarray([d["label"]])},
                 meta={"index": int(d["idx"])},
             )
 

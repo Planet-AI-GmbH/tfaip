@@ -20,6 +20,7 @@ from dataclasses import field
 from typing import Optional
 
 from dataclasses_json import config
+from os.path import basename, abspath, join
 
 
 def resource_field(*, resource_id: Optional[str] = None, **kwargs):
@@ -71,5 +72,15 @@ class Resource:
         self.abs_path: Optional[str] = None
 
     def __str__(self) -> str:
-        assert self.initialized
-        return self.abs_path or "Not initialized"
+        if not self.initialized:
+            return "[UNINITIALIZED RESOURCE]"
+        return self.abs_path
+
+    def __initialize__(self, working_dir, dump_prefix_dir):
+        if not self.initialized:
+            if self.abs_path is None:
+                self.abs_path = abspath(join(working_dir, self.rel_path))
+
+            self.basename = basename(self.rel_path)
+            self.dump_path = join(dump_prefix_dir, self.dump_dir, self.basename)
+            self.initialized = True

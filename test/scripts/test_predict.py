@@ -19,9 +19,9 @@ import os
 import tempfile
 import unittest
 
-from test.util.workdir import call_in_root
+from tfaip.util.testing.workdir import call_in_root
 
-work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tutorial", "workdir"))
+work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples", "tutorial", "workdir"))
 
 
 class TestPredictScript(unittest.TestCase):

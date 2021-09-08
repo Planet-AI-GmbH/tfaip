@@ -16,10 +16,12 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """A pool of processes derived from multiprocessing.Pool with a custom worker function"""
-import multiprocessing
 import logging
+import multiprocessing
 import sys
+from functools import partial
 
+from tfaip.util.multiprocessing.sharedmemoryqueue import SHARED_MEMORY_SUPPORT, from_shared_memory, to_shared_memory
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +58,26 @@ class Initializer:
 
 
 class WrappedPool(multiprocessing.pool.Pool):
-    def __init__(self, worker_constructor, **kwargs):
+    def __init__(self, worker_constructor, use_shared_memory=SHARED_MEMORY_SUPPORT, **kwargs):
         super().__init__(initializer=Initializer(worker_constructor), **kwargs)
+        self.use_shared_memory = use_shared_memory
 
     def imap_gen(self, gen):
-        return self.imap(worker_func, gen)
+        if self.use_shared_memory and SHARED_MEMORY_SUPPORT:
+            return map(from_shared_memory, self.imap(worker_func_with_shared_memory, to_shared_memory(gen)))
+        else:
+            if self.use_shared_memory:
+                logger.warning(
+                    "Shared memory not supported. Python Version >= 3.8 required. Using default queues "
+                    "as fallback which might be significantly slower for large numpy arrays."
+                )
+            return self.imap(worker_func_without_shared_memory, gen)
 
 
-def worker_func(*args, **kwargs):
-    # Calls process on the actual worker that was created by the initializer as global var for the python process
-    return Initializer.worker.process(*args, **kwargs)
+# Calls process on the actual worker that was created by the initializer as global var for the python process
+def worker_func_without_shared_memory(sample, **kwargs):
+    return Initializer.worker.process(sample, **kwargs)
+
+
+def worker_func_with_shared_memory(sample, **kwargs):
+    return to_shared_memory(Initializer.worker.process(from_shared_memory(sample), **kwargs))

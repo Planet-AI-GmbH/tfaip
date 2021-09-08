@@ -55,7 +55,13 @@ class ParallelDataProcessorPipeline(ParallelPipeline):
             limit = pipeline_params.limit
         self.sample_generator = sample_generator
         self.create_processor_fn = create_processor_fn
-        super().__init__(num_processes, limit, auto_repeat_input, preproc_max_tasks_per_child)
+        super().__init__(
+            num_processes,
+            limit,
+            auto_repeat_input,
+            preproc_max_tasks_per_child,
+            use_shared_memory=pipeline_params.use_shared_memory,
+        )
 
     def create_worker_func(self) -> Callable[[], DataWorker]:
         return partial(

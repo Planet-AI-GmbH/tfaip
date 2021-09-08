@@ -24,11 +24,11 @@ from typing import Iterable, Any
 from tqdm import tqdm
 
 
-def tqdm_wrapper(iterable, *, total=1, desc="", progress_bar=False):
+def tqdm_wrapper(iterable, *, progress_bar=False, **kwargs):
     if not progress_bar:
         return iterable
     else:
-        return tqdm(iterable, total=total, desc=desc)
+        return tqdm(iterable, **kwargs)
 
 
 def parallel_map(

@@ -26,7 +26,13 @@ from typing import Union
 import tensorflow as tf
 from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
-AnyTensor = Union[tf.Tensor, KerasTensor]
+try:
+    import keras.engine.keras_tensor
+except ImportError:
+    AnyTensor = Union[tf.Tensor, KerasTensor]
+else:
+    AnyTensor = Union[tf.Tensor, KerasTensor, keras.engine.keras_tensor.KerasTensor]
+
 
 try:
     # tf 2.5.x

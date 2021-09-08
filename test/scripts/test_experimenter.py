@@ -19,7 +19,7 @@ import os
 import tempfile
 import unittest
 
-from test.util.workdir import call_in_root
+from tfaip.util.testing.workdir import call_in_root
 from tfaip.util.file.oshelper import ChDir
 
 this_dir = os.path.dirname(os.path.realpath(__file__))

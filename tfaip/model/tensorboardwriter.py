@@ -28,7 +28,41 @@ import tensorflow as tf
 import tensorflow.keras as keras
 
 
-class TensorboardWriter(keras.metrics.Metric):
+class TensorboardWriterInterface(keras.metrics.Metric):
+    def __init__(self, func: Callable[[str, np.ndarray, int], None], **kwargs):
+        super().__init__(**kwargs)
+        self.handle_fn = func
+
+    def handle(self, name: str, value: np.ndarray, step: int):
+        return self.handle_fn(name, value, step)
+
+
+class TensorboardMetricWriter(TensorboardWriterInterface):
+    def get_config(self):
+        cfg = super().get_config()
+        cfg["func"] = "NOT_SUPPORTED"
+        cfg["metric"] = "NOT_SUPPORTED"
+        return cfg
+
+    @classmethod
+    def from_config(cls, config):
+        return super().from_config(config)
+
+    def __init__(self, func: Callable[[str, np.ndarray, int], None], metric: keras.metrics.Metric):
+        super().__init__(func, name=metric.name)
+        self.metric = metric
+
+    def update_state(self, *args, **kwargs):
+        return self.metric(*args, **kwargs)
+
+    def result(self):
+        return self.metric.result()
+
+    def reset_states(self):
+        return self.metric.reset_states()
+
+
+class TensorboardWriter(TensorboardWriterInterface):
     """Dummy Metric that holds the outputs of the last batch.
 
     Used to write this data to the logs, which can then be written to the tensorboard
@@ -52,11 +86,9 @@ class TensorboardWriter(keras.metrics.Metric):
         n_storage: int = 2,
         **kwargs,
     ):
-        super().__init__(**kwargs)
-        assert func is not None
+        super().__init__(func, **kwargs)
         self.initial_input_shape = input_shape
         self.n_storage = n_storage
-        self.handle_fn = func
         self.store_w = tf.Variable(
             initial_value=[],
             shape=tf.TensorShape(None),  # dynamic shape
@@ -76,6 +108,3 @@ class TensorboardWriter(keras.metrics.Metric):
 
     def reset_states(self):
         self.store_w.assign([])
-
-    def handle(self, name: str, value: np.ndarray, step: int):
-        return self.handle_fn(name, value, step)

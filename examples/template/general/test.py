@@ -20,9 +20,8 @@ import unittest
 import pytest
 from tensorflow.python.keras.backend import clear_session
 
-from examples.template.general.data import TemplateData
 from examples.template.general.scenario import TemplateScenario
-from test.util.training import single_train_iter, resume_training, lav_test_case, warmstart_training_test_case
+from tfaip.util.testing.training import single_train_iter, resume_training, lav_test_case, warmstart_training_test_case
 
 
 # [remove @pytest.mark.skip]

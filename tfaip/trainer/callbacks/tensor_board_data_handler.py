@@ -20,7 +20,7 @@
 import tensorflow as tf
 from tensorflow.python.ops import summary_ops_v2
 
-from tfaip.model.tensorboardwriter import TensorboardWriter
+from tfaip.model.tensorboardwriter import TensorboardWriterInterface
 from tfaip.util.tftyping import AnyTensor
 
 
@@ -40,7 +40,7 @@ class TensorBoardDataHandler:
     """
 
     def __init__(self, model: tf.keras.Model):
-        self.tensorboard_handlers = {m.name: m for m in model.metrics if isinstance(m, TensorboardWriter)}
+        self.tensorboard_handlers = {m.name: m for m in model.metrics if isinstance(m, TensorboardWriterInterface)}
 
     def handle(self, name, name_for_tb, value, step):
         # Handle your output.

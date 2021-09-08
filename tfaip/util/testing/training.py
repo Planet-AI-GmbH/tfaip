@@ -35,7 +35,14 @@ from tfaip.util.random import set_global_random_seed
 debug_test = sys.flags.debug
 
 
-def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[ScenarioBase], debug=debug_test, delta=1e-5):
+def warmstart_training_test_case(
+    test: unittest.TestCase,
+    scenario: Type[ScenarioBase],
+    debug=debug_test,
+    delta=1e-5,
+    ignore_binary_metric=False,
+    ignore_array_metric=False,
+):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
     # The resulting metrics/loss must be identical
@@ -69,7 +76,7 @@ def warmstart_training_test_case(test: unittest.TestCase, scenario: Type[Scenari
         for k, v in logs_after_warmstart.items():
             if k.startswith("val"):
                 # only test val variables, because training loss is once before and once after weight update
-                test.assertAlmostEqual(v, initial_logs[k], delta=delta)
+                assert_equality(test, k, v, initial_logs[k], delta, ignore_binary_metric, ignore_array_metric)
 
 
 def single_train_iter(
@@ -158,26 +165,17 @@ def lav_test_case(
                 iter(lav.run([trainer_params.gen.val_gen()], run_eagerly=debug, instantiate_graph=instantiate_graph))
             )
             lav.benchmark_results.pretty_print()
-            for k in bs1_results.keys():
-                if type(bs1_results[k]) == bytes:
-                    if ignore_binary_metric:
-                        continue
-                    else:
-                        test.assertEqual(bs1_results[k], bs5_results[k], msg=f"on key {k}")
-                elif type(bs1_results[k]).__module__ == "numpy":
-                    if ignore_array_metric:
-                        continue
-                    else:
-                        for x1, x5 in zip(np.reshape(bs1_results[k], [-1]), np.reshape(bs5_results[k], [-1])):
-                            if str(bs1_results[k].dtype).startswith("int"):
-                                test.assertEqual(x1, x5, msg=f"on key {k}")
-                            else:
-                                test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
-                else:
-                    test.assertAlmostEqual(bs1_results[k], bs5_results[k], delta=delta, msg=f"on key {k}")
+            assert_equality_dict(test, bs1_results, bs5_results, delta, ignore_binary_metric, ignore_array_metric)
 
 
-def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta=1e-5, debug=debug_test):
+def resume_training(
+    test: unittest.TestCase,
+    scenario: Type[ScenarioBase],
+    delta=1e-5,
+    debug=debug_test,
+    ignore_binary_metric=False,
+    ignore_array_metric=False,
+):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
@@ -211,7 +209,7 @@ def resume_training(test: unittest.TestCase, scenario: Type[ScenarioBase], delta
         for k, v in logs_after_resume.items():
             if k.startswith("val"):
                 # only test val variables, because training loss is once before and once after weight update
-                test.assertAlmostEqual(v, initial_logs[k], delta=delta)
+                assert_equality(test, k, v, initial_logs[k], delta, ignore_binary_metric, ignore_array_metric)
 
 
 def test_tensorboard_content(test: unittest.TestCase, output_dir: str, logs: Dict[str, Any], trainer):
@@ -260,3 +258,33 @@ def test_tensorboard_content(test: unittest.TestCase, output_dir: str, logs: Dic
         test.assertSetEqual(set(), additional_outputs_per_event)
 
     test.assertDictEqual({}, logs_to_find)
+
+
+def assert_equality_dict(
+    test: unittest.TestCase, res1, res2, delta, ignore_binary_metric=False, ignore_array_metric=False
+):
+    # res1, res2: dicts to compare
+    for k in res1.keys():
+        assert_equality(test, k, res1[k], res2[k], delta, ignore_binary_metric, ignore_array_metric)
+
+
+def assert_equality(
+    test: unittest.TestCase, key, res1, res2, delta, ignore_binary_metric=False, ignore_array_metric=False
+):
+    # res1, res2: values to compare
+    if type(res1) == bytes:
+        if ignore_binary_metric:
+            return
+        else:
+            test.assertEqual(res1, res2, msg=f"on key {key}")
+    elif type(res1).__module__ == "numpy":
+        if ignore_array_metric:
+            return
+        else:
+            for x1, x2 in zip(np.reshape(res1, [-1]), np.reshape(res2, [-1])):
+                if str(res1.dtype).startswith("int"):
+                    test.assertEqual(x1, x2, msg=f"on key {key}")
+                else:
+                    test.assertAlmostEqual(res1, res2, delta=delta, msg=f"on key {key}")
+    else:
+        test.assertAlmostEqual(res1, res2, delta=delta, msg=f"on key {key}")

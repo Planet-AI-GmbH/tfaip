@@ -532,8 +532,19 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                 "Setting no train scopes was designed for TF 2.4.0. " "Maybe you use an incompatible version"
             ) from e
 
+    def setup_training_graph(self, no_train_scope: Optional[str]) -> NoReturn:
+        logger.info("Building training keras model")
+        self._keras_train_model = create_training_graph(self, self.graph.model, self.graph)
+        logger.info("Attempting to set no train scope")
+        self._set_no_train_scope(no_train_scope)  # exclude layers from training
+
     def setup_training(
-        self, optimizer, skip_model_load_test=False, run_eagerly=False, no_train_scope: Optional[str] = None
+        self,
+        optimizer,
+        skip_model_load_test=False,
+        run_eagerly=False,
+        no_train_scope: Optional[str] = None,
+        training_graph_only=False,
     ) -> NoReturn:
         """
         Set training by constructing the training and prediction keras Models.
@@ -543,7 +554,13 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
             skip_model_load_test: Skip the test checking if the prediction model can be stored and loaded
             run_eagerly: Run the model in eager mode
             no_train_scope: Regex to match layers to exclude from training
+            training_graph_only: Set up only the training graph without compiling. This is required for exporting the model in tf.v1 style
         """
+        if training_graph_only:
+            # JAVA-Training: setup only the training graph. This is a workaround for creating trainable models for java
+            self.setup_training_graph(no_train_scope)
+            return
+
         real_inputs = self.data.create_input_layers()
         real_targets = self.data.create_target_as_input_layers()
         real_meta = self.data.create_meta_as_input_layers()
@@ -569,13 +586,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
                     f"The following keys occurr more than once: {set(non_unique)}"
                 )
 
-        all_keys = list(chain(real_inputs.keys(), real_targets.keys(), real_meta.keys()))
-        assert_unique_keys(all_keys)
-
-        logger.info("Building training keras model")
-        self._keras_train_model = create_training_graph(self, self.graph.model, self.graph)
-        logger.info("Attempting to set no train scope")
-        self._set_no_train_scope(no_train_scope)  # exclude layers from training
+        # all_keys = list(chain(real_inputs.keys(), real_targets.keys(), real_meta.keys()))
+        # assert_unique_keys(all_keys)
+        self.setup_training_graph(no_train_scope)
         logger.info("Compiling training model including optimization")
         self._keras_train_model.compile(optimizer=optimizer, run_eagerly=run_eagerly)
         if run_eagerly:

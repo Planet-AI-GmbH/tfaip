@@ -17,7 +17,7 @@
 # ==============================================================================
 
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, Dropout
 
 from examples.tutorial.min.model import TutorialModelParams
 from tfaip.imports import GraphBase
@@ -33,6 +33,7 @@ class TutorialGraph(GraphBase[TutorialModelParams]):
         self.pool2 = MaxPool2D(pool_size=(2, 2), strides=(2, 2), name="pool2")
         self.flatten = Flatten()
         self.ff = Dense(128, name="f_ff", activation="relu")
+        self.dropout = Dropout(0.5, name="dropout")
         self.logits = Dense(self._params.n_classes, activation=None, name="classify")
 
     def build_graph(self, inputs, training=None):
@@ -41,7 +42,7 @@ class TutorialGraph(GraphBase[TutorialModelParams]):
         if len(rescaled_img.shape) == 3:
             rescaled_img = K.expand_dims(rescaled_img, axis=-1)  # add missing channels dimension
         conv_out = self.pool2(self.conv2(self.pool1(self.conv1(rescaled_img))))
-        logits = self.logits(self.ff(self.flatten(conv_out)))
+        logits = self.logits(self.dropout(self.ff(self.flatten(conv_out))))
         pred = K.softmax(logits, axis=-1)
         cls = K.argmax(pred, axis=-1)
         out = {"pred": pred, "logits": logits, "class": cls}

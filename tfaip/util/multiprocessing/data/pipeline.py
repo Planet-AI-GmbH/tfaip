@@ -41,7 +41,9 @@ class ParallelPipeline(ABC):
         auto_repeat_input: bool = False,
         max_tasks_per_child: int = 250,
         run_parallel: bool = True,  # Flag to debug and disable parallel run
+        use_shared_memory: bool = False,
     ):
+        self.use_shared_memory = use_shared_memory
         self.limit = limit
         self.auto_repeat_input = auto_repeat_input
         self.processes = processes
@@ -57,6 +59,7 @@ class ParallelPipeline(ABC):
         if self.run_parallel:
             # Auto repeat input should only be true during training
             self.pool = WrappedPool(
+                use_shared_memory=self.use_shared_memory,
                 processes=self.processes,
                 worker_constructor=self.create_worker_func(),
                 context=mp_context(),

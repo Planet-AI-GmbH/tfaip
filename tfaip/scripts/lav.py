@@ -33,8 +33,10 @@ def run():
 
 
 def main(args, scenario_meta, scenario_params):
+    import tensorflow as tf
     import tensorflow_addons as tfa
 
+    print(tf.__version__, tfa.__version__, tfa._check_tf_version())
     tfa.register_all()
 
     callbacks = []
@@ -86,7 +88,7 @@ class ScenarioSelectionAction(Action):
 
 
 def parse_args(args=None):
-    parser = TFAIPArgumentParser(add_help=False)
+    parser = TFAIPArgumentParser(add_help=True)
     parser.add_argument("--export_dir", required=True, action=ScenarioSelectionAction)
     parser.add_argument(
         "--run_eagerly",

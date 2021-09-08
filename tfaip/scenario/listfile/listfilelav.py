@@ -17,26 +17,36 @@
 # ==============================================================================
 import json
 import os
+from typing import List
+
+from tfaip.lav.callbacks.lav_callback import LAVCallback
 
 from tfaip.lav.lav import LAV
-from tfaip.scenario.listfile.params import ListsFileGeneratorParams
 
 
-class ListFileLAV(LAV):
-    def _on_lav_end(self, data_generator_params: ListsFileGeneratorParams, result):
-        if self._params.store_results:
+class ListFileLAVCallback(LAVCallback):
+    def on_lav_end(self, result):
+        ...
+
+    def _on_lav_end(self, result):
+        if self.lav.params.store_results:
             dump_dict = {
                 "metrics": {
                     k: v for k, v in result.items() if (not isinstance(v, bytes) and not type(v).__module__ == "numpy")
                 },
-                "lav_params": self._params.to_dict(),
-                "data_params": self._data.params.to_dict(),
-                "model_params": self._model.params.to_dict(),
+                "lav_params": self.lav.params.to_dict(),
+                "data_params": self.data.params.to_dict(),
+                "model_params": self.model.params.to_dict(),
             }
             json_fn = os.path.join(
-                self._params.model_path,
-                f"lav_results_{'_'.join([os.path.basename(l) for l in data_generator_params.lists])}.json",
+                self.lav.params.model_path,
+                f"lav_results_{'_'.join([os.path.basename(l) for l in self.current_data_generator_params.lists])}.json",
             )
 
             with open(json_fn, "w") as json_fp:
                 json.dump(dump_dict, json_fp, indent=2)
+
+
+class ListFileLAV(LAV):
+    def _custom_callbacks(self) -> List[LAVCallback]:
+        return [ListFileLAVCallback()]

@@ -18,7 +18,6 @@
 import logging
 from argparse import Action
 
-from tfaip.imports import Trainer
 from tfaip.util.logging import WriteToLogFile
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
@@ -27,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
+        from tfaip.imports import Trainer
+
         output_dir = values
         trainer_params, scenario = Trainer.parse_trainer_params(output_dir)
 

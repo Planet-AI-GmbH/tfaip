@@ -41,6 +41,9 @@ class TrainingGraph(tf.keras.models.Model):
         self.model = model
         self.graph = graph
         self.multi_metrics = model._multi_metric()
+        self.model_metrics = (
+            model.metrics
+        )  # TODO(christoph): remove hack, add metrics to metrics to that they are know in tensorboard handler
         if len(self.multi_metrics) > 0:
             logger.warning(
                 "Usage of ModelBase._multi_metric is deprecated. It is now possible to compute everything directly in "

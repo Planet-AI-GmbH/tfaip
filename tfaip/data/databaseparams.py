@@ -103,6 +103,13 @@ class DataPipelineParams:
         default=None,
         metadata=pai_meta(help="Batch sizes of the buckets. By default, batch_size * (len(bucked_boundaries) + 1)."),
     )
+    use_shared_memory: bool = field(
+        default=False,
+        metadata=pai_meta(
+            help="Instead of Queues use Shared Memory to communicate between multiple threads. Note, this requires "
+            "at least Python 3.8."
+        ),
+    )
 
     def __post_init__(self):
         if self.num_processes <= 0:

@@ -59,7 +59,7 @@ class TokenizerProcessor(MappingDataProcessor[TokenizerProcessorParams]):
         word_ids = self.tokenizer.convert_tokens_to_ids(word_ids)
         return sample.new_inputs(
             {
-                Keys.InputWordIds: word_ids,
+                Keys.InputWordIds: np.asarray(word_ids),
                 Keys.InputMask: np.full(fill_value=1, shape=[len(word_ids)], dtype=np.int32),
                 Keys.InputTypeIds: np.asarray(type_ids, dtype=np.int32),
             }

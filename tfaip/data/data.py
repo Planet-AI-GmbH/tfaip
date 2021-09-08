@@ -184,13 +184,7 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
     def _meta_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         return {"meta": tf.TensorSpec(shape=[1], dtype=tf.string)}
 
-    def register_resource_from_parameter(self, param_name: str) -> Resource:
-        return self.resources.register(param_name, Resource(getattr(self._params, param_name)))
-
     def dump_resources(self, root_path: str, data_params_dict: dict):
         # dump resources and adjust the paths in the dumped dict
         data_params_dict["resource_base_path"] = "."
-        self.resources.dump(root_path)
-        for r_id, resource in self.resources.items():
-            if r_id in data_params_dict:
-                data_params_dict[r_id] = resource.dump_path
+        self.resources.dump(root_path, dump_dict=data_params_dict)

@@ -164,7 +164,9 @@ class SequentialProcessorPipelineParams(DataProcessorPipelineParams):
                 )
                 last_type = GeneratingDataProcessor
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"DataProcessor {processor_type} must either be GeneratingDataProcessor or MappingDataProcessor."
+                )
 
         return composed_params.create(data_pipeline_params, data_params)
 

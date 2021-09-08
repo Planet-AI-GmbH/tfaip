@@ -96,7 +96,10 @@ Learning rate
 The learning rate can be adapted using the ``trainer.learning_rate`` field which must be set to a ``LearningRateParams`` structure.
 The `LearningRateParams` always provide a ``lr``-field to modify the overall learning rate which defaults to ``0.001``.
 
-Example: ``--trainer.learning_rate.lr 0.001``.
+Example: ``--learning_rate.lr 0.001``.
+
+To change the schedule, set the learning rate field directly: ``--learning_rate ExponentialDecay``.
+The parameters of the schedule can be set similarly to above, e.g., ``--learning_rate.decay 0.95``.
 
 Optimizer
 ~~~~~~~~~
@@ -104,14 +107,16 @@ Optimizer
 The optimizer of the trainer can be changed and adapted via the ``trainer.optimizer`` field which is a ``OptimizerParams`` structure.
 |tfaip| supports different optimizers by default: ``Adam``, ``Adamax``, ``AdaBelief``, ``RMSprop``, ``SGD``. Each one comes with is custom parameters.
 
-Example: ``--trainer.optimizer Adamax``.
+Example: ``--optimizer Adamax``.
+
+To adap the parameters of the optimizer call, e.g., ``--optimizer.epsilon 1e-7``
 
 Gradient-Clipping
 """""""""""""""""
 
 Each optimizer supports gradient-clipping based on the `Tensorflow-Optimizer <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Optimizer>`_: ``clip_value``, ``clip_norm``, ``clip_global_norm``.
 
-Example: ``--trainer.optimizer.clip_global_norm 5``.
+Example: ``--optimizer.clip_global_norm 5``.
 
 Weight-Decay
 """"""""""""
@@ -119,7 +124,7 @@ Weight-Decay
 A global weight decay (applied to all weights) is provided by the ``Adam`` and ``SGD`` optimizer with their additional ``weight_decay`` field which defaults to ``0.0``.
 Alternatively, you can implement weight-decay directly when define layers, as recommended by `Tensorflow <https://www.tensorflow.org/tutorials/keras/overfit_and_underfit#combined_l2_dropout>`_.
 
-Example: ``--trainer.optimizer.weight_decay 0.00002``.
+Example: ``--optimizer.weight_decay 0.00002``.
 
 EMA-Weights
 ~~~~~~~~~~~
@@ -147,14 +152,14 @@ Warm-Start
 Warm-starting a model before training with predefined weights is supported.
 See ``WarmstartParams`` for all options.
 
-Example: ``--trainer.warmstart.model PATH_TO_WARMSTART_MODEL``
+Example: ``--warmstart.model PATH_TO_WARMSTART_MODEL``
 
 Devices
 ~~~~~~~
 
 See :ref:`DeviceConfig <doc.device_config:Device Configuration>` which is set at ``trainer.device``
 
-Example: ``--trainer.device.gpus 0 1``.
+Example: ``--device.gpus 0 1``.
 
 Early-Stopping
 ~~~~~~~~~~~~~~
@@ -181,6 +186,7 @@ During training several models/weights are logged:
 * ``export``: saved model, the final state of the model (last model)
 
 There are two formats:
+
 * checkpoint: only the weights are stored. Can only be used to continue the training or for :ref:`warm-start<doc.training:warm-start>`
 * saved model (serving): the model and weights are stored. Can be used in LAV and from other apis (e.g., java). Can also be used for :ref:`warm-start<doc.training:warm-start>`
 
@@ -198,3 +204,24 @@ Hereto, |tfaip| automatically stores the metrics and losses on the train, valida
 Launch the tensorboard via ``tensorboard --log_dir PATH_TO_THE_MODELS --bind_all``.
 
 Additional output such as images or PR-curves can be setup in the :ref:`model <doc.model:tensorboard>`.
+
+Benchmarking
+------------
+
+
+Profiling Training
+~~~~~~~~~~~~~~~~~~
+
+The full training can be profiled using the `Tensorboard`:
+
+* Install requirement ``tensorboard_plugin_profile``
+* Set ``--trainer.profile True``
+
+
+Benchmarking the Input Pipeline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Quite often, the bottleneck is not the model but the input data pipeline that is not able to produce enough samples per second.
+
+Replace ``tfaip-train`` with ``tfaip-benchmark-input-pipeline`` and run to profile the number of samples per second.
+By default the benchmark will run infinitely, so terminate to process to stop the benchmark.

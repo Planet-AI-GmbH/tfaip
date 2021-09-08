@@ -24,7 +24,10 @@ from datetime import datetime
 from typing import Type, Tuple, Union, TypeVar, Generic, Optional, Dict
 
 import tensorflow as tf
+from tensorflow.python.keras.backend import get_graph
 from tfaip import TrainerParams
+from tfaip import EXPORT_TENSORFLOW_1
+from tfaip.data.data import DataBase
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.scenario.scenariobase import ScenarioBase
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback
@@ -46,10 +49,29 @@ from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.random import set_global_random_seed
 from tfaip.util.typing import AnyNumpy
 from typeguard import typechecked
+from packaging import version
+
+if version.parse(tf.__version__) == version.parse("2.6.0"):
+    # TODO(all): this is a workaround to fix writing of binary metrics
+    # the custom fix is to skip metrics with dtype tf.string
+    import keras
+    from keras.engine.training import _is_scalar
+
+    def write_scalar_summaries(logs, step):
+        for name, value in logs.items():
+            if _is_scalar(value) and value.dtype != tf.string:
+                tf.summary.scalar("batch_" + name, value, step=step)
+
+    setattr(keras.engine.training, "write_scalar_summaries", write_scalar_summaries)
 
 logger = logging.getLogger(__name__)
 
 TTrainerParams = TypeVar("TTrainerParams", bound=TrainerParams)
+
+
+def to_placeholder(ts):
+    # JAVA-Training: convert tensorspec to placeholders
+    return {k: tf.compat.v1.placeholder(name=k, dtype=s.dtype, shape=(None,) + s.shape) for k, s in ts.items()}
 
 
 class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
@@ -89,6 +111,13 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
     def __init__(self, params: TTrainerParams, scenario: ScenarioBase, restore=False):
         super().__init__()
         self._params = params
+        self._training_graph_only = params.export_training_graph_path is not None  # only required for JAVA-Training
+        if self._training_graph_only:
+            EXPORT_TENSORFLOW_1["metric_aggregation"] = "mean"
+            tf.compat.v1.disable_eager_execution()
+            self.params.export_final = False
+            self.params.scenario.print_eval_limit = 0
+
         self.restore = restore
         if self._params.random_seed is not None:
             set_global_random_seed(self._params.random_seed)
@@ -124,6 +153,11 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
     @property
     def scenario(self):
         return self._scenario
+
+    @property
+    def data(self) -> "DataBase":
+        assert self._data is not None, "Data not initialized yet, call setup_data() manually first."
+        return self._data
 
     @property
     def params(self):
@@ -170,6 +204,7 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
             self._params.skip_model_load_test,
             run_eagerly=self._params.force_eager,
             no_train_scope=self._params.no_train_scope,
+            training_graph_only=self._training_graph_only,
         )
         if self.restore:
             logger.info(f"Restoring from checkpoint '{self._params.output_dir}'")
@@ -310,20 +345,54 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
                     f"{self._params.samples_per_epoch} < {self.params.gen.setup.train.batch_size}"
                 )
 
+        if self._steps_per_epoch <= 0:
+            raise ValueError(
+                f"Steps per epoch must be > 0 but got {self._steps_per_epoch}. Possibly the number of samples "
+                f"is smaller than the batch size."
+            )
+
         logger.info(f"Set steps per epoch to {self._steps_per_epoch}")
 
     def fit(self):
-        self._scenario.fit(
-            epochs=self._params.epochs,
-            initial_epoch=self._params.current_epoch,
-            steps_per_epoch=self._steps_per_epoch,
-            validation_freq=self._params.val_every_n,
-            callbacks=self._callbacks,
-            verbose=self._params.progress_bar_mode,
-        )
+        if self._training_graph_only:
+            logger.info("Not training, only exporting graph")
+            self.export_trainable_pb()
+        else:
+            self._scenario.fit(
+                epochs=self._params.epochs,
+                initial_epoch=self._params.current_epoch,
+                steps_per_epoch=self._steps_per_epoch,
+                validation_freq=self._params.val_every_n,
+                callbacks=self._callbacks,
+                verbose=self._params.progress_bar_mode,
+            )
+
+    def _compute_ema_decay(self):
+        if self._params.ema_decay != 0.0:
+            if self._params.ema_decay >= 1:
+                raise ValueError(
+                    f"The EMA decay is {self._params.ema_decay} >= 1 which is invalid. Either pass "
+                    f"a negative value for an automatic computation, or a value in (0, 1)."
+                )
+            elif self._params.ema_decay < 0.0:
+                emadecay = 0.75 ** (
+                    float(self._params.gen.setup.train.batch_size) / max(self._params.samples_per_epoch, 1)
+                )
+                # Very short epochs lead to low ema decays. prevent this...
+                emadecay = max(emadecay, 0.99)
+                # Very long epochs lead to very very high ema decays. prevent this...
+                emadecay = min(emadecay, 0.99975)
+            else:
+                emadecay = self._params.ema_decay
+
+            return emadecay
+        return 0.0
 
     @typechecked
-    def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
+    def _create_optimizer(self, ema_decay=None) -> tf.keras.optimizers.Optimizer:
+        if ema_decay is None:
+            ema_decay = self._compute_ema_decay()
+
         # Create the optimizer
         # Wrap with ema_decay if desired
         @typechecked
@@ -337,23 +406,8 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
                 if isinstance(lr_schedule, LearningRateSchedule):
                     args["weight_decay"] = WeightDecaySchedule(args["weight_decay"], lr_schedule)
 
-            if self._params.ema_decay != 0.0:
-                if self._params.ema_decay >= 1:
-                    raise ValueError(
-                        f"The EMA decay is {self._params.ema_decay} >= 1 which is invalid. Either pass "
-                        f"a negative value for an automatic computation, or a value in (0, 1)."
-                    )
-                elif self._params.ema_decay < 0.0:
-                    emadecay = 0.75 ** (
-                        float(self._params.gen.setup.train.batch_size) / max(self._params.samples_per_epoch, 1)
-                    )
-                    # Very short epochs lead to low ema decays. prevent this...
-                    emadecay = max(emadecay, 0.99)
-                    # Very long epochs lead to very very high ema decays. prevent this...
-                    emadecay = min(emadecay, 0.99975)
-                else:
-                    emadecay = self._params.ema_decay
-                return WeightsMovingAverage, {"optimizer": real_optimizer(**args), "average_decay": emadecay}
+            if ema_decay is not None and ema_decay != 0:
+                return WeightsMovingAverage, {"optimizer": real_optimizer(**args), "average_decay": ema_decay}
             else:
                 return real_optimizer, args
 
@@ -362,3 +416,62 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
 
     def create_warmstarter(self) -> WarmStarter:
         return WarmStarter(self.params.warmstart)
+
+    def export_trainable_pb(self):
+        """Save the current graph (tf1 style) in a pb
+
+        Usage:
+            - use the `train_ema` operation to train (incl. ema weights update). `train_op` is without ema.
+            - save the model (incl. ema weights) using `save_basic/Const` so set the path, and use
+              "save_basic/control_dependency" to save all weights
+            - to restore all weights, load with "save_basic/restore_all"
+            - to copy the ema weights into the training weights for prediction, call "save_ema/restore_all"
+        """
+        export_path = os.path.abspath(self._params.export_training_graph_path)
+
+        optimizer = self._create_optimizer(ema_decay=0)  # disable ema in model
+        x = tuple(
+            map(
+                to_placeholder,
+                (self.data.input_layer_specs(), self.data.target_layer_specs(), self.data.meta_layer_specs()),
+            )
+        )
+        training = tf.compat.v1.placeholder_with_default(False, shape=[], name="training")
+        model = self.scenario.keras_train_model
+        with tf.GradientTape() as tape:
+            outputs = model(x, training=training)
+            loss_value = tf.constant(0, dtype=tf.float32)
+            # Add any extra losses created during the forward pass.
+            loss_value += sum(model.losses)
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        train_op = optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+        # additional outputs
+        # rename outputs and operations
+        tf.identity(optimizer.iterations, name="global_step")
+        tf.identity(optimizer.lr(optimizer.iterations), name="learning_rate")
+        train_op = tf.group([train_op], name="train_op")
+        loss_value = tf.identity(loss_value, name="loss_value")
+        if isinstance(outputs, dict):
+            for k, v in outputs.items():
+                tf.identity(v, name=k)
+
+        # Setup the EMA handling
+        emadecay = self._compute_ema_decay()
+        ema = tf.train.ExponentialMovingAverage(emadecay)
+        train_collection = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES)
+        ema_op = ema.apply(train_collection)
+        # Setup the final training op (grouped with ema handling)
+        train_op = tf.group([train_op, ema_op], name="train_ema")
+
+        # Init + saver
+        init = tf.compat.v1.global_variables_initializer()
+        # training variables
+        tf.compat.v1.train.Saver(name="save_basic").as_saver_def()
+        # ema variables
+        var_mapper = {ema.average_name(v): v for v in train_collection}
+        tf.compat.v1.train.Saver(var_list=var_mapper, name="save_ema").as_saver_def()
+
+        # Write graph
+        tf.io.write_graph(get_graph(), export_path, "hull.pb", as_text=False)
+        logger.info(f"Successfully exported to {export_path}/hull.pb")

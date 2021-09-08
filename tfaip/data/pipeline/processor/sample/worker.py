@@ -53,18 +53,36 @@ class MappingDataProcessorWorker(DataWorker):
 class GeneratingDataProcessorWorker(DataWorker):
     """Worker that applies one GeneratingDataProcessor
 
+    The generating data processor worker support a "pre-/post-processing sequential processor" which will be
+    executed in the same thread.
+
     The worker will be instantiated and called in a separate process.
     """
 
     def __init__(
         self,
-        data_processor_fn: Callable[[], GeneratingDataProcessor],
+        pre_mapping_processor_fn: Optional[Callable[[], SequenceProcessor]],
+        generating_processor_fn: Callable[[], GeneratingDataProcessor],
+        post_mapping_processor_fn: Optional[Callable[[], SequenceProcessor]],
     ):
-        self.data_processor_fn = data_processor_fn
-        self.processor: Optional[GeneratingDataProcessor] = None
+        self.pre_mapping_data_processor_fn = pre_mapping_processor_fn
+        self.post_mapping_data_processor_fn = post_mapping_processor_fn
+        self.generating_data_processor_fn = generating_processor_fn
+        self.pre_mapping_processor: Optional[SequenceProcessor] = None
+        self.post_mapping_processor: Optional[SequenceProcessor] = None
+        self.generating_processor: Optional[GeneratingDataProcessor] = None
 
     def initialize_thread(self):
-        self.processor = self.data_processor_fn()
+        if self.pre_mapping_data_processor_fn:
+            self.pre_mapping_processor = self.pre_mapping_data_processor_fn()
+        self.generating_processor = self.generating_data_processor_fn()
+        if self.post_mapping_data_processor_fn:
+            self.post_mapping_processor = self.post_mapping_data_processor_fn()
 
     def process(self, sample: Iterator[Sample]):
-        return self.processor.generate(sample)
+        if self.pre_mapping_processor:
+            sample = map(self.pre_mapping_processor.apply_on_sample, sample)
+        sample = self.generating_processor.generate(sample)
+        if self.post_mapping_processor:
+            sample = map(self.post_mapping_processor.apply_on_sample, sample)
+        return sample

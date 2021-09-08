@@ -95,34 +95,63 @@ class DataProcessorPipeline:
 
             if len(data_processors) == 0:
                 continue
-            processor_type = data_processors[0].cls()
-            if issubclass(processor_type, MappingDataProcessor):
+
+            has_generating_processor = any(issubclass(p.cls(), GeneratingDataProcessor) for p in data_processors)
+            if not has_generating_processor:
                 # All Processors must be MappingDataProcessors if the first one is a MappingDataProcessor
-                assert all(issubclass(dp.cls(), MappingDataProcessor) for dp in data_processors)
                 cfn = partial(_create_sequence_processor_fn, data_processors, data_params, mode)
                 if pipeline.run_parallel and len(data_processors) > 0:
                     sample_processor_pipelines.append(
-                        ParallelMappingSampleProcessingPipeline(pipeline, data_pipeline_params, cfn)
+                        ParallelMappingSampleProcessingPipeline(
+                            params=pipeline, data_pipeline_params=data_pipeline_params, processor_fn=cfn
+                        )
                     )
                 else:
                     sample_processor_pipelines.append(
-                        MappingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
-                    )
-            elif issubclass(processor_type, GeneratingDataProcessor):
-                # Only one GeneratingDataProcessor per SequenceProcessorParams
-                assert all(issubclass(dp.cls(), GeneratingDataProcessor) for dp in data_processors)
-                assert len(data_processors) == 1
-                cfn = partial(_create_generator_processor_fn, data_processors[0], data_params, mode)
-                if pipeline.run_parallel:
-                    sample_processor_pipelines.append(
-                        ParallelGeneratingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
-                    )
-                else:
-                    sample_processor_pipelines.append(
-                        GeneratingSampleProcessorPipeline(pipeline, data_pipeline_params, cfn)
+                        MappingSampleProcessorPipeline(
+                            params=pipeline, data_pipeline_params=data_pipeline_params, processor_fn=cfn
+                        )
                     )
             else:
-                raise NotImplementedError
+                # Only one GeneratingDataProcessor per SequenceProcessorParams
+                # but allow preceding generating processors
+                pre_mapping_processors = []
+                post_mapping_processors = []
+                generating_processor = None
+                for dp in data_processors:
+                    if issubclass(dp.cls(), MappingDataProcessor):
+                        if generating_processor is None:
+                            pre_mapping_processors.append(dp)
+                        else:
+                            post_mapping_processors.append(dp)
+                    else:
+                        assert (
+                            generating_processor is None
+                        ), "Only one GeneratingDataProcessor allowed per CompoundPipeline. Use a separate one."
+                        generating_processor = dp
+                pre_mapping_cfn = partial(_create_sequence_processor_fn, pre_mapping_processors, data_params, mode)
+                generating_cfn = partial(_create_generator_processor_fn, generating_processor, data_params, mode)
+                post_mapping_cfn = partial(_create_sequence_processor_fn, post_mapping_processors, data_params, mode)
+                if pipeline.run_parallel:
+                    sample_processor_pipelines.append(
+                        ParallelGeneratingSampleProcessorPipeline(
+                            params=pipeline,
+                            data_pipeline_params=data_pipeline_params,
+                            pre_mapping_processor_fn=pre_mapping_cfn,
+                            generating_processor_fn=generating_cfn,
+                            post_mapping_processor_fn=post_mapping_cfn,
+                        )
+                    )
+                else:
+                    sample_processor_pipelines.append(
+                        GeneratingSampleProcessorPipeline(
+                            params=pipeline,
+                            data_pipeline_params=data_pipeline_params,
+                            pre_mapping_processor_fn=pre_mapping_cfn,
+                            generating_processor_fn=generating_cfn,
+                            post_mapping_processor_fn=post_mapping_cfn,
+                        )
+                    )
 
         return DataProcessorPipeline(sample_processor_pipelines, mode)
 

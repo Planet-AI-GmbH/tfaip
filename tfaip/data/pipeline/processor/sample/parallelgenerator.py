@@ -42,7 +42,9 @@ class ParallelDataGenerator(ParallelGenerator):
         self,
         pipeline_params: "DataPipelineParams",
         sample_generator: Iterable[Sample],
-        create_processor_fn,
+        create_pre_mapping_processor_fn,
+        create_generating_processor_fn,
+        create_post_mapping_processor_fn,
         auto_repeat_input: bool,
         num_processes: Optional[int] = None,
         limit: Optional[int] = None,
@@ -55,7 +57,9 @@ class ParallelDataGenerator(ParallelGenerator):
         if limit is None:
             limit = pipeline_params.limit
         self.sample_generator = sample_generator
-        self.create_processor_fn = create_processor_fn
+        self.create_pre_mapping_processor_fn = create_pre_mapping_processor_fn
+        self.create_generating_processor_fn = create_generating_processor_fn
+        self.create_post_mapping_processor_fn = create_post_mapping_processor_fn
         super().__init__(
             processes=num_processes,
             limit=limit,
@@ -63,12 +67,15 @@ class ParallelDataGenerator(ParallelGenerator):
             max_tasks_per_child=preproc_max_tasks_per_child,
             max_in_samples=max_in_samples,
             max_out_samples=max_out_samples,
+            use_shared_memory_queues=pipeline_params.use_shared_memory,
         )
 
     def create_worker_func(self) -> Callable[[], DataWorker]:
         return partial(
             create_generating_data_processor_worker,
-            self.create_processor_fn,
+            self.create_pre_mapping_processor_fn,
+            self.create_generating_processor_fn,
+            self.create_post_mapping_processor_fn,
         )
 
     def generate_input(self):

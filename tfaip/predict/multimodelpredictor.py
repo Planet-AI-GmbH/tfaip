@@ -174,7 +174,10 @@ class MultiModelPredictor(PredictorBase):
             for d in self._datas
         ]
         post_proc_pipeline = SequentialProcessorPipelineParams(
-            processors=[MultiModelPostProcessorParams(voter=voter, post_processors=post_processors)]
+            processors=[MultiModelPostProcessorParams(voter=voter, post_processors=post_processors)],
+            run_parallel=self.data.params.post_proc.run_parallel,
+            num_threads=self.data.params.post_proc.num_threads,
+            max_tasks_per_process=self.data.params.post_proc.max_tasks_per_process,
         )
 
         with pipeline as rd:

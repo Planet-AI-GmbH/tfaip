@@ -20,7 +20,7 @@ import unittest
 
 from tensorflow.keras.backend import clear_session
 
-from test.tutorial.test_tutorial_full import TutorialScenarioTest
+from test.examples.tutorial.test_tutorial_full import TutorialScenarioTest
 from tfaip.data.databaseparams import DataPipelineParams
 
 

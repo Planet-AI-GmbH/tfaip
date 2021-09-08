@@ -188,6 +188,14 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
             "take some time. Thus for debugging you should skip this by setting it to True"
         ),
     )
+    export_training_graph_path: Optional[str] = field(
+        default=None,
+        metadata=pai_meta(
+            help="Only export the training graph as saved model to the given path and do not train. Everything before "
+            "the first epoch will be executed, e.g., loading the warmstarted weights. Crease a hull.pb at the "
+            "desired path that only comprises the model but no weights."
+        ),
+    )
     val_every_n: int = field(
         default=1,
         metadata=pai_meta(

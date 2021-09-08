@@ -36,10 +36,12 @@ GENERAL_PROCESSOR = {PipelineMode.TRAINING, PipelineMode.EVALUATION, PipelineMod
 class Sample:
     """
     Basic structure of a single (unbatched) sample which is used to process data.
-    The sample provides four fields (inputs, outputs, targets, and optionally meta) which must be set dependen on the
+    The sample provides four fields (inputs, outputs, targets, and optionally meta) which must be set dependent on the
     PipelineMode.
 
-    Meta should be a dict with arbitrary serializable data.
+    Meta should be a dict with arbitrary SERIALIZABLE data.
+    Inputs, outputs, targets have to be (arbitrarily) nested structures of numpy arrays. Furthermore, scalars are not supported, i.e.,
+    use np.asarray([0], dtype=np.int32) instead of np.asarray(0, dtype=np.int32)
 
     Call the provided methods `new_inputs`, `new_outputs`, `new_targets`, `new_meta`, or `new_invalid` to build and
     return a new (copied) sample after transformations were applied.

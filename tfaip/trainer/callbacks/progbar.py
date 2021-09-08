@@ -18,7 +18,7 @@
 """Definition of the TFAIPProgbarLogger which extends the default keras ProgbarLogger"""
 import time
 
-from tensorflow.python.keras.callbacks import ProgbarLogger
+from tensorflow.keras.callbacks import ProgbarLogger
 from tfaip.util.tftyping import sync_to_numpy_or_python_type
 
 

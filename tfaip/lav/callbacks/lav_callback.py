@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from tfaip import DataGeneratorParams
+from tfaip import DataGeneratorParams, Sample
 
 if TYPE_CHECKING:
     from tfaip.lav.lav import LAV
@@ -36,11 +36,19 @@ class LAVCallback(ABC):
         self.lav: "LAV" = None  # Set from lav
         self.data: "DataBase" = None  # Set from lav
         self.model: "ModelBase" = None  # set from lav
+        self.current_data_generator_params: DataGeneratorParams = None  # not yes set
 
-    @abstractmethod
-    def on_sample_end(self, data_generator_params: DataGeneratorParams, sample):
-        pass
+    def setup(self, data_generator_params: DataGeneratorParams, lav: "LAV", data: "DataBase", model: "ModelBase"):
+        self.current_data_generator_params = data_generator_params
+        self.lav = lav
+        self.data = data
+        self.model = model
 
-    @abstractmethod
-    def on_lav_end(self, data_generator_params: DataGeneratorParams, result):
-        pass
+    def on_lav_start(self):
+        ...
+
+    def on_sample_end(self, sample: Sample):
+        ...
+
+    def on_lav_end(self, result):
+        ...

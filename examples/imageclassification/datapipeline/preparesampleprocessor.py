@@ -17,6 +17,7 @@
 # ==============================================================================
 from dataclasses import dataclass
 
+import numpy as np
 from paiargparse import pai_dataclass
 
 from examples.imageclassification.params import Keys
@@ -37,5 +38,5 @@ class PrepareSampleProcessor(MappingDataProcessor[PrepareSampleProcessorParams])
         if self.mode in INPUT_PROCESSOR:
             sample = sample.new_inputs({Keys.Image: sample.inputs})
         if self.mode in TARGETS_PROCESSOR:
-            sample = sample.new_targets({Keys.Target: [sample.targets]})
+            sample = sample.new_targets({Keys.Target: np.asarray([sample.targets])})
         return sample

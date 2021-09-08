@@ -40,6 +40,8 @@ setup(
     download_url="https://github.com/Planet-AI-GmbH/tf2_aip_base/archive/{}.tar.gz".format(__version__),
     entry_points={
         "console_scripts": [
+            "tfaip-adapt-exported-model=tfaip.scripts.adapt_exported_model:run",
+            "tfaip-benchmark-scenario-input-pipeline=tfaip.scripts.benchmark_scenario_input_pipeline:run",
             "tfaip-train=tfaip.scripts.train:run",
             "tfaip-lav=tfaip.scripts.lav:run",
             "tfaip-multi-lav=tfaip.scripts.lav_multi:run",

@@ -9,4 +9,10 @@ repos:
     hooks:
       - id: flake8
         args: ["--select=E9,F63,F7,F82", "--count"]
+  - repo: local
+    hooks:
+      - id: add-copyrights
+        name: Add Copyrights
+        language: python
+        entry: python scripts/pre-commit/add_copyright.py
 
