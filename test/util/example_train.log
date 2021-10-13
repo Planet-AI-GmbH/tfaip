@@ -1,0 +1,66 @@
+INFO     2021-09-15 14:14:34,372 tfaip.trainer.callbacks.logger: Start of epoch    4
+INFO     2021-09-15 14:17:46,034 tfaip.model.print_evaluate_lay: Printing evaluation results of 10 instances
+INFO     2021-09-15 14:17:46,035 tfaip.model.print_evaluate_lay: TAR = 14.140, PRED = 13.919, RES = 0.221
+INFO     2021-09-15 14:17:46,035 tfaip.model.print_evaluate_lay: TAR = 15.700, PRED = 13.903, RES = 1.797
+INFO     2021-09-15 14:17:46,036 tfaip.model.print_evaluate_lay: TAR = 14.880, PRED = 16.210, RES = 1.330
+INFO     2021-09-15 14:17:46,036 tfaip.model.print_evaluate_lay: TAR = 14.020, PRED = 14.992, RES = 0.972
+INFO     2021-09-15 14:17:46,036 tfaip.model.print_evaluate_lay: TAR = 13.610, PRED = 14.023, RES = 0.413
+INFO     2021-09-15 14:17:46,037 tfaip.model.print_evaluate_lay: TAR = 13.990, PRED = 14.006, RES = 0.016
+INFO     2021-09-15 14:17:46,038 tfaip.model.print_evaluate_lay: TAR = 16.860, PRED = 14.968, RES = 1.892
+INFO     2021-09-15 14:17:46,039 tfaip.model.print_evaluate_lay: TAR = 17.730, PRED = 18.128, RES = 0.398
+INFO     2021-09-15 14:17:46,054 tfaip.model.print_evaluate_lay: TAR = 17.440, PRED = 18.438, RES = 0.998
+INFO     2021-09-15 14:17:46,054 tfaip.model.print_evaluate_lay: TAR = 16.700, PRED = 17.730, RES = 1.030
+INFO     2021-09-15 14:17:56,196 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+-----------------------+----------------------+----------------------+-----------------------+----------------------+-----------------------+
+|    Benchmark    |      Train Total      |     Train Batch      |     Train Sample     |       Test Total      |      Test Batch      |      Test Sample      |
++-----------------+-----------------------+----------------------+----------------------+-----------------------+----------------------+-----------------------+
+|    AVG Count    |           1           |        21000         |        55888         |           1           |        21000         |         55888         |
+|   AVG Time Per  |   824.9548406600952   | 0.03575516859690348  | 0.013435058340519846 |   824.9548506736755   | 0.03575516859690348  |  0.013435058340519846 |
+|  AVG Per Second |  0.001212187565564002 |  27.967984468869304  |  74.43212933315083   | 0.0012121875508500604 |  27.967984468869304  |   74.43212933315083   |
+|    Last Count   |           1           |         5250         |        13972         |           1           |         1747         |         13972         |
+|  Last Time Per  |   201.82226657867432  | 0.036058779444013325 | 0.013549140572650296 |   11.985665559768677  | 0.006627310734854197 | 0.0008286510058538708 |
+| Last Per Second | 0.0049548546696663925 |  27.732497200928563  |  73.80541921740456   |  0.08343299710919849  |  150.8907670106403   |   1206.7806506426252  |
++-----------------+-----------------------+----------------------+----------------------+-----------------------+----------------------+-----------------------+
+INFO     2021-09-15 14:17:56,217 tfaip.trainer.callbacks.earlys: No better value of val_mae = 0.48920032382011414 found. Keeping best = 0.4721277356147766
+INFO     2021-09-15 14:17:56,232 tfaip.trainer.callbacks.logger: Results of epoch    4 loss: 0.5184 - loss/mean_epoch: 0.5184 - mae: 0.5043 - mse: 0.5184 - val_loss: 0.4799 - val_loss/mean_epoch: 0.4799 - val_mae: 0.4892 - val_mse: 0.4799
+INFO     2021-09-15 14:17:56,237 tfaip.trainer.callbacks.logger: Start of epoch    5
+INFO     2021-09-15 14:21:05,031 tfaip.model.print_evaluate_lay: Printing evaluation results of 10 instances
+INFO     2021-09-15 14:21:05,032 tfaip.model.print_evaluate_lay: TAR = 14.140, PRED = 13.831, RES = 0.309
+INFO     2021-09-15 14:21:05,037 tfaip.model.print_evaluate_lay: TAR = 15.700, PRED = 13.829, RES = 1.871
+INFO     2021-09-15 14:21:05,038 tfaip.model.print_evaluate_lay: TAR = 14.880, PRED = 15.951, RES = 1.071
+INFO     2021-09-15 14:21:05,042 tfaip.model.print_evaluate_lay: TAR = 14.020, PRED = 14.674, RES = 0.654
+INFO     2021-09-15 14:21:05,043 tfaip.model.print_evaluate_lay: TAR = 13.610, PRED = 13.651, RES = 0.041
+INFO     2021-09-15 14:21:05,045 tfaip.model.print_evaluate_lay: TAR = 13.990, PRED = 13.698, RES = 0.292
+INFO     2021-09-15 14:21:05,048 tfaip.model.print_evaluate_lay: TAR = 16.860, PRED = 14.616, RES = 2.244
+INFO     2021-09-15 14:21:05,049 tfaip.model.print_evaluate_lay: TAR = 17.730, PRED = 17.864, RES = 0.134
+INFO     2021-09-15 14:21:05,069 tfaip.model.print_evaluate_lay: TAR = 17.440, PRED = 18.213, RES = 0.773
+INFO     2021-09-15 14:21:05,070 tfaip.model.print_evaluate_lay: TAR = 16.700, PRED = 17.489, RES = 0.789
+INFO     2021-09-15 14:21:17,890 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+-----------------------+---------------------+----------------------+-----------------------+----------------------+-----------------------+
+|    Benchmark    |      Train Total      |     Train Batch     |     Train Sample     |       Test Total      |      Test Batch      |      Test Sample      |
++-----------------+-----------------------+---------------------+----------------------+-----------------------+----------------------+-----------------------+
+|    AVG Count    |           1           |        26250        |        69860         |           1           |        26250         |         69860         |
+|   AVG Time Per  |   1026.648068189621   | 0.03574847228640602 | 0.013432542191785829 |   1026.6480915546417  | 0.03574847228640602  |  0.013432542191785829 |
+|  AVG Per Second | 0.0009740436192154807 |  27.97322335870189  |  74.44607176529196   | 0.0009740435970476614 |  27.97322335870189   |   74.44607176529196   |
+|    Last Count   |           1           |         5250        |        13972         |           1           |         1747         |         13972         |
+|  Last Time Per  |   201.65087699890137  | 0.03572168704441615 | 0.013422477596849757 |   13.578501224517822  | 0.007624203365874004 | 0.0009532982593889125 |
+| Last Per Second |  0.004959065960350117 |  27.994198559452283 |  74.50189376622234   |  0.07364583052762588  |  131.16124426533636  |   1048.9896421724554  |
++-----------------+-----------------------+---------------------+----------------------+-----------------------+----------------------+-----------------------+
+INFO     2021-09-15 14:21:17,912 tfaip.trainer.callbacks.earlys: No better value of val_mae = 0.477530300617218 found. Keeping best = 0.4721277356147766
+INFO     2021-09-15 14:21:17,927 tfaip.trainer.callbacks.logger: Results of epoch    5 loss: 0.5049 - loss/mean_epoch: 0.5049 - mae: 0.4960 - mse: 0.5049 - val_loss: 0.4632 - val_loss/mean_epoch: 0.4632 - val_mae: 0.4775 - val_mse: 0.4632
+INFO     2021-09-15 14:21:17,930 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+-----------------------+------------------------+------------------------+-----------------------+------------------------+------------------------+
+|    Benchmark    |      Train Total      |      Train Batch       |      Train Sample      |       Test Total      |       Test Batch       |      Test Sample       |
++-----------------+-----------------------+------------------------+------------------------+-----------------------+------------------------+------------------------+
+|    AVG Count    |           1           |         26250          |         69860          |           1           |         26250          |         69860          |
+|   AVG Time Per  |   1026.6881756782532  | 1.3618465632916579e-06 | 1.9227801591448366e-07 |   1026.6881756782532  | 1.3618465632916579e-06 | 1.9227801591448366e-07 |
+|  AVG Per Second | 0.0009740055682820908 |   734297.1131659246    |   5200802.573523297    | 0.0009740055682820908 |   734297.1131659246    |   5200802.573523297    |
+|    Last Count   |           1           |          5250          |         13972          |           1           |          1747          |         13972          |
+|  Last Time Per  |   201.65087699890137  |  0.03572168704441615   |  0.013422477596849757  |   13.578501224517822  |  0.007624203365874004  | 0.0009532982593889125  |
+| Last Per Second |  0.004959065960350117 |   27.994198559452283   |   74.50189376622234    |  0.07364583052762588  |   131.16124426533636   |   1048.9896421724554   |
++-----------------+-----------------------+------------------------+------------------------+-----------------------+------------------------+------------------------+
+INFO     2021-09-15 14:21:18,632          tfaip.trainer.trainer: Final export of the model.
+WARNING  2021-09-15 14:21:24,740                           absl: Found untraced functions such as weather_graph_lstm_layer_call_and_return_conditional_losses, weather_graph_lstm_layer_call_fn, output_lay_layer_call_and_return_conditional_losses, output_lay_layer_call_fn, weather_graph_lstm_layer_call_fn while saving (showing 5 of 25). These functions will not be directly callable after loading.
+INFO     2021-09-15 14:21:25,284                     tensorflow: Assets written to: ...
+CRITICAL 2021-09-15 14:21:25,438             tfaip.util.logging: Uncaught exception
+NoneType: None
