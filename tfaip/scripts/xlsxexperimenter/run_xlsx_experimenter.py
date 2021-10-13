@@ -17,11 +17,15 @@
 # ==============================================================================
 from typing import NamedTuple, List
 
-from pandas import read_excel
+import pandas as pd
+from pandas import read_excel, DataFrame, ExcelWriter
+import time
 import numpy as np
 import os
 from subprocess import run, PIPE
 from dataclasses import dataclass
+
+from tfaip.util.logging import ParseLogFile
 
 
 @dataclass()
@@ -81,11 +85,19 @@ class Device(NamedTuple):
 
 
 class XLSXExperimenter:
-    def __init__(self, xlsx_path, gpus=None, cpus=None, dry_run=False, python=None, use_ts=False):
+    def __init__(self, xlsx_path, gpus=None, cpus=None, dry_run=False, python=None, use_ts=False, update_mode=False):
         gpus = gpus if gpus else []
         cpus = cpus if cpus else []
-        assert not (use_ts and not gpus and not cpus)
-        assert not (gpus and cpus)
+
+        if not update_mode:
+            # error if no cpus or gpus are selected
+            assert not (use_ts and not gpus and not cpus)
+            # error if cpus and gpus are selected simultaneously
+            assert not (gpus and cpus)
+
+        # check if xlsx exists
+        if not os.path.isfile(xlsx_path):
+            raise FileNotFoundError
 
         self.xlsx_path = xlsx_path
         self.with_gpu = gpus and len(gpus) > 0
@@ -93,8 +105,10 @@ class XLSXExperimenter:
         self.dry_run = dry_run
         self.python = python
         self.use_ts = use_ts
+        self.update_mode = update_mode
 
     def run(self):
+        # read first sheet of xlsx
         sheet = read_excel(self.xlsx_path)
         header = sheet.head(0)
         # ID column
@@ -104,6 +118,7 @@ class XLSXExperimenter:
         skip_idx = None
         cleanup_idx = None
         command = None
+        result_idx = None
         for i, v in enumerate(header.columns):
             if v == "ID":
                 id = i
@@ -117,6 +132,8 @@ class XLSXExperimenter:
                 skip_idx = i
             elif v == "CLEANUP":
                 cleanup_idx = i
+            elif v == "RESULT":
+                result_idx = i
 
         assert skip_idx is not None
         assert id is not None
@@ -124,26 +141,34 @@ class XLSXExperimenter:
         assert scenario is not None
         assert cleanup_idx is not None
         assert command is not None
+        assert result_idx is not None
 
         # read param groups
+        # iterate all columns, first row (second in xlsx due to header)
         groups = []
         last_group = None
         for i, group in enumerate(sheet.iloc[0]):
+            # add None if i is smaller than params start idx
             if i < params:
                 groups.append(None)
                 continue
 
+            # check type
             if isinstance(group, str):
                 last_group = group
 
+            # append parameter group (for each column)
             groups.append(last_group)
 
+        # iterate all columns , second row (third in xlsx due to header)
         parameters = []
         for i, parameter in enumerate(sheet.iloc[1]):
+            # add None if i is smaller than params start idx
             if i < params:
                 parameters.append(None)
                 continue
 
+            # check type, append parameter name
             if isinstance(parameter, str):
                 parameters.append(Parameter.parse(parameter, groups[i] != "default"))
             else:
@@ -153,7 +178,9 @@ class XLSXExperimenter:
             return next(p for p in parameters if p and p.flag == flag)
 
         all_commands = []
+        # iterate rows
         for index, row in sheet.iterrows():
+            # skip group and param name rows
             if index < 2:
                 continue
             if not (isinstance(row[skip_idx], float) and np.isnan(row[skip_idx])):
@@ -161,7 +188,6 @@ class XLSXExperimenter:
                 continue
 
             cmd = Command(str(row[id]), row[command], row[scenario], row[cleanup_idx], {}, {})
-            selected_group = cmd.default_commands
             for group, param, value in zip(groups, parameters, row):
                 if param is None:
                     continue
@@ -181,71 +207,118 @@ class XLSXExperimenter:
 
             all_commands.append(cmd)
 
-        print("Starting {} calls".format(len(all_commands)))
+        if self.update_mode:
 
-        device_idx = 0
-        for c in all_commands:
-            if not self.use_ts:
-                ts_socket = None
-            elif self.with_gpu:
-                ts_socket = "gpu{}".format(self.devices[device_idx].label)
-            else:
-                ts_socket = "cpu{}".format(self.devices[device_idx].label)
+            def flatten_params(c_in: Command) -> dict:
+                cgc = c_in.grouped_commands
+                return {k1 + "." + k2: val for k1 in cgc for k2, val in cgc[k1].items()}
 
-            tsp_call = []
-            env = os.environ.copy()
-            env["ID"] = str(c.id)
-            env["PYTHON"] = self.python
-            if self.use_ts:
-                env["TS_SOCKET"] = ts_socket
-                tsp_call = ["tsp", "-L", c.id]
+            # check if any calls exists
+            assert len(all_commands) > 0
 
-            def single_param(k, v):
-                params = get_parameter_by_flag(k).to_str(v)
-                if params[0].endswith("__cls__"):
-                    # Override class type of parameter
-                    params[0] = params[0][: -len("__cls__")]
-                return params
+            # check if trainer.output_dir exists (required for update_mode)
+            assert "output_dir" in all_commands[0].grouped_commands["trainer"]
 
-            def group_param(group_name, k, v):
-                params = single_param(k, v)
-                if len(params[0]) == 0:
-                    return []  # empty parameter, skip
+            # check if trainer.output_dir is unique for each call
+            # create list of output_dirs
+            outdir_list = []
+            for c in all_commands:
+                temp_outdir: str = c.grouped_commands["trainer"]["output_dir"]
+                # replace . by / if needed
+                temp_outdir = temp_outdir.replace(".", "/")
+                outdir_list.append(temp_outdir)
+
+            # check for duplicates
+            assert len(outdir_list) == len(
+                set(outdir_list)
+            ), "update_mode requires unique entries in trainer.output_dir"
+
+            # parse result data from models/train.log
+            metrics_list = [ParseLogFile(d).get_metrics() for d in outdir_list]
+
+            df = DataFrame()
+            for (i, c) in zip(range(len(metrics_list)), all_commands):
+                df_ids = DataFrame({"ID": c.id}, index=[i])
+                df_metrics = DataFrame(metrics_list[i], index=[i])
+                df_params = DataFrame(flatten_params(c), index=[i])
+                df = df.append(pd.concat([df_ids, df_params, df_metrics], axis=1))
+
+            # write results into new sheet with time stamp
+            timestamp = time.strftime("%d-%b-%Y (%H-%M-%S)", time.gmtime())
+
+            sheet_name = "results " + timestamp
+
+            with ExcelWriter(self.xlsx_path, mode="a", if_sheet_exists="new") as writer:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        else:
+            # start calculations
+            print("Starting {} calls".format(len(all_commands)))
+
+            device_idx = 0
+            for c in all_commands:
+                if not self.use_ts:
+                    ts_socket = None
+                elif self.with_gpu:
+                    ts_socket = "gpu{}".format(self.devices[device_idx].label)
                 else:
-                    params[0] = "--" + group_name + "." + params[0]
-                return params
+                    ts_socket = "cpu{}".format(self.devices[device_idx].label)
 
-            call = (
-                tsp_call
-                + [c.command, c.scenario]
-                + (["--device.gpus", str(self.devices[device_idx].device_id)] if self.with_gpu else [])
-                + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
-                + sum(
-                    sum(
-                        [
-                            [group_param(group_name, k, v) for k, v in group.items()]
-                            for group_name, group in c.grouped_commands.items()
-                        ],
+                tsp_call = []
+                env = os.environ.copy()
+                env["ID"] = str(c.id)
+                env["PYTHON"] = self.python
+                if self.use_ts:
+                    env["TS_SOCKET"] = ts_socket
+                    tsp_call = ["tsp", "-L", c.id]
+
+                def single_param(k, v):
+                    params = get_parameter_by_flag(k).to_str(v)
+                    return params
+
+                def group_param(group_name, k, v):
+                    params = single_param(k, v)
+                    if len(params[0]) == 0:
+                        return []  # empty parameter, skip
+                    else:
+                        params[0] = "--" + group_name + "." + params[0]
+                    return params
+
+                c_call = [c.command, c.scenario]
+                if c.command == "tfaip-resume-training":
+                    c_call = [c.command, c.grouped_commands["trainer"]["output_dir"]]
+
+                call = (
+                    tsp_call
+                    + c_call
+                    + (["--device.gpus", str(self.devices[device_idx].device_id)] if self.with_gpu else [])
+                    + sum([single_param(k, v) for k, v in c.default_commands.items()], [])
+                    + sum(
+                        sum(
+                            [
+                                [group_param(group_name, k, v) for k, v in group.items()]
+                                for group_name, group in c.grouped_commands.items()
+                            ],
+                            [],
+                        ),
                         [],
-                    ),
-                    [],
+                    )
                 )
-            )
-            call = [str(c) for c in call if c]
-            if not self.dry_run:
-                if c.cleanup:
-                    print("Cleanup not implemented yet")
-                print("CALL [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
-                out = run(call, env=env, check=True, stderr=PIPE, stdout=PIPE, universal_newlines=True)
-                print(out.stderr)
-                print(out.stdout)
+                call = [str(c) for c in call if c]
+                if not self.dry_run:
+                    if c.cleanup:
+                        print("Cleanup not implemented yet")
+                    print("CALL [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
+                    out = run(call, env=env, check=True, stderr=PIPE, stdout=PIPE, universal_newlines=True)
+                    print(out.stderr)
+                    print(out.stdout)
+
+                    if self.use_ts:
+                        result = run(["tsp", "-i"], env=env, check=True, capture_output=True)
+                        if result.stdout.startswith(b"Exit status: died with exit code -1"):
+                            raise Exception("Error in cmd")
+                else:
+                    print("DRY RUN [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
 
                 if self.use_ts:
-                    result = run(["tsp", "-i"], env=env, check=True, capture_output=True)
-                    if result.stdout.startswith(b"Exit status: died with exit code -1"):
-                        raise Exception("Error in cmd")
-            else:
-                print("DRY RUN [{}, {}]>> {}".format(ts_socket, c.id, " ".join(call)))
-
-            if self.use_ts:
-                device_idx = (device_idx + 1) % len(self.devices)
+                    device_idx = (device_idx + 1) % len(self.devices)

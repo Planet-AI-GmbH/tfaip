@@ -27,4 +27,4 @@ Note, the prediction will only print the raw output of the network.
 The [working dir](workingdir) provides some example lines of the UW3 dataset which are loaded by default
 
 ## References
-* Planet AI GmbH offers an intelligent [Document Analysis Suite (IDA)](https://planet-ai.de/applications/document-analysis/) which is able to read and even understand a broad spectrum of documents from ancient hand-written documents to modern machine-generated ones.
+* PLANET AI GmbH offers an intelligent [Document Analysis Suite (IDA)](https://planet-ai.de/applications/document-analysis/) which is able to read and even understand a broad spectrum of documents from ancient hand-written documents to modern machine-generated ones.

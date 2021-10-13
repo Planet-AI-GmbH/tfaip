@@ -43,6 +43,20 @@ class ScenarioBaseParamsMeta(ReplaceDefaultDataClassFieldsMeta):
         return super().__new__(mcs, *args, field_names=["data", "model"], **kwargs)
 
 
+def throw_data_not_set_error():
+    raise NotImplementedError(
+        "The Generic for TDataParams was not found. Could not instantiate the ScenarioParams-class. "
+        "This error could also occur if you forget to add @pai_dataclass and @dataclass."
+    )
+
+
+def throw_model_not_set_error():
+    raise NotImplementedError(
+        "The Generic for TDataParams was not found. Could not instantiate the ScenarioParams-class. "
+        "This error could also occur if you forget to add @pai_dataclass and @dataclass."
+    )
+
+
 @pai_dataclass
 @dataclass
 class ScenarioBaseParams(Generic[TDataParams, TModelParams], ABC, metaclass=ScenarioBaseParamsMeta):
@@ -78,18 +92,8 @@ class ScenarioBaseParams(Generic[TDataParams, TModelParams], ABC, metaclass=Scen
 
     export_serve: bool = field(default=True, metadata=pai_meta(help="Export the serving model (saved model format)"))
 
-    model: TModelParams = field(
-        default_factory=ModelBaseParams,
-        metadata=pai_meta(
-            mode="flat",
-        ),
-    )
-    data: TDataParams = field(
-        default_factory=DataBaseParams,
-        metadata=pai_meta(
-            mode="flat",
-        ),
-    )
+    model: TModelParams = field(default_factory=ModelBaseParams, metadata=pai_meta(mode="flat"))
+    data: TDataParams = field(default_factory=DataBaseParams, metadata=pai_meta(mode="flat"))
     evaluator: EvaluatorParams = field(default_factory=EvaluatorParams, metadata=pai_meta(mode="flat"))
 
     # Additional export params
@@ -104,8 +108,23 @@ class ScenarioBaseParams(Generic[TDataParams, TModelParams], ABC, metaclass=Scen
     scenario_id: Optional[str] = field(default=None, metadata=pai_meta(mode="ignore"))
     id: Optional[str] = field(default=None, metadata=pai_meta(mode="ignore"))
 
-    tfaip_commit_hash: str = field(default_factory=get_commit_hash, metadata=pai_meta(mode="ignore"))
+    tfaip_commit_hash: Optional[str] = field(default_factory=get_commit_hash, metadata=pai_meta(mode="ignore"))
     tfaip_version: str = field(default=__version__, metadata=pai_meta(mode="ignore"))
+
+    # input regularization related params
+    use_input_gradient_regularization: bool = field(
+        default=False, metadata=pai_meta(help="Switch for use of input regularization loss in training")
+    )
+    input_gradient_regularization_h: float = field(
+        default=0.001,
+        metadata=pai_meta(help="Size of finite difference discretization for use in the input regularization scenario"),
+    )
+    input_gradient_regularization_lambda: float = field(
+        default=0.1,
+        metadata=pai_meta(
+            help="Weight of the input regularization related loss part in the input regularization scenario"
+        ),
+    )
 
     def __post_init__(self) -> NoReturn:
         """

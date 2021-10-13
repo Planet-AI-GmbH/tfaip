@@ -21,18 +21,27 @@ import os
 import sys
 import tempfile
 import unittest
-from typing import Type, Any, Dict
+from typing import Type, Any, Dict, NamedTuple
 
 import numpy as np
 from tensorflow.keras.backend import clear_session
 
-from tfaip import WarmStartParams
+from tfaip import WarmStartParams, TrainerParams
 from tfaip.scenario.scenariobase import ScenarioBase
 from tfaip.trainer.callbacks.tensor_board_data_handler import TensorBoardDataHandler
 from tfaip.trainer.trainer import Trainer
 from tfaip.util.random import set_global_random_seed
 
 debug_test = sys.flags.debug
+
+
+class AdditionalTrainerArgs(NamedTuple):
+    input_gradient_regularization: bool = False
+    preload_data: bool = False
+
+    def apply(self, params: TrainerParams):
+        params.scenario.use_input_gradient_regularization = self.input_gradient_regularization
+        params.preload_data = self.preload_data
 
 
 def warmstart_training_test_case(
@@ -42,6 +51,7 @@ def warmstart_training_test_case(
     delta=1e-5,
     ignore_binary_metric=False,
     ignore_array_metric=False,
+    args: AdditionalTrainerArgs = AdditionalTrainerArgs(),
 ):
     # First train a normal iteration and store the results of metrics and losses with a fixed seed
     # Then reload the model as warmstart, train an epoch but with a learning rate of 0
@@ -59,6 +69,7 @@ def warmstart_training_test_case(
         trainer_params.export_final = False
         trainer_params.random_seed = 1338  # Obtain same inputs from the input pipeline
         trainer_params.force_eager = debug
+        args.apply(trainer_params)
         trainer = scenario.create_trainer(trainer_params)
         initial_logs = trainer.train()
 
@@ -84,6 +95,7 @@ def single_train_iter(
     scenario: Type[ScenarioBase],
     debug=debug_test,
     lav_every_n=2,
+    args: AdditionalTrainerArgs = AdditionalTrainerArgs(),
 ):
     with tempfile.TemporaryDirectory() as tmp_dir:  # To write best model
         trainer_params = scenario.default_trainer_params()
@@ -98,6 +110,7 @@ def single_train_iter(
         trainer_params.lav_every_n = lav_every_n
         trainer_params.skip_model_load_test = debug
         trainer_params.val_every_n = 1
+        args.apply(trainer_params)
 
         trainer = scenario.create_trainer(trainer_params)
         train_logs = trainer.train()
@@ -113,6 +126,7 @@ def lav_test_case(
     ignore_binary_metric=False,
     ignore_array_metric=False,
     instantiate_graph=False,
+    args: AdditionalTrainerArgs = AdditionalTrainerArgs(),
 ):
     with tempfile.TemporaryDirectory() as tmp_dir:
         trainer_params = scenario.default_trainer_params()
@@ -126,6 +140,7 @@ def lav_test_case(
         trainer_params.write_checkpoints = False
         trainer_params.random_seed = 324
         trainer_params.scenario.data.pre_proc.run_parallel = False  # Deterministic results!
+        args.apply(trainer_params)
         batch_and_limit = 5
         trainer = scenario.create_trainer(trainer_params)
         trainer.train()
@@ -136,6 +151,7 @@ def lav_test_case(
         trainer_params_dict["epochs"] = 2
 
         lav_params = scenario.lav_cls().params_cls()()
+        lav_params.print_samples = True
         lav_params.model_path = os.path.join(trainer_params.output_dir, "export")
         lav_params.pipeline = trainer_params.gen.setup.val
         clear_session()
@@ -175,6 +191,7 @@ def resume_training(
     debug=debug_test,
     ignore_binary_metric=False,
     ignore_array_metric=False,
+    args: AdditionalTrainerArgs = AdditionalTrainerArgs(),
 ):
     # simulate by setting epochs to 1, then loading the trainer_params and setting epochs to 2
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -187,6 +204,7 @@ def resume_training(
         trainer_params.export_final = True  # due to magic circumstances, some tests will hang up if set to False...
         trainer_params.export_best = False
         trainer_params.random_seed = 1338 if trainer_params.random_seed is None else trainer_params.random_seed
+        args.apply(trainer_params)
         trainer = scenario.create_trainer(trainer_params)
         initial_logs = trainer.train()
         clear_session()

@@ -154,6 +154,9 @@ See ``WarmstartParams`` for all options.
 
 Example: ``--warmstart.model PATH_TO_WARMSTART_MODEL``
 
+To customise warm starting, pass custom parameters ``--warmstart MyWarmstarter`` that need to inherit ``WarmstartParams``.
+
+
 Devices
 ~~~~~~~
 

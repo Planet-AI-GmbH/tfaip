@@ -38,6 +38,9 @@ class LAVParams:
     )
     model_path: Union[str, List[str]] = field(default=None, metadata=pai_meta(mode="ignore"))
     device: DeviceConfigParams = field(default_factory=DeviceConfigParams)
+    print_samples: bool = field(
+        default=False, metadata=pai_meta(help="Print the evauation/prediction for each sample.")
+    )
     silent: bool = field(default=False, metadata=pai_meta(help="Suppress model prediction print to console/log"))
     store_results: bool = field(default=True, metadata=pai_meta(help="Save lav results (metrics) in "))
 

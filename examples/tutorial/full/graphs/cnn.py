@@ -20,6 +20,7 @@ from typing import List
 
 import numpy as np
 import tensorflow as tf
+from packaging import version
 from paiargparse import pai_dataclass, pai_meta
 from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten
 
@@ -69,7 +70,8 @@ class ConvLayers(TutorialBackend[ConvGraphParams]):
         self.pool_layers = [MaxPool2D(pool_size=(2, 2), strides=(2, 2)) for _ in params.filters]
         self.flatten = Flatten()
         self.dense_layers = [Dense(nodes, activation="relu") for nodes in params.dense]
-        self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype="float32", name="conv_mat")
+        if version.parse(tf.__version__) >= version.parse("2.5.0"):
+            self.conv_mat_tb_writer = TensorboardWriter(func=handle, dtype="float32", name="conv_mat")
 
     def call(self, images, **kwargs):
         conv_out = images
@@ -78,8 +80,8 @@ class ConvLayers(TutorialBackend[ConvGraphParams]):
         dense_out = self.flatten(conv_out)
         for dense in self.dense_layers:
             dense_out = dense(dense_out)
-
-        self.add_tensorboard(self.conv_mat_tb_writer, conv_out)
+        if version.parse(tf.__version__) >= version.parse("2.5.0"):
+            self.add_tensorboard(self.conv_mat_tb_writer, conv_out)
         return {
             "out": dense_out,
             "conv_out": conv_out,

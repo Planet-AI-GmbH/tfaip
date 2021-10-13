@@ -120,3 +120,6 @@ class SharedMemoryQueue:
 
     def close(self):
         return self.queue.close()
+
+    def cancel_join_thread(self):
+        return self.queue.cancel_join_thread()

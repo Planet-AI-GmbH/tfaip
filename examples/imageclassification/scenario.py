@@ -18,11 +18,13 @@
 import os
 import pathlib
 from dataclasses import dataclass
+from typing import Dict, Any
 
 import tensorflow as tf
 
 from paiargparse import pai_dataclass
 from tfaip import ScenarioBaseParams
+from tfaip.data.data import DataBase
 from tfaip.scenario.scenariobase import ScenarioBase
 
 from examples.imageclassification.datapipeline.datagenerator import ICTrainerPipelineParams
@@ -41,11 +43,16 @@ data_dir = pathlib.Path(data_dir)
 @pai_dataclass
 @dataclass
 class ICScenarioParams(ScenarioBaseParams[ICDataParams, ICModelParams]):
-    def __post_init__(self):
-        self.model.num_classes = len(self.data.classes)
+    ...
 
 
 class ICScenario(ScenarioBase[ICScenarioParams, ICTrainerPipelineParams]):
+    @staticmethod
+    def additional_graph_kwargs(data: DataBase, scenario_params: ICScenarioParams) -> Dict[str, Any]:
+        return {
+            "num_classes": len(scenario_params.data.classes),
+        }
+
     @classmethod
     def default_trainer_params(cls):
         p = super().default_trainer_params()

@@ -88,7 +88,10 @@ class CollectGenericTypes(ABCMeta):
                     for i, matching_values in enumerate(non_matched):
                         c.__generic_types__[non_matched[0][i][0]] = matching_values[0][1]
                 else:
-                    raise TypeError("Could not determining corresponding TypeVar.")
+                    raise TypeError(
+                        f"Could not determining corresponding TypeVar."
+                        f"Check if namings of the TypeVars are identical: f{non_matched}"
+                    )
         return c
 
 

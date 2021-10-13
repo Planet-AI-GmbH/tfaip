@@ -76,10 +76,10 @@ class MultiModelPredictor(PredictorBase):
             paths: paths to the scenario_params (see ScenarioBase.params_from_path)
             params: PredictorParams
             scenario: Type of the ScenarioBase
-            use_first_params: Only False is supportet ATM.
+            use_first_params: Only False is supported ATM.
             model_paths: Paths to the actual models saved dirs (optional), by default based on paths
             models: Already instantiated models (optional), by default created based on paths
-            predictor_args: Additional args for instantiating the Predictior (that are not part of PredictorParams)
+            predictor_args: Additional args for instantiating the Predictor (that are not part of PredictorParams)
 
         Returns:
             An instantiated and ready to use MultiModelPredictor
@@ -95,7 +95,12 @@ class MultiModelPredictor(PredictorBase):
                 if p.data.pre_proc != data_params.pre_proc:
                     raise ValueError(f"The preprocessors differ {p.data.pre_proc} and {data_params.pre_proc}")
 
-        predictor = cls(params=params, data=scenario.data_cls()(data_params), **predictor_args)
+        predictor = cls(
+            params=params,
+            data=scenario.data_cls()(data_params),
+            **predictor_args,
+            **scenario.static_predictor_kwargs(scenarios[0]),
+        )
 
         if not models:
             model_paths = model_paths or [os.path.join(model, "serve") for model in paths]
@@ -103,11 +108,11 @@ class MultiModelPredictor(PredictorBase):
                 keras.models.load_model(model, compile=False, custom_objects=scenario.model_cls().all_custom_objects())
                 for model in model_paths
             ]
-        predictor.set_models(models, [scenario.data_cls()(s.data) for s in scenarios])
+        predictor.set_models(models, [scenario.data_cls()(s.data, **scenario.static_data_kwargs(s)) for s in scenarios])
         return predictor
 
-    def __init__(self, params: PredictorParams, data: "DataBase"):
-        super().__init__(params, data)
+    def __init__(self, params: PredictorParams, data: "DataBase", **kwargs):
+        super().__init__(params, data, **kwargs)
         self._datas: List["DataBase"] = []
         self.params.pipeline.mode = PipelineMode.EVALUATION if self.params.include_targets else PipelineMode.PREDICTION
 
@@ -180,14 +185,14 @@ class MultiModelPredictor(PredictorBase):
             max_tasks_per_process=self.data.params.post_proc.max_tasks_per_process,
         )
 
-        with pipeline as rd:
-            post_proc_pipeline = post_proc_pipeline.create(pipeline.pipeline_params, self.data.params)
+        tf_dataset, n_samples = pipeline.input_dataset_with_len()
+        post_proc_pipeline = post_proc_pipeline.create(pipeline.pipeline_params, self.data.params)
 
-            results = tqdm_wrapper(
-                self.predict_dataset(rd.input_dataset()),
-                progress_bar=self._params.progress_bar,
-                desc="Prediction",
-                total=len(rd),
-            )
-            for r in post_proc_pipeline.apply(results):
-                yield voter.finalize_sample(r)
+        results = tqdm_wrapper(
+            self.predict_dataset(tf_dataset),
+            progress_bar=self._params.progress_bar,
+            desc="Prediction",
+            total=n_samples,
+        )
+        for r in post_proc_pipeline.apply(results):
+            yield voter.finalize_sample(r)

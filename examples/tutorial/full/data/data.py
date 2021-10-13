@@ -16,6 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 from dataclasses import dataclass
+from typing import Optional
 
 import tensorflow as tf
 from paiargparse import pai_dataclass
@@ -50,10 +51,17 @@ class TutorialData(DataBase[TutorialDataParams]):
         return params
 
     def _input_layer_specs(self):
-        # Define the input specs of the graph. Here a [28, 28] image of type uint8. The batch dimension is not stated.
-        return {"img": tf.TensorSpec(shape=(28, 28), dtype="uint8")}
+        # Define the input specs of the graph. Here a [28, 28] image of type float32.
+        # The batch dimension is not stated.
+        # Note that int8 is also possible as dtype, but optional the application of input regularizations (here yes)
+        # requires a float as input
+        return {"img": tf.TensorSpec(shape=(28, 28), dtype="float32")}
 
     def _target_layer_specs(self):
         # Define the target specs. Here a single label of type uint8 is the target (the number in the image).
         # The batch dimension is not stated and scalars must be of dimension [1]
         return {"gt": tf.TensorSpec(shape=[1], dtype="uint8")}
+
+    def input_tensor_key_for_regularization(self) -> Optional[str]:
+        # Optional: define the key for the input gradient regularization
+        return "img"

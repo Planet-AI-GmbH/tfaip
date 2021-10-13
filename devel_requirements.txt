@@ -1,4 +1,4 @@
-black
+black==21.6b0 # TODO check whether this could be upgraded with TF2.6
 flake8
 pre-commit
 pytest

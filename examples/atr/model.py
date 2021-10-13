@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 @pai_dataclass
 @dataclass
 class ATRModelParams(ModelBaseParams):
-    num_classes: int = -1
     conv_filters: List[int] = field(default_factory=lambda: [20, 40])
     lstm_nodes: int = 100
     dropout: float = 0.5

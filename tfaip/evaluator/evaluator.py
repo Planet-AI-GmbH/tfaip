@@ -53,7 +53,8 @@ class EvaluatorBase(Generic[TP], metaclass=CollectGenericTypes):
     def default_params(cls) -> TP:
         return cls.params_cls()()
 
-    def __init__(self, params: TP):
+    def __init__(self, params: TP, **kwargs):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         post_init(params)
         self.params = params
 

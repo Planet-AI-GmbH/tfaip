@@ -27,7 +27,6 @@ from tfaip import ModelBaseParams
 from tfaip import Sample, EXPORT_TENSORFLOW_1
 from tfaip.data.data import DataBase
 from tfaip.model.metric.count import Count
-from tfaip.model.metric.multi import MultiMetricDefinition
 from tfaip.model.tensorboardwriter import TensorboardWriter
 from tfaip.util.tftyping import AnyTensor
 
@@ -40,9 +39,7 @@ TMP = TypeVar("TMP", bound=ModelBaseParams)
 
 
 class ModelBase(Generic[TMP], ABC):
-    """
-    The ModelBase class provides the implementation of the keras Model, its losses and metrics.
-    """
+    """The ModelBase class provides the implementation of the keras Model, its losses and metrics."""
 
     @classmethod
     def params_cls(cls) -> Type[TMP]:
@@ -68,6 +65,7 @@ class ModelBase(Generic[TMP], ABC):
         }
 
     def __init__(self, params: TMP, **kwargs):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         self._params: TMP = params
         self._count_metric = Count()
         self.tensorboard_writer_metrics = []
@@ -113,10 +111,6 @@ class ModelBase(Generic[TMP], ABC):
         return []
 
     def _metric(self, inputs, targets, outputs) -> List[AnyTensor]:
-        # Override this function
-        return []
-
-    def _multi_metric(self) -> List[MultiMetricDefinition]:
         # Override this function
         return []
 
@@ -189,6 +183,7 @@ class ModelBase(Generic[TMP], ABC):
         outputs: Dict[str, AnyTensor],
         targets: Dict[str, AnyTensor],
     ) -> Dict[str, tf.keras.Model]:
+        """Function to export additional (sub)-graphs alongside the `default` one."""
         eg = self._export_graphs(inputs, outputs, targets)
         if "default" not in eg:
             raise KeyError(f'Expected at least an export graph with label "default" in {eg}.')
@@ -205,6 +200,11 @@ class ModelBase(Generic[TMP], ABC):
         return {"default": tf.keras.Model(inputs=inputs, outputs=outputs)}
 
     def add_all_losses(self, model, inputs, targets, outputs):
+        """Add the losses, defined by `loss` and `loss_weights`.
+
+        Losses are summed up to form the final loss.
+        Each loss is added as a standalone metric.
+        """
         aggregation = EXPORT_TENSORFLOW_1["metric_aggregation"]  # JAVA-Training Workaround, remove if better solution
 
         loss_weights = self.loss_weights() or {}
@@ -220,21 +220,12 @@ class ModelBase(Generic[TMP], ABC):
         model.add_metric(total_loss, name="loss/mean_epoch", aggregation=aggregation)
 
     def add_all_metrics(self, model, inputs, targets, outputs):
+        """Add the metrics and their sample_weights to the model."""
         for metric_v in self.metric(inputs, targets, outputs):
             model.add_metric(metric_v)
 
         # add counter metric
         model.add_metric(self._count_metric(inputs, targets))
-
-        # convert multi metrics to simple metrics
-        if len(model.multi_metrics) > 0:
-            sample_weights = self.sample_weights(inputs, targets)
-            for v in model.multi_metrics:
-                for c in v.metric.children:
-                    model.add_metric(c(targets[v.target], outputs[v.output], sample_weights.get(c.name, None)))
-                model.add_metric(
-                    v.metric(targets[v.target], outputs[v.output], sample_weights.get(v.metric.name, None))
-                )
 
         if len(model.target_output_metrics) > 0:
             sample_weights = self.sample_weights(inputs, targets)
@@ -242,12 +233,21 @@ class ModelBase(Generic[TMP], ABC):
                 model.add_metric(m(targets[t], outputs[o], sample_weights.get(m.name, None)))
 
     def pre_proc_targets(self, inputs, targets):
+        """Method to be called on the targets before outputs are computed."""
+        del inputs
         return targets
 
     def post_proc_targets(self, inputs, targets, outputs):
+        """Method to be called on the targets after outputs are computed."""
+        del inputs
+        del outputs
         return targets
 
     def wrap_model_with_loss_and_metric(self, model, inputs, targets, outputs, with_losses=True, with_metrics=True):
+        """Adds all losses and metrics.
+
+        This function will apply post-processing on the targets.
+        """
         post_proc_targets = self.post_proc_targets(inputs, targets, outputs)
         if with_losses:
             self.add_all_losses(model, inputs, post_proc_targets, outputs)
@@ -255,7 +255,7 @@ class ModelBase(Generic[TMP], ABC):
             self.add_all_metrics(model, inputs, post_proc_targets, outputs)
 
 
-class TFAIPKerasModel(tf.keras.models.Model):
+class TFAIPKerasModel(tf.keras.Model):
     def call(self, inputs, training=None, mask=None):
         return super().call(inputs, training=training, mask=mask)
 

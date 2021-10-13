@@ -15,6 +15,14 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""The `RawPredictor` wraps a `PredictorBase` to support prediction on raw samples and custom closing of the pipelines.
+
+Usage:
+    See `PredictorBase.raw()`
+
+See Also:
+    `PredictorBase.raw`
+"""
 import logging
 from contextlib import ExitStack
 from queue import Queue

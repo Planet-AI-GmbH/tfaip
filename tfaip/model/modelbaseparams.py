@@ -18,24 +18,34 @@
 """Definition of the ModelBaseParams"""
 from abc import abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Type
 
 from paiargparse import pai_dataclass
+
+if TYPE_CHECKING:
+    from tfaip.model.modelbase import ModelBase
+    from tfaip.model.graphbase import GenericGraphBase
 
 
 @pai_dataclass
 @dataclass
 class ModelBaseParams:
+    """Base-Params for a model and the Graph.
+
+    Inherit `cls()` to return the `ModelBase` and `graph_cls()` to return the `GenericGraphBase`.
+    """
+
     @staticmethod
     @abstractmethod
-    def cls():
+    def cls() -> Type["ModelBase"]:
         raise NotImplementedError
 
-    def create(self, **kwargs):
+    def create(self, **kwargs) -> "ModelBase":
         return self.cls()(params=self, **kwargs)
 
     @abstractmethod
-    def graph_cls(self):
+    def graph_cls(self) -> Type["GenericGraphBase"]:
         raise NotImplementedError
 
-    def create_graph(self, **kwargs):
+    def create_graph(self, **kwargs) -> "GenericGraphBase":
         return self.graph_cls()(params=self, **kwargs)

@@ -19,6 +19,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Type, Optional, Iterable, List
 
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
 from paiargparse import pai_meta, pai_dataclass
@@ -74,7 +75,10 @@ class TutorialTrainerGeneratorParams(
 
 
 def to_samples(samples):
-    return [Sample(inputs={"img": img}, targets={"gt": gt.reshape((1,))}) for img, gt in zip(*samples)]
+    return [
+        Sample(inputs={"img": np.array(img).astype("float")}, targets={"gt": gt.reshape((1,))})
+        for img, gt in zip(*samples)
+    ]
 
 
 @pai_dataclass

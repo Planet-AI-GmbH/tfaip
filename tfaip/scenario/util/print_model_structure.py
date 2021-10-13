@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
+"""Utilities to print all (sub-)layers and their number of weights nicely.
+
+Call: `print_all_layers(keras.Model)`
+"""
 from typing import NamedTuple, List, Any
 import tensorflow as tf
 import numpy as np

@@ -72,7 +72,8 @@ class PredictorBase(ABC):
     def params_cls(cls) -> Type[PredictorParams]:
         return PredictorParams
 
-    def __init__(self, params: PredictorParams, data: "DataBase"):
+    def __init__(self, params: PredictorParams, data: "DataBase", **kwargs):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         post_init(params)
         self._params = params
         self._params.pipeline.mode = PipelineMode.PREDICTION
@@ -205,12 +206,13 @@ class PredictorBase(ABC):
             - predict_raw
             - predict
         """
-        with pipeline as rd:
+        tf_dataset, n_samples = pipeline.input_dataset_with_len()
+        with pipeline.process_output(self.predict_dataset(tf_dataset)) as output_samples:
             for sample in tqdm_wrapper(
-                rd.process_output(self.predict_dataset(rd.input_dataset())),
+                output_samples,
                 progress_bar=self._params.progress_bar,
                 desc="Prediction",
-                total=len(rd),
+                total=n_samples,
             ):
                 if not self._params.silent:
                     self._print_prediction(sample, logger.info)

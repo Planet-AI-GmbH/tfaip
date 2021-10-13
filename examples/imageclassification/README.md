@@ -26,5 +26,5 @@ tfaip-predict --export_dir ic_model/best --data.image_files examples/imageclassi
 
 ## References
 * Official [Tensorflow Tutorial](https://www.tensorflow.org/tutorials/images/classification)
-* Planet AI GmbH offers an [Intelligent Image Analysis](https://planet-ai.de/applications/image-analysis/) which is able to localize and identify many visual categories in images and videos.
+* PLANET AI GmbH offers an [Intelligent Image Analysis](https://planet-ai.de/applications/image-analysis/) which is able to localize and identify many visual categories in images and videos.
   This skill is often utilized by our engines to preprocess images or videos to segment certain objects, but can also be used as a stand-alone solution.

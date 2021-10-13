@@ -94,3 +94,17 @@ Example:
         epochs: int = field(default=1000, metadata=pai_meta(help="Number of epochs to train"))
         # Or with factory
         gpus: List[int] = field(default_factory=list, metadata=pai_meta(help="GPUs to use"))
+
+
+Static Parameters
+-----------------
+
+Static parameters are parameters that must be know to create a certain class of ``ModelBase``, ``DataBase``, ``GraphBase``, ``PredictorBase``, ``LAV``, ``Evaluator``, or ``RootGraph``.
+Hereto add the parameter as additional argument to the respective ``__init__`` function and override the respective parameter function in ``ScenarioBase``.
+
+See the `how to <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/howtos/staticmodelparameters>`_ for a usage for ``ModelBase``, ``DataBase``, and ``GraphBase``.
+
+Use this if you want to:
+
+* pass parameters from ``DataBase`` (instantiated) to the ``ModelBase` or ``Evaluator``, e.g., the size of a loaded codec, or the tokenizer.
+  See usage in the `ATR example <https://github.com/Planet-AI-GmbH/tfaip/tree/master/examples/atr/scenario.py>`_.

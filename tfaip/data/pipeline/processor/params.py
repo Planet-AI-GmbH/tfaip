@@ -59,9 +59,6 @@ class DataProcessorPipelineParams(ABC):
         ),
     )
 
-    def create_with_pipeline(self, data_pipeline: "DataPipeline") -> "DataProcessorPipeline":
-        return self.create(data_pipeline.pipeline_params, data_pipeline.data.params)
-
     @abstractmethod
     def create(
         self, data_pipeline_params: "DataPipelineParams", data_params: "DataBaseParams"

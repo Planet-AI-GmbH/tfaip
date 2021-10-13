@@ -30,11 +30,11 @@ with open(os.path.join(this_dir, "tfaip", "version.py")) as f:
 setup(
     name="tfaip",
     version=__version__,
-    packages=find_packages(exclude=["test/*"]),
+    packages=find_packages(exclude=["test.*", "test"]),
     license="GPL-v3.0",
     long_description=open(os.path.join(this_dir, "README.md")).read(),
     long_description_content_type="text/markdown",
-    author="Planet AI GmbH",
+    author="PLANET AI GmbH",
     author_email="admin@planet-ai.de",
     url="https://github.com/Planet-AI-GmbH/tf2_aip_base",
     download_url="https://github.com/Planet-AI-GmbH/tf2_aip_base/archive/{}.tar.gz".format(__version__),

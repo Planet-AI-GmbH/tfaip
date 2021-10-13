@@ -17,9 +17,12 @@
 # ==============================================================================
 import os
 from dataclasses import dataclass
+from typing import Dict, Any
 
 from paiargparse import pai_dataclass
+
 from tfaip import ScenarioBaseParams
+from tfaip.data.data import DataBase
 from tfaip.scenario.scenariobase import ScenarioBase
 
 from examples.atr.model import ATRModelParams
@@ -31,11 +34,16 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 @pai_dataclass
 @dataclass
 class ATRScenarioParams(ScenarioBaseParams[ATRDataParams, ATRModelParams]):
-    def __post_init__(self):
-        self.model.num_classes = len(self.data.codec) + 1  # +1 for blank
+    ...
 
 
 class ATRScenario(ScenarioBase[ATRScenarioParams, ATRTrainerPipelineParams]):
+    @staticmethod
+    def additional_graph_kwargs(data: DataBase, scenario_params: ATRScenarioParams) -> Dict[str, Any]:
+        return {
+            "num_classes": len(scenario_params.data.codec) + 1,  # +1 for blank
+        }
+
     @classmethod
     def default_trainer_params(cls):
         p = super().default_trainer_params()

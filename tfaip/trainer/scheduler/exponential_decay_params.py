@@ -40,3 +40,7 @@ class ExponentialDecayParams(LearningRateParams):
         default=3, metadata=pai_meta(help="(type dependent) The number of epochs with a flat constant learning rate")
     )
     lr_decay_rate: float = field(default=0.99, metadata=pai_meta(help="(type dependent) The exponential decay factor"))
+    decay_min_fraction: float = field(
+        default=0.0,
+        metadata=pai_meta(help="(type dependent) Minimal fraction the learning rate can drop to by exponential decay)"),
+    )

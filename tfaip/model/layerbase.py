@@ -31,11 +31,17 @@ from tfaip.model.tensorboardwriter import TensorboardWriter
 
 
 class TFAIPLayerBase(keras.layers.Layer):
+    """Layer-wrapper to support writing to Tensorboard.
+
+    Values written to the tensorboard are treated as special "Metrics" which are then parsed in the respective training callback.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensorboard_outputs = []
 
     def add_tensorboard(self, tb: TensorboardWriter, value):
+        """Add a `TensorboardWriter` for a given value."""
         if tb not in self.tensorboard_outputs:
             self.tensorboard_outputs.append(tb)
 

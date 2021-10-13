@@ -33,7 +33,8 @@ class CosineDecaySchedule(LearningRateSchedule):
             epoch,
             self.params.learning_circle,
             self.params.lr_decay_rate,
-            self.params.decay_fraction,
+            self.params.decay_min_fraction,
+            self.params.alpha,
             self.params.epochs,
             self.params.final_epochs,
             name=self.name,
@@ -49,7 +50,8 @@ class WarmupCosineDecaySchedule(LearningRateSchedule):
             epoch,  # epoch
             self.params.learning_circle,  # batch epoch
             self.params.lr_decay_rate,  # decay
-            self.params.decay_fraction,  # alpha
+            self.params.decay_min_fraction,
+            self.params.alpha,  # alpha
             self.params.epochs,
             self.params.final_epochs,  # final epoch
             self.params.warmup_epochs,
@@ -68,7 +70,8 @@ class WarmupConstantCosineDecaySchedule(LearningRateSchedule):
             epoch,  # epoch
             self.params.learning_circle,  # batch epoch
             self.params.lr_decay_rate,  # decay
-            self.params.decay_fraction,  # alpha
+            self.params.decay_min_fraction,
+            self.params.alpha,  # alpha
             self.params.epochs,
             self.params.final_epochs,  # final epoch
             self.params.warmup_epochs,
@@ -84,6 +87,7 @@ def cosine_decay(
     epoch,  # epoch
     batch,  # batch epoch
     decay,  # decay
+    decay_min_fraction,
     alpha,  # alpha
     epochs,
     final_epochs,  # finalepoch
@@ -106,6 +110,7 @@ def cosine_decay(
             math_ops.less_equal(epoch, delay),
             lambda: learn_rate,
             lambda: learn_rate * (decay ** math_ops.floor(completed_fraction)),
+            lambda: learn_rate * tf.math.maximum((decay ** math_ops.floor(completed_fraction)), decay_min_fraction),
         )
         return control_flow_ops.cond(
             math_ops.less_equal(epoch, epochs - final_epochs),
@@ -123,6 +128,7 @@ def warmup_cosine_decay(
     epoch,  # epoch
     batch,  # batch epoch
     decay,  # decay
+    decay_min_fraction,
     alpha,  # alpha
     epochs,
     final_epochs,  # finalepoch
@@ -147,6 +153,7 @@ def warmup_cosine_decay(
         epoch=epoch,
         batch=batch,
         decay=decay,
+        decay_min_fraction=decay_min_fraction,
         alpha=alpha,
         epochs=epochs,
         final_epochs=final_epochs,
@@ -160,6 +167,7 @@ def warmup_constant_cosine_decay(
     epoch,  # epoch
     batch,  # batch epoch
     decay,  # decay
+    decay_min_fraction,
     alpha,  # alpha
     epochs,
     final_epochs,  # finalepoch
@@ -185,6 +193,7 @@ def warmup_constant_cosine_decay(
         epoch=epoch,
         batch=batch,
         decay=decay,
+        decay_min_fraction=decay_min_fraction,
         alpha=alpha,
         epochs=epochs,
         final_epochs=final_epochs,

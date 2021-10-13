@@ -15,23 +15,17 @@
 # You should have received a copy of the GNU General Public License along with
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
-"""Implementation of a TensorflowFix"""
-import tensorflow.keras.callbacks as cb
+from unittest import TestCase
+
+import numpy as np
+
+from examples.howtos.parametrizablelayer.mylayer import MyModelParams
 
 
-class TensorflowFix(cb.Callback):
-    """Fix for a weired Tensorflow bug. Remove this if the Issue is closed or Fixed...
+class TestParametrizableLayer(TestCase):
+    def test_layer(self):
+        # create the graph
+        graph = MyModelParams().create_graph()
 
-    See https://github.com/tensorflow/tensorflow/issues/42872
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._supports_tf_logs = True  # Any Callback before LAV callback must act on raw tf logs only
-        self._backup_loss = None
-
-    def on_train_begin(self, logs=None):
-        self._backup_loss = {**self.model.loss}
-
-    def on_train_batch_end(self, batch, logs=None):
-        self.model.loss = self._backup_loss
+        # and call it on some input
+        graph.predict(np.zeros((10, 10)))

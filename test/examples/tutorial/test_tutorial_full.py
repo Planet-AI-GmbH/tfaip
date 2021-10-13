@@ -22,7 +22,13 @@ from tensorflow.keras.backend import clear_session
 from examples.tutorial.full.data.data import TutorialData
 from examples.tutorial.full.graphs.cnn import ConvGraphParams
 from examples.tutorial.full.scenario import TutorialScenario
-from tfaip.util.testing.training import resume_training, single_train_iter, lav_test_case, warmstart_training_test_case
+from tfaip.util.testing.training import (
+    resume_training,
+    single_train_iter,
+    lav_test_case,
+    warmstart_training_test_case,
+    AdditionalTrainerArgs,
+)
 from tfaip.data.databaseparams import DataPipelineParams
 
 
@@ -54,10 +60,10 @@ class TestTutorialData(unittest.TestCase):
     def test_data_loading(self):
         trainer_params = TutorialScenarioTest.default_trainer_params()
         data = TutorialData(trainer_params.scenario.data)
-        with trainer_params.gen.train_data(data) as rd:
-            train_data = next(rd.input_dataset().as_numpy_iterator())
-        with trainer_params.gen.val_data(data) as rd:
-            val_data = next(rd.input_dataset().as_numpy_iterator())
+        with trainer_params.gen.train_data(data).generate_input_batches() as batches:
+            train_data = next(batches)
+        with trainer_params.gen.val_data(data).generate_input_batches() as batches:
+            val_data = next(batches)
 
         def check(data):
             self.assertEqual(len(data), 3, "Expected (input, output, meta) tuple")
@@ -81,16 +87,23 @@ class TestTutorialTrain(unittest.TestCase):
         clear_session()
 
     def test_single_train_iter(self):
-        single_train_iter(self, self.scenario, debug=False)
+        single_train_iter(
+            self,
+            self.scenario,
+            debug=False,
+            args=AdditionalTrainerArgs(input_gradient_regularization=True, preload_data=True),
+        )
 
     def test_resume_training(self):
-        resume_training(self, self.scenario)
+        resume_training(self, self.scenario, args=AdditionalTrainerArgs(input_gradient_regularization=True))
 
     def test_lav(self):
-        lav_test_case(self, self.scenario, debug=False)
+        lav_test_case(self, self.scenario, debug=False, args=AdditionalTrainerArgs(input_gradient_regularization=True))
 
     def test_warmstart(self):
-        warmstart_training_test_case(self, self.scenario)
+        warmstart_training_test_case(
+            self, self.scenario, args=AdditionalTrainerArgs(input_gradient_regularization=True)
+        )
 
 
 if __name__ == "__main__":

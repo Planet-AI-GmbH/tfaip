@@ -149,6 +149,53 @@ class Data(DataBase):
 
 
 class TestDataPipeline(unittest.TestCase):
+    def test_data_preload(self):
+        numbers = list(range(10))
+        data_params = DataParams(
+            pre_proc=SequentialProcessorPipelineParams(
+                max_tasks_per_process=10000,
+                run_parallel=True,
+                num_threads=1,  # deterministic
+                processors=[
+                    RepeatSampleProcessorParams(f=10, add_per_step=7),
+                ],
+            )
+        )
+        data = data_params.create()
+        l = data.create_pipeline(
+            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+        ).preload_input_samples()
+        out_numbers = [int(s.inputs) for s in l]
+        self.assertListEqual(out_numbers, sum([[i + x * 7 for x in range(10)] for i in numbers], []))
+
+    def test_data_generator(self):
+        numbers = list(range(10))
+        data_params = DataParams(
+            pre_proc=ComposedProcessorPipelineParams(
+                pipelines=[
+                    SequentialProcessorPipelineParams(
+                        max_tasks_per_process=10000,
+                        run_parallel=True,
+                        num_threads=1,
+                        processors=[
+                            RepeatSampleProcessorParams(f=100, add_per_step=7),
+                        ],
+                    )
+                ]
+            )
+        )
+        data = data_params.create()
+        with data.create_pipeline(
+            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+        ).generate_input_samples(auto_repeat=False) as samples:
+            gen = zip(range(10), samples)
+            out = [s.inputs for _, s in gen]
+
+        with data.create_pipeline(
+            DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
+        ).generate_input_samples(auto_repeat=False) as samples:
+            out = [s.inputs for s in samples]
+
     def test_data_sequential_pipeline(self):
         numbers = list(range(10))
         target_numbers = []
@@ -175,8 +222,8 @@ class TestDataPipeline(unittest.TestCase):
         data = data_params.create()
         with data.create_pipeline(
             DataPipelineParams(mode=PipelineMode.TRAINING), SimpleDataGeneratorParams(numbers_to_generate=numbers)
-        ) as pipeline:
-            out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
+        ).generate_input_samples(auto_repeat=False) as samples:
+            out = [s.inputs for s in samples]
             self.assertListEqual(target_numbers, out)
 
     def test_data_composed_pipeline(self):
@@ -226,6 +273,6 @@ class TestDataPipeline(unittest.TestCase):
         with data.create_pipeline(
             DataPipelineParams(mode=PipelineMode.TRAINING, use_shared_memory=True),
             SimpleDataGeneratorParams(numbers_to_generate=numbers),
-        ) as pipeline:
-            out = [s.inputs for s in pipeline.generate_input_samples(auto_repeat=False)]
+        ).generate_input_samples(auto_repeat=False) as samples:
+            out = [s.inputs for s in samples]
             self.assertListEqual(target_numbers, out)

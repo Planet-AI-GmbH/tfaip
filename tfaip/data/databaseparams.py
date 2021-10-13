@@ -50,7 +50,7 @@ class DataGeneratorParams(ABC):
         raise NotImplementedError
 
     def create(self, mode: PipelineMode) -> "DataGenerator":
-        return self.cls()(mode, self)
+        return self.cls()(mode=mode, params=self)
 
 
 @pai_dataclass

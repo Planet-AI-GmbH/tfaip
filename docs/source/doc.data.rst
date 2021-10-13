@@ -180,7 +180,6 @@ Have a look at the code documentation for a description of the individual classe
 
 * Red: ``DataBaseParams`` and ``DataBase`` define the overall structure of a data pipeline by connecting ``DataProcessorParams``.
   By calling ``get_or_create_pipeline``, or ``create_pipeline`` a ``DataPipeline`` will be prepared.
-* Purple: Entering this pipeline ``with DataPipeline as RunningDataPipeline`` a ``RunningDataPipeline`` will be created which will spawn threads if required and join them when exiting the ``with`` block.
 * Yellow: The ``DataGenerator`` provide the data for the preprocessing pipeline. The actual implementation depends on the scenario and mode (e.g. different data sources for training, lav and prediction)
 * Orange: The creation and definition of the different ``DataProcessor`` types. A user should only override ``MappingDataProcessor`` and ``GeneratingDataProcessor``. Multiple ``MappingDataProcessors`` will be joined to a ``SequenceProcessor`` for faster execution (send as a complete block to a spawned process upon parallelization).
 * Green: Setting up of the actual Pipeline using parameters. By default, a ``SequenceProcessorPipelineParams`` should suffice, if however `GeneratingDataProcessors` play a role it might be sensible to provide a custom grouping which can be done via ``CompoundProcessorPipelineParams``
@@ -188,4 +187,4 @@ Have a look at the code documentation for a description of the individual classe
 * Blue: These classes are use for the actual data processing of a set of ``MappingDataProcessors`` in a ``MappingSampleProcessorPipeline`` or one ``GeneratingDataProcessor`` in a ``GeneratingSampleProcessorPipeline``.
   Each class has a corresponding parallel version (see lower half of Figure 1).
   Construction of the actual processors (calling ``DataProcessorParams.create``) is performed within these classes to ensure that only the parameters are passed to a spawned process not the actual class (which might not be serializable via pickle).
-* Yellow (lower left): The ``TFDatasetGenerator`` can optionally be overwritten in a DataPipeline to change the creation of the ``tf.data.Dataset`` or to inject additional data mappings performed in Tensorflow.
+* Yellow (lower right): The ``TFDatasetGenerator`` can optionally be overwritten in a DataPipeline to change the creation of the ``tf.data.Dataset`` or to inject additional data mappings performed in Tensorflow.

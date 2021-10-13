@@ -42,10 +42,10 @@ class TestTutorialData(unittest.TestCase):
     def test_data_loading(self):
         trainer_params = TutorialScenarioTest.default_trainer_params()
         data = TutorialData(trainer_params.scenario.data)
-        with trainer_params.gen.train_data(data) as rd:
-            train_data = next(rd.input_dataset().as_numpy_iterator())
-        with trainer_params.gen.val_data(data) as rd:
-            val_data = next(rd.input_dataset().as_numpy_iterator())
+        with trainer_params.gen.train_data(data).generate_input_batches() as batches:
+            train_data = next(batches)
+        with trainer_params.gen.val_data(data).generate_input_batches() as batches:
+            val_data = next(batches)
 
         def check(data):
             self.assertEqual(len(data), 3, "Expected (input, output) tuple")

@@ -28,6 +28,7 @@ from tfaip.trainer.optimizer.optimizers import (
     AdamaxOptimizer,
     RMSpropOptimizer,
     AdaBeliefOptimizer,
+    LAMBOptimizer,
 )
 
 
@@ -78,3 +79,6 @@ class TestOptimizers(unittest.TestCase):
 
     def test_adabelief_optimizer(self):
         self.run_for_optimizer(AdaBeliefOptimizer())
+
+    def test_lamb_optimizer(self):
+        self.run_for_optimizer(LAMBOptimizer())

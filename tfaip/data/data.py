@@ -83,9 +83,15 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
 
     @classmethod
     def data_pipeline_cls(cls) -> Type[DataPipeline]:
+        """DataPipeline for this Data.
+
+        Overwrite this and return a custom `DataPipeline` if you need to modify the `tf.data.Dataset`
+        (see `TFDatasetGenerator`).
+        """
         return DataPipeline
 
-    def __init__(self, params: TDP):
+    def __init__(self, params: TDP, **kwargs):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         post_init(params)
         self._params = params
         self.resources = ResourceManager(params.resource_base_path)
@@ -117,11 +123,7 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         raise Exception("Implement this function if you want to use buckets")
 
     def create_pipeline(self, pipeline_params: DataPipelineParams, params: DataGeneratorParams) -> DataPipeline:
-        return self.data_pipeline_cls()(
-            pipeline_params,
-            self,
-            generator_params=params,
-        )
+        return self.data_pipeline_cls()(pipeline_params, self, generator_params=params)
 
     def get_or_create_pipeline(
         self, pipeline_params: DataPipelineParams, params: Optional[DataGeneratorParams]
@@ -173,6 +175,27 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
     def meta_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         return self._meta_layer_specs()
 
+    def dataset_input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
+        """tf.data.Dataset generator: Input specs.
+
+        Usually, these should not be overwritten, only if using a custom TFDatasetGenerator (and thus a custom DataPipeline).
+        """
+        return self._input_layer_specs()
+
+    def dataset_target_layer_specs(self) -> Dict[str, tf.TensorSpec]:
+        """tf.data.Dataset generator: Targets specs
+
+        Usually, these should not be overwritten, only if using a custom TFDatasetGenerator (and thus a custom DataPipeline).
+        """
+        return self._target_layer_specs()
+
+    def dataset_meta_layer_specs(self) -> Dict[str, tf.TensorSpec]:
+        """tf.data.Dataset generator: Meta specs
+
+        Usually, these should not be overwritten, only if using a custom TFDatasetGenerator (and thus a custom DataPipeline).
+        """
+        return self._meta_layer_specs()
+
     @abstractmethod
     def _input_layer_specs(self) -> Dict[str, tf.TensorSpec]:
         raise NotImplementedError
@@ -188,3 +211,9 @@ class DataBase(Generic[TDP], ABC, metaclass=CollectGenericTypes):
         # dump resources and adjust the paths in the dumped dict
         data_params_dict["resource_base_path"] = "."
         self.resources.dump(root_path, dump_dict=data_params_dict)
+
+    def input_tensor_key_for_regularization(self) -> Optional[str]:
+        """input gradient regularization helper method
+        !!! the inputs must be stored in a dict under this key !!!
+        """
+        return None

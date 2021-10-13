@@ -67,7 +67,7 @@ class MappingSampleProcessorPipeline(SampleProcessorPipelineBase):
 
     def __init__(
         self,
-        processor_fn: Optional[Callable[[], Union[SequenceProcessor]]] = None,
+        processor_fn: Optional[Callable[[], SequenceProcessor]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -123,9 +123,9 @@ class GeneratingSampleProcessorPipeline(SampleProcessorPipelineBase):
 
     def __init__(
         self,
-        pre_mapping_processor_fn: Optional[Callable[[], Union[SequenceProcessor]]] = None,
-        post_mapping_processor_fn: Optional[Callable[[], Union[SequenceProcessor]]] = None,
-        generating_processor_fn: Optional[Callable[[], Union[GeneratingDataProcessor]]] = None,
+        pre_mapping_processor_fn: Optional[Callable[[], SequenceProcessor]] = None,
+        post_mapping_processor_fn: Optional[Callable[[], SequenceProcessor]] = None,
+        generating_processor_fn: Optional[Callable[[], GeneratingDataProcessor]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)

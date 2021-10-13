@@ -62,8 +62,8 @@ def main(scenario: Type["ScenarioBase"], trainer_params: TrainerParams, args):
 
         print_interval = 0  # time until next print
         delta_print_interval = 0.5  # every half second
-        with training_pipeline as rd:
-            it = iter(enumerate(rd.input_dataset(auto_repeat=True).as_numpy_iterator()))
+        with training_pipeline.generate_input_batches(auto_repeat=True) as batches:
+            it = iter(enumerate(batches))
             next(it)  # take one example to initialize pipeline
             with MeasureTime() as total_time:
                 tot_time_batch = 0

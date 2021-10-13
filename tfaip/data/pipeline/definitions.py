@@ -16,7 +16,7 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """General definitions for the Pipeline: PipelineMode, Sample"""
-from typing import Any
+from typing import Any, Optional
 
 from tfaip.util.enum import StrEnum
 
@@ -55,6 +55,16 @@ class Sample:
 
     def new_invalid(self):
         return Sample(meta=self.meta)
+
+    def is_valid(self, mode: Optional[PipelineMode] = None) -> bool:
+        if mode is None:
+            return not (self.inputs is None and self.outputs is None and self.targets is None)
+        if self.inputs is None and mode in INPUT_PROCESSOR:
+            return False
+        if self.targets is None and mode in TARGETS_PROCESSOR:
+            return False
+
+        return True
 
     def copy(self):
         return Sample(inputs=self.inputs, outputs=self.outputs, targets=self.targets, meta=self.meta)

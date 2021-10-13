@@ -37,20 +37,20 @@ class TestTemplateScenario(unittest.TestCase):
         data = trainer_params.scenario.data.create()
 
         # First check if generate_input_samples is working which will return single pre-processed samples
-        with trainer_params.gen.train_data(data) as rd:
-            train_data = next(rd.generate_input_samples(auto_repeat=False))
-        with trainer_params.gen.val_data(data) as rd:
-            val_data = next(rd.generate_input_samples(auto_repeat=False))
+        with trainer_params.gen.train_data(data).generate_input_samples(auto_repeat=False) as samples:
+            train_data = next(samples)
+        with trainer_params.gen.val_data(data).generate_input_samples(auto_repeat=False) as samples:
+            val_data = next(samples)
 
         # [check if train_data and val_data comprise correct data]
 
         # Then check if the tf.data.Dataset can be correctly set up
         # If the first test works and this fails, most probably there are mismatches of the input and target layer
         # specs. See TemplateData
-        with trainer_params.gen.train_data(data) as rd:
-            train_data = next(rd.input_dataset(auto_repeat=False).as_numpy_iterator())
-        with trainer_params.gen.val_data(data) as rd:
-            val_data = next(rd.input_dataset(auto_repeat=False).as_numpy_iterator())
+        with trainer_params.gen.train_data(data).generate_input_batches(auto_repeat=False) as batches:
+            train_data = next(batches)
+        with trainer_params.gen.val_data(data).generate_input_batches(auto_repeat=False) as batches:
+            val_data = next(batches)
 
         # [check if train_data and val_data comprise correct data]
 

@@ -17,9 +17,12 @@
 # ==============================================================================
 """Definition of the WarmStartParams"""
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from paiargparse import pai_meta, pai_dataclass
+
+if TYPE_CHECKING:
+    from tfaip.trainer.warmstart.warmstarter import WarmStarter
 
 
 @pai_dataclass
@@ -64,3 +67,8 @@ class WarmStartParams:
     )
 
     auto_remove_numbers_for: List[str] = field(default_factory=lambda: ["lstm_cell"])
+
+    def create(self, **kwargs) -> "WarmStarter":
+        from tfaip.trainer.warmstart.warmstarter import WarmStarter
+
+        return WarmStarter(params=self, **kwargs)

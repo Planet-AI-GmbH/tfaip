@@ -22,6 +22,7 @@ from tfaip.trainer.optimizer.optimizers import (
     RMSpropOptimizer,
     SGDOptimizer,
     AdaBeliefOptimizer,
+    LAMBOptimizer,
 )
 
-DEFAULT_OPTIMIZERS = [AdamOptimizer, AdamaxOptimizer, RMSpropOptimizer, SGDOptimizer, AdaBeliefOptimizer]
+DEFAULT_OPTIMIZERS = [AdamOptimizer, AdamaxOptimizer, RMSpropOptimizer, SGDOptimizer, AdaBeliefOptimizer, LAMBOptimizer]

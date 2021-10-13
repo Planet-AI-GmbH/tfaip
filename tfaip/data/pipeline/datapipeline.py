@@ -17,10 +17,9 @@
 # ==============================================================================
 """Definition of the base DataPipeline, and RawDataPipeline"""
 import copy
-import gc
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, TypeVar, Generic
+from typing import TYPE_CHECKING, List, Optional, TypeVar, Generic, Iterable, ContextManager, Tuple, Generator
 
 from tfaip import DataGeneratorParams
 from tfaip import Sample, PipelineMode
@@ -31,6 +30,7 @@ from tfaip.data.pipeline.processor.params import DataProcessorPipelineParams, Se
 from tfaip.data.pipeline.processor.pipeline import DataProcessorPipeline
 from tfaip.data.pipeline.tfdatasetgenerator import TFDatasetGenerator
 from tfaip.util.multiprocessing.join import JoinableHolder
+from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 
 if TYPE_CHECKING:
     from tfaip.data.data import DataBase
@@ -43,14 +43,6 @@ TData = TypeVar("TData", bound="DataBase")
 class DataPipeline(Generic[TData], JoinableHolder):
     """
     The DataPipeline sets up and handles the pre- and post-processing pipelines.
-
-    To actually apply a data, a `DataPipeline` must be entered which results in a `RunningDataPipeline`:
-    ```
-    with DataPipeline() as running_data_pipeline:
-       # running_data_pipeline.generate_input_samples()
-       # running_data_pipeline.input_dataset()
-    ```
-    This ensures that the threads created within the pipelines are joined upon exit.
     """
 
     def __init__(
@@ -90,14 +82,14 @@ class DataPipeline(Generic[TData], JoinableHolder):
         if not isinstance(self._input_processors, SequentialProcessorPipelineParams):
             raise TypeError("Preloading is currently only supported for a SequentialProcessorPipeline")
         logger.info(f"Preloading: Converting {self.mode.value} to raw pipeline.")
-        with self as rp:
-            # Get the running data pipeline, load the samples, and create a RawDataPipeline
-            non_preloadable_params = []
-            data = rp.preload_input_samples(progress_bar=progress_bar, non_preloadable_params=non_preloadable_params)
-            pipeline = RawDataPipeline(data, self.pipeline_params, self.data, self.generator_params)
-            pipeline._input_processors = copy.copy(pipeline._input_processors)  # pylint: disable=protected-access
-            pipeline._input_processors.processors = non_preloadable_params  # pylint: disable=protected-access
-            return pipeline
+
+        # Get the running data pipeline, load the samples, and create a RawDataPipeline
+        non_preloadable_params = []
+        data = self.preload_input_samples(progress_bar=progress_bar, non_preloadable_params=non_preloadable_params)
+        pipeline = RawDataPipeline(data, self.pipeline_params, self.data, self.generator_params)
+        pipeline._input_processors = copy.copy(pipeline._input_processors)  # pylint: disable=protected-access
+        pipeline._input_processors.processors = non_preloadable_params  # pylint: disable=protected-access
+        return pipeline
 
     @property
     def auto_batch(self):
@@ -134,34 +126,126 @@ class DataPipeline(Generic[TData], JoinableHolder):
 
         return processors
 
-    def create_input_pipeline(self) -> Optional[DataProcessorPipeline]:
-        params = self._input_processors
-
-        if params:
-            return params.create_with_pipeline(self)
-        else:
-            return DataProcessorPipeline([])
-
-    def create_tf_dataset_generator(self) -> TFDatasetGenerator:
+    def _create_tf_dataset_generator(self) -> TFDatasetGenerator:
         return TFDatasetGenerator(self)
 
     def create_output_pipeline(self) -> Optional[DataProcessorPipeline]:
         params = self._output_processors
         if params:
-            return params.create_with_pipeline(self)
+            return params.create(self.pipeline_params, self.data_params)
         else:
             return DataProcessorPipeline([])
 
-    def __enter__(self):
-        from tfaip.data.pipeline.runningdatapipeline import (
-            RunningDataPipeline,
-        )  # pylint: disable=import-outside-toplevel
+    def input_dataset(self, auto_repeat=None):
+        """Return the tf.data.Dataset as input of the network."""
+        dataset, _ = self.input_dataset_with_len(auto_repeat)
+        return dataset
 
-        return RunningDataPipeline(self)
+    def input_dataset_with_len(self, auto_repeat=None):
+        gen = self.generate_input_samples(auto_repeat=auto_repeat)
+        return gen.as_dataset(self._create_tf_dataset_generator()), len(gen)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.join()
-        gc.collect()  # required or something goes wrong with tf.data.Dataset
+    def generate_input_batches(self, auto_repeat=None) -> ContextManager[Generator[Tuple, None, None]]:
+        """Network input batches as iterator
+
+        The data will pass the input pipeline and the tf.data.Dataset so these are the actual samples for training, prediction, ...
+
+        Dependent on the mode returns either a tuple (inputs, targets, meta), (inputs, meta), or (targets, meta).
+
+        Usage:
+            ```
+            with pipeline.generate_input_batches() as batches:
+                for batch in batches:
+                    print(batch)
+        """
+
+        class ContextWrapper:
+            def __init__(self, dataset):
+                self.dataset = dataset
+
+            def __enter__(self):
+                def generator():
+                    # This wrapper is required to add "close"-functionality for clean-up
+                    batches = self.dataset.as_numpy_iterator()
+                    for b in batches:
+                        yield b
+
+                self.generator = generator()
+                return self.generator
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.generator.close()  # This ensures that upon closing, the pipelines are cleaned up
+
+        return ContextWrapper(self.input_dataset(auto_repeat=auto_repeat))
+
+    def generate_input_samples(self, auto_repeat=None) -> ContextManager[Generator[Sample, None, None]]:
+        """Yiels the samples produces by the data generator and after the preproc pipeline.
+
+        Note:
+            This function will return a context that must be entered in order to obtain the samples.
+
+            The samples might also be batched already if the DataGenerator if this pipeline yields batches.
+
+        Usage:
+            ```
+            with pipeline.generate_input_samples() as samples:
+                for sample in samples:
+                    print(sample)
+            ```
+        """
+        from tfaip.data.pipeline.runningdatapipeline import InputSamplesGenerator
+
+        return InputSamplesGenerator(
+            self._input_processors,
+            self.data,
+            self.create_data_generator(),
+            self.pipeline_params,
+            self.mode,
+            auto_repeat,
+        )
+
+    def process_output(self, samples: Iterable[Sample]) -> ContextManager[Generator[Iterable[Sample], None, None]]:
+        from tfaip.data.pipeline.runningdatapipeline import OutputSamplesGenerator
+
+        return OutputSamplesGenerator(
+            samples,
+            self._output_processors,
+            self.data,
+            self.pipeline_params,
+        )
+
+    def preload_input_samples(self, progress_bar=True, non_preloadable_params: Optional[List] = None) -> List[Sample]:
+        """
+        Applies all pre-proc DataProcessors marked as `preloadable` to the samples of the `DataGenerator` and
+        returns a list of the `Samples`. `DataProcessors` that were not applied are added to the
+        `non_preloadable_params`.
+
+        See Also:
+            `DataPipeline.as_preloaded` uses this to convert the Pipeline to a pipeline with a `RawDataGenerator`
+        """
+        non_preloadable_params = non_preloadable_params if non_preloadable_params is not None else []
+        data_generator = self.create_data_generator()
+        old_limit = self.pipeline_params.limit
+        self.pipeline_params.limit = len(data_generator)
+
+        # Load the samples
+        last_generator = list(
+            tqdm_wrapper(
+                data_generator.generate(), progress_bar=progress_bar, total=len(data_generator), desc="Loading samples"
+            )
+        )
+        # Obtain the list of preprocessors that are valid to use (preloadable) and apply them one by one
+        processors = self.flat_input_processors(preload=True, non_preloadable_params=non_preloadable_params)
+        for processor in processors:
+            last_generator = processor.preload(
+                last_generator,
+                num_processes=self.pipeline_params.num_processes,
+                progress_bar=progress_bar,
+            )
+            last_generator = list(last_generator)
+
+        self.pipeline_params.limit = old_limit
+        return last_generator
 
 
 class RawDataPipeline(DataPipeline):

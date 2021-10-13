@@ -24,7 +24,7 @@ from examples.imageclassification.params import Keys
 
 
 class ICGraph(GraphBase[ICModelParams]):
-    def __init__(self, params: ICModelParams, **kwargs):
+    def __init__(self, num_classes: int, params: ICModelParams, **kwargs):
         super(ICGraph, self).__init__(params, **kwargs)
 
         self.conv_layers = [
@@ -34,7 +34,7 @@ class ICGraph(GraphBase[ICModelParams]):
         self.pool_layers = [keras.layers.MaxPool2D(pool_size=[2, 2], strides=[2, 2]) for _ in self._params.conv_filters]
         self.flatten_layer = keras.layers.Flatten()
         self.dense_layers = [keras.layers.Dense(nodes, activation=params.activation) for nodes in params.dense]
-        self.logits_layer = keras.layers.Dense(units=self._params.num_classes)
+        self.logits_layer = keras.layers.Dense(units=num_classes)
 
     def build_graph(self, inputs, training=None):
         flowing_data = tf.cast(inputs[Keys.Image], tf.float32) / 255.0

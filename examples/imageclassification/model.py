@@ -39,7 +39,6 @@ class ICModelParams(ModelBaseParams):
 
         return ICGraph
 
-    num_classes: int = -1
     conv_filters: List[int] = field(default_factory=lambda: [16, 32, 64])
     dense: List[int] = field(default_factory=lambda: [128])
     activation: str = "relu"

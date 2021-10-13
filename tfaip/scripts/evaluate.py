@@ -16,11 +16,12 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 import logging
-import tarfile
 import pickle
+import tarfile
 from argparse import Action
 
-from tfaip.scenario.scenariobase import import_scenario
+from tfaip import ScenarioBaseParams
+from tfaip.scenario.scenariobase import ScenarioBase
 from tfaip.util.multiprocessing.parallelmap import tqdm_wrapper
 from tfaip.util.tfaipargparse import TFAIPArgumentParser
 
@@ -32,8 +33,8 @@ def run():
     main(*parse_args())
 
 
-def main(prediction: str, scenario, evaluator_params):
-    with scenario.create_evaluator(evaluator_params) as e:
+def main(prediction: str, scenario: ScenarioBase, scenario_params: ScenarioBaseParams):
+    with scenario.create_evaluator(scenario_params.evaluator, scenario.static_evaluator_kwargs(scenario_params)) as e:
         with tarfile.open(prediction, "r:gz") as tar:
             names = tar.getnames()
             for file in tqdm_wrapper(tar.getnames(), total=len(names), desc="Evaluating", progress_bar=True):
@@ -43,12 +44,13 @@ def main(prediction: str, scenario, evaluator_params):
 
 class ScenarioSelectionAction(Action):
     def __call__(self, parser: TFAIPArgumentParser, namespace, values, option_string=None):
-        scenario = import_scenario(values)
-        evaluator_params = scenario.evaluator_cls().default_params()
+        scenario, scenario_params = ScenarioBase.from_path(values)
+        evaluator_params = scenario_params.evaluator
 
         parser = TFAIPArgumentParser()
         parser.add_root_argument("evaluator", evaluator_params.__class__, evaluator_params)
         setattr(namespace, self.dest, scenario)
+        setattr(namespace, self.dest + "_params", scenario_params)
 
 
 def parse_args(args=None):
@@ -57,7 +59,7 @@ def parse_args(args=None):
     parser.add_argument("--scenario", type=str, required=True, action=ScenarioSelectionAction)
 
     args = parser.parse_args(args=args)
-    return args.prediction, args.scenario, args.evaluator_params
+    return args.prediction, args.scenario, args.scenario_params
 
 
 if __name__ == "__main__":

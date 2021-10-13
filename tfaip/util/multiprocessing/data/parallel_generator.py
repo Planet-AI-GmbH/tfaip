@@ -16,26 +16,27 @@
 # tfaip. If not, see http://www.gnu.org/licenses/.
 # ==============================================================================
 """Definition of a multiprocessing Pool for running generators in parallel"""
-import logging
 import threading
 import time
 from abc import ABC, abstractmethod
+from multiprocessing import Value, Lock
 from multiprocessing.queues import Queue
-from queue import Empty
+from queue import Empty, Full
 from typing import Callable, Iterable, Any
 
 from tfaip.util.multiprocessing import context as mp_context
 from tfaip.util.multiprocessing.data.worker import DataWorker
 from tfaip.util.multiprocessing.sharedmemoryqueue import SharedMemoryQueue, SHARED_MEMORY_SUPPORT
+from tfaip.util.logging import logger
 
-logger = logging.getLogger(__name__)
+logger = logger(__name__)
 
 
 class Finished:
     pass
 
 
-def run(worker_fn: Callable[[], DataWorker], max_tasks: int, in_queue: Queue, out_queue: Queue):
+def run(worker_fn: Callable[[], DataWorker], max_tasks: int, in_queue: Queue, out_queue: Queue, cancel_process: Value):
     # This is the worker function of a spawned process.
     # While the task does not receive a Finished flag, if fetches an input sample which is yielded in the worker.
     # The outputs are then written to the output queue.
@@ -48,21 +49,45 @@ def run(worker_fn: Callable[[], DataWorker], max_tasks: int, in_queue: Queue, ou
         # Transform the input queue to a generator
         # Note that other processes read from the sample in_queue
         while True:
-            s = in_queue.get()
-            if isinstance(s, Finished):
-                logger.debug("Received None. Stopping worker")
-                break
-            yield s
+            try:
+                s = in_queue.get(timeout=0.01)
+            except Empty:
+                logger.debug("In queue empty.")
+                if cancel_process.value:
+                    logger.debug("Canceling working generator.")
+                    break
+            else:
+                if isinstance(s, Finished):
+                    logger.debug("Received Finished. Stopping working generator")
+                    break
+                yield s
 
     for out in worker.process(generator()):
         # Process the data and write it to the queue
-        out_queue.put(out)
+        while True:
+            if cancel_process.value:
+                logger.debug("Canceling working processor (inner).")
+                break
+            try:
+                out_queue.put(out, timeout=0.01)
+            except Full:
+                logger.debug("Out queue Full.")
+                continue
+            else:
+                break
+
+        if cancel_process.value:
+            logger.debug("Canceling working processor (outer).")
+            break
+
         max_tasks -= 1
         if max_tasks == 0:
             logger.debug("Max tasks reached for this worker. Stopping.")
             break
 
     logger.debug("Worker finished")
+    if cancel_process.value:
+        out_queue.cancel_join_thread()  # this prevents a deadlock if the generator is stopped prematurely
 
 
 class ParallelGenerator(ABC):
@@ -101,12 +126,15 @@ class ParallelGenerator(ABC):
         self.max_out_samples = processes * 32 if max_out_samples < 0 else max_out_samples
         self.max_tasks_per_child = max_tasks_per_child
         self.running = False
+        self.lock = Lock()
+        self.cancel_process = mp_context().Value("i", 0)
 
         if run_parallel:
             if use_shared_memory_queues and SHARED_MEMORY_SUPPORT:
                 self.in_queue = SharedMemoryQueue(maxsize=self.max_in_samples, context=mp_context())
                 self.out_queue = SharedMemoryQueue(maxsize=self.max_out_samples, context=mp_context())
             else:
+                self._shared_memory_queues = False
                 if use_shared_memory_queues:
                     logger.warning(
                         "Shared memory not supported. Python Version >= 3.8 required. Using default queues "
@@ -115,8 +143,8 @@ class ParallelGenerator(ABC):
                 self.in_queue = mp_context().Queue(maxsize=self.max_in_samples)
                 self.out_queue = mp_context().Queue(maxsize=self.max_out_samples)
             self.processes = []
-            self.input_thread = threading.Thread(target=self._put_inputs, daemon=True)
-            self.process_spawner = threading.Thread(target=self._spawn_processes, daemon=True)
+            self.input_thread = threading.Thread(target=self._put_inputs, daemon=False)
+            self.process_spawner = threading.Thread(target=self._spawn_processes, daemon=False)
         else:
             self.processes = None
 
@@ -125,43 +153,61 @@ class ParallelGenerator(ABC):
 
         # Check if subprocesses shall be spawned
         # (e.g. some are not running yet, or some finished to due max_tasks_per_child)
-        while self._shall_spawn():
-            self.processes = [p for p in self.processes if p.is_alive()]
-            while len(self.processes) < self.num_processes:
-                logger.debug("Spawning new process for generation")
-                self.processes.append(
-                    mp_context().Process(
-                        target=run,
-                        args=(self.create_worker_func(), self.max_tasks_per_child, self.in_queue, self.out_queue),
+        while not self.cancel_process.value:
+            with self.lock:
+                if self.processes is None or not self._shall_spawn():
+                    break
+
+                self.processes = [p for p in self.processes if p.is_alive()]
+                while len(self.processes) < self.num_processes:
+                    logger.debug("Spawning new process for generation")
+                    self.processes.append(
+                        mp_context().Process(
+                            target=run,
+                            args=(
+                                self.create_worker_func(),
+                                self.max_tasks_per_child,
+                                self.in_queue,
+                                self.out_queue,
+                                self.cancel_process,
+                            ),
+                        )
                     )
-                )
-                self.processes[-1].start()
+                    self.processes[-1].start()
 
             time.sleep(0.1)
-        # stop the remaining processes by sending a Finished signal
-        for _ in self.processes:
-            logger.debug("Putting Finished() to stop remaining threads")
-            self.in_queue.put(Finished())
 
-        # Wait for finished
-        for p in self.processes:
-            p.join()
-
-        # remove additional Finished (can happen if max_tasks_per_child was reached before reading Finished)
-        while not self.in_queue.empty():
-            v = self.in_queue.get_nowait()
-            assert isinstance(v, Finished)
+        if not self.cancel_process.value:
+            # Notify running threads that then can end since no more samples will be written
+            for _ in self.processes:
+                self.in_queue.put(Finished())
 
         logger.debug("Stopped process spawner")
 
     def join(self):
         logger.debug("Attempting to join")
-        if self.processes:
-            for p in self.processes:
-                p.join()
-            self.in_queue.close()
-            self.out_queue.close()
-            self.processes = None
+        with self.lock:
+            if self.processes:
+                logger.debug("Setting cancel_process to stop threads")
+                self.cancel_process.value = 1
+
+                for p in self.processes:
+                    logger.debug("Joining process")
+                    p.join()
+
+                self.processes = None
+
+        logger.debug("Joining process spawner")
+        self.process_spawner.join()
+        logger.debug("Joining input thread")
+        self.input_thread.join()
+        logger.debug("all processes joined")
+
+        self.in_queue.close()
+        self.out_queue.close()
+        self.out_queue.cancel_join_thread()
+        self.in_queue.cancel_join_thread()
+
         logger.debug("ParallelGenerator joined")
 
     def __enter__(self) -> Iterable[Any]:
@@ -188,6 +234,8 @@ class ParallelGenerator(ABC):
         return any(p.is_alive() for p in self.processes) or self._shall_spawn() or not self.out_queue.empty()
 
     def _shall_spawn(self):
+        if self.cancel_process.value:
+            return False
         return self.input_thread.is_alive() or not self.in_queue.empty()
 
     def _max_size_input_generator(self):
@@ -215,7 +263,20 @@ class ParallelGenerator(ABC):
         self.process_spawner.start()  # start the process spawner when input runner was started
 
         for i in self._max_size_input_generator():
-            self.in_queue.put(i)
+            while True:
+                try:
+                    if self.cancel_process.value:
+                        logger.debug("Canceling working processor (inner).")
+                        break
+                    self.in_queue.put(i, timeout=0.01)
+                except Full:
+                    continue
+                else:
+                    break
+
+            if self.cancel_process.value:
+                logger.debug("Canceling working processor (outer).")
+                break
 
         logger.debug("Input thread finished")
 
@@ -234,12 +295,20 @@ class ParallelGenerator(ABC):
                     else:
                         yield oo
         else:
+            running = False  # store if the data processing is running to check if logging the warning
+
             # Multiprocessing
             assert self.is_running()
             while self.is_running() or not self.out_queue.empty():
                 try:
                     o = self.out_queue.get(timeout=1)
+                    running = True  # we got the first example, it is running now.
                 except Empty:
+                    if running:
+                        logger.warning(
+                            "Waiting for output from the datapipeline. This means that the training is data-bound."
+                            "Try to speed up the data pipeline or use more threads. Or increase the max_tasks_per_process parameter."
+                        )
                     continue
                 if o is None:
                     logger.debug("Invalid data. Skipping")

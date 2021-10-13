@@ -20,6 +20,7 @@ from tensorflow import keras
 
 from tfaip.trainer.scheduler import ExponentialDecayParams
 from tfaip.trainer.scheduler.learningrate import LearningRateSchedule
+import tensorflow as tf
 
 
 class ExponentialDecaySchedule(LearningRateSchedule):
@@ -36,6 +37,7 @@ class ExponentialDecaySchedule(LearningRateSchedule):
         self.exp_decay = keras.optimizers.schedules.ExponentialDecay(
             params.lr, params.learning_circle, params.lr_decay_rate, staircase=True, name=self.name
         )
+        self.lr_min = params.lr * params.decay_min_fraction
 
     def lr(self, epoch):
-        return self.exp_decay(epoch)
+        return tf.math.maximum(self.lr_min, self.exp_decay(epoch))

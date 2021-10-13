@@ -25,7 +25,7 @@ from examples.atr.params import Keys
 
 
 class ATRGraph(GraphBase[ATRModelParams]):
-    def __init__(self, params: ATRModelParams, **kwargs):
+    def __init__(self, num_classes: int, params: ATRModelParams, **kwargs):
         super(ATRGraph, self).__init__(params, **kwargs)
 
         self.conv_layers = [
@@ -38,7 +38,7 @@ class ATRGraph(GraphBase[ATRModelParams]):
             keras.layers.LSTM(self._params.lstm_nodes, return_sequences=True)
         )
         self.dropout_layer = keras.layers.Dropout(rate=self._params.dropout)
-        self.logits_layer = keras.layers.Dense(units=self._params.num_classes)
+        self.logits_layer = keras.layers.Dense(units=num_classes)
 
     def build_graph(self, inputs, training=None):
         image = tf.expand_dims(inputs[Keys.Image], axis=-1)  # add channel axis

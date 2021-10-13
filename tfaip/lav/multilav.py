@@ -18,14 +18,13 @@
 """Implementation of MultiLAV"""
 import json
 from abc import ABC
-from typing import Type, List, Callable
+from typing import Type, List
 
-from tfaip import LAVParams, DataGeneratorParams, PredictorParams
+from tfaip import LAVParams, DataGeneratorParams, PredictorParams, ScenarioBaseParams
 from tfaip import Sample
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.callbacks.lav_callback import LAVCallback
-from tfaip.predict.multimodelpredictor import MultiModelPredictor
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkResults
 
 
@@ -45,14 +44,15 @@ class MultiLAV(ABC):
     def __init__(
         self,
         params: LAVParams,
-        predictor_fn: Callable[[List[str], PredictorParams], MultiModelPredictor],
-        evaluator: EvaluatorBase,
+        scenario_params: ScenarioBaseParams,
         predictor_params: PredictorParams,
+        **kwargs,
     ):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         assert params.model_path
+        self._scenario_cls = scenario_params.cls()
+        self._scenario_params = scenario_params
         self._params = params
-        self._predictor_fn = predictor_fn
-        self._evaluator = evaluator
         self.device_config = DeviceConfig(self._params.device)
         self.benchmark_results = BenchmarkResults()
         self.predictor_params = predictor_params
@@ -72,13 +72,17 @@ class MultiLAV(ABC):
             callbacks = []
 
         self.predictor_params.run_eagerly = run_eagerly
-        predictor = self._predictor_fn(self._params.model_path, self.predictor_params)
+        predictor = self._scenario_cls.create_multi_predictor(self._params.model_path, self.predictor_params)
         lav_pipeline = predictor.data.get_or_create_pipeline(self._params.pipeline, data_gen_params)
 
         for cb in callbacks:
             cb.lav, cb.data, cb.model = self, predictor.data, None
 
-        with self._evaluator:
+        evaluator = self._scenario_cls.create_evaluator(
+            self._scenario_params.evaluator,
+            **self._scenario_cls.additional_evaluator_kwargs(predictor.data, self._scenario_params),
+        )
+        with evaluator:
             for prediction in predictor.predict_pipeline(lav_pipeline):
                 targets, outputs = prediction.targets, prediction.outputs
 
@@ -88,9 +92,9 @@ class MultiLAV(ABC):
                 if not self._params.silent:
                     print(targets, outputs)
 
-                self._evaluator.update_state(prediction)
+                evaluator.update_state(prediction)
 
-            result = self._evaluator.result()
+            result = evaluator.result()
 
             for cb in callbacks:
                 cb.on_lav_end(result)

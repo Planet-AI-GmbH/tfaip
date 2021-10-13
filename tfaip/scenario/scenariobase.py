@@ -25,10 +25,8 @@ import re
 import tempfile
 from abc import ABC
 from collections import Counter
-from contextlib import ExitStack
 from dataclasses import dataclass
-from itertools import chain
-from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, TypeVar, Generic, NoReturn
+from typing import Type, TYPE_CHECKING, Tuple, List, Optional, Iterable, Dict, TypeVar, Generic, NoReturn, Any
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -298,10 +296,9 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         post_init(lav_params)
         post_init(scenario_params)
         return cls.lav_cls()(
-            lav_params,
-            data_fn=lambda: cls.data_cls()(scenario_params.data),
-            model_fn=lambda: cls.model_cls().root_graph_cls()(scenario_params.model, setup_graph=False).create_model(),
-            evaluator_fn=lambda: cls.create_evaluator(scenario_params.evaluator),
+            params=lav_params,
+            scenario_params=scenario_params,
+            **cls.static_lav_kwargs(scenario_params),
         )
 
     @classmethod
@@ -316,17 +313,22 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         post_init(predictor_params)
         return MultiLAV(
             lav_params,
-            cls.create_multi_predictor,
-            cls.create_evaluator(scenario_params.evaluator),
+            scenario_params,
             predictor_params=predictor_params or cls.multi_predictor_cls().params_cls()(),
+            **cls.static_lav_kwargs(scenario_params),
         )
 
     @classmethod
     def create_predictor(cls, model: str, params: "PredictorParams") -> "Predictor":
         post_init(params)
-        data_params = cls.params_from_path(model).data
+        scenario_params = cls.params_from_path(model)
+        data_params = scenario_params.data
         post_init(data_params)
-        predictor = cls.predictor_cls()(params, cls.data_cls()(data_params))
+        predictor = cls.predictor_cls()(
+            params,
+            cls.data_cls()(data_params, **cls.static_data_kwargs(scenario_params)),
+            **cls.static_predictor_kwargs(scenario_params),
+        )
         model_cls = cls.model_cls()
         run_eagerly = params.run_eagerly
         if isinstance(model, str):
@@ -346,11 +348,11 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         return predictor_cls.from_paths(paths, params, cls)
 
     @classmethod
-    def create_evaluator(cls, params: EvaluatorParams) -> EvaluatorBase:
+    def create_evaluator(cls, params: EvaluatorParams, **kwargs) -> EvaluatorBase:
         post_init(params)
         if cls.evaluator_cls() is None:
             raise NotImplementedError
-        return cls.evaluator_cls()(params=params)
+        return cls.evaluator_cls()(params=params, **kwargs)
 
     @classmethod
     def params_cls(cls) -> Type[TScenarioParams]:
@@ -409,30 +411,47 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
 
         return self._graph
 
+    def check_preconditions_for_input_gradient_regularization(self):
+        input_layer_specs = self.data.input_layer_specs()
+        inputs_tensor_key = self.data.input_tensor_key_for_regularization()
+        if inputs_tensor_key is None:
+            raise ValueError(
+                "the preconditions for the use of the regularization of input gradients in the training process are not fulfilled - reason: data.input_tensor_key_for_regularization() returns None"
+            )
+        inputs_spec: tf.TensorSpec = input_layer_specs[inputs_tensor_key]
+        if (
+            inputs_spec.dtype != tf.dtypes.float16
+            and inputs_spec.dtype != tf.dtypes.float32
+            and inputs_spec.dtype != tf.dtypes.float64
+        ):
+            raise TypeError(
+                "the preconditions for the use of the regularization of input gradients in the training process are not fulfilled - reason: dtype of inputs tensor is not float16 nor float32 nor float64"
+            )
+
     def create_data(self) -> DataBase:
-        return self.data_cls()(self._params.data)
+        return self.data_cls()(params=self._params.data, **self.static_data_kwargs(self.params))
 
     def create_model_and_graph(self) -> Tuple[ModelBase, RootGraph]:
-        graph = self.model_cls().root_graph_cls()(self.params.model)
-        return graph.model, graph
+        root_graph = self.model_cls().root_graph_cls()(
+            self.params.model,
+            model_kwargs=self.additional_model_kwargs(self.data, self.params),
+            graph_kwargs=self.additional_graph_kwargs(self.data, self.params),
+            **self.additional_root_graph_kwargs(self.data, self.params),
+        )
+        return root_graph.model, root_graph
 
     def print_params(self) -> NoReturn:
-        """
-        Print the ScenarioParams to logger.info
-        """
+        """Print the ScenarioParams to logger.info"""
         logger.info(f"scenario_params={self._params.to_json(indent=2)}")
 
     def best_logging_settings(self) -> Tuple[str, str]:
-        """
-        Returns: See ModelBase.best_logging_settings()
-        """
+        """Returns: See ModelBase.best_logging_settings()"""
         return self.graph.model.best_logging_settings()
 
     def export(
         self, path: str, trainer_params: Optional["TrainerParams"] = None, export_resources: bool = True
     ) -> NoReturn:
-        """
-        Export the prediction model to a given path
+        """Export the prediction model to a given path
 
         Args:
             path: Directory where to export the model to
@@ -486,8 +505,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         self.data.dump_resources(root_path, scenario_params_dict["data"])  # export the data resources
 
     def _print_all_layer(self) -> NoReturn:
-        """
-        Print all model params in detail
+        """Print all model params in detail
 
         Note: the implementation was tested for Tensorflow 2.3 und 2.4 and might need updates in the future
         since private functions are used that are not part of the official API.
@@ -497,8 +515,7 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         print_all_layers(self._keras_train_model, logger.info)
 
     def _set_no_train_scope(self, regex: Optional[str]) -> NoReturn:
-        """
-        Internal function to disable training of some layers by setting layer.trainable = False
+        """Internal function to disable training of some layers by setting layer.trainable = False
 
         Note: the implementation was tested for Tensorflow 2.3 und 2.4 and might need updates in the future
         since private functions are used that are not part of the official API.
@@ -594,16 +611,15 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         if run_eagerly:
             # one debug step
             logger.info("Running evaluation on one training example for debugging.")
-            with self.data.pipeline_by_mode(PipelineMode.TRAINING) as rd:
-                r = self._keras_train_model.evaluate(
-                    self._wrap_data(
-                        rd.input_dataset(auto_repeat=False), rd.data_pipeline.pipeline_params.batch_size
-                    ).take(1),
-                    callbacks=[ExtractLogsCallback()],  # extract logs (must be first logger, so verbose=0)
-                    verbose=0,  # Disable progress bar logger
-                    return_dict=True,
-                )
-                logger.info(f"Results: {r}")
+            pipeline = self.data.pipeline_by_mode(PipelineMode.TRAINING)
+            dataset = pipeline.input_dataset(auto_repeat=False)
+            r = self._keras_train_model.evaluate(
+                self._wrap_data(dataset, pipeline.pipeline_params.batch_size).take(1),
+                callbacks=[ExtractLogsCallback()],  # extract logs (must be first logger, so verbose=0)
+                verbose=0,  # Disable progress bar logger
+                return_dict=True,
+            )
+            logger.info(f"Results: {r}")
         else:
             # create graph, by calling it once, this ensures that the namings of the variables are those of the
             # training and not of the prediction graph (i.e., excluding "beam_search_decoder" prefixes, et.c)
@@ -686,30 +702,25 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         """
         self._print_all_layer()
 
-        with ExitStack() as stack:
-            # Fill the exit stack that collects `__enter__` of all pipelines that are created.
-            # This ensures that all subthreads are joined when training is finished.
-            train_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.TRAINING)).input_dataset(
-                auto_repeat=True
-            )
-            if self.data.pipeline_by_mode(PipelineMode.EVALUATION) is not None:
-                val_dataset = stack.enter_context(self.data.pipeline_by_mode(PipelineMode.EVALUATION)).input_dataset()
-            else:
-                logger.warning("Training without validation.")
-                val_dataset = None
+        train_dataset = self.data.pipeline_by_mode(PipelineMode.TRAINING).input_dataset(auto_repeat=True)
+        if self.data.pipeline_by_mode(PipelineMode.EVALUATION) is not None:
+            val_dataset = self.data.pipeline_by_mode(PipelineMode.EVALUATION).input_dataset()
+        else:
+            logger.warning("Training without validation.")
+            val_dataset = None
 
-            # Train the model
-            self._keras_train_model.fit(
-                self._wrap_data(train_dataset, steps_per_epoch),
-                epochs=epochs,
-                callbacks=callbacks,
-                steps_per_epoch=steps_per_epoch,
-                initial_epoch=initial_epoch,
-                validation_data=self._wrap_data(val_dataset, steps_per_epoch) if validation_freq > 0 else None,
-                validation_freq=validation_freq,
-                shuffle=False,
-                **kwargs,
-            )
+        # Train the model
+        self._keras_train_model.fit(
+            self._wrap_data(train_dataset, steps_per_epoch),
+            epochs=epochs,
+            callbacks=callbacks,
+            steps_per_epoch=steps_per_epoch,
+            initial_epoch=initial_epoch,
+            validation_data=self._wrap_data(val_dataset, steps_per_epoch) if validation_freq > 0 else None,
+            validation_freq=validation_freq,
+            shuffle=False,
+            **kwargs,
+        )
 
     def net_config(self) -> NetConfigParamsBase:
         """
@@ -767,6 +778,41 @@ class ScenarioBase(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metacl
         """
         pass
 
+    @staticmethod
+    def static_data_kwargs(scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameters required to initialize the DataBase of this scenario."""
+        return {}
+
+    @staticmethod
+    def static_lav_kwargs(scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameters required to initialize the Evaluator of this scenario."""
+        return {}
+
+    @staticmethod
+    def static_predictor_kwargs(scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameters required to initialize the Predictor/MultiPredictor of this scenario."""
+        return {}
+
+    @staticmethod
+    def additional_model_kwargs(data: DataBase, scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameter required to initialize the ModelBase."""
+        return {}
+
+    @staticmethod
+    def additional_graph_kwargs(data: DataBase, scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameter required to initialize the GenericGraphBase."""
+        return {}
+
+    @staticmethod
+    def additional_root_graph_kwargs(data: DataBase, scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameter required to initialize the RootGraph."""
+        return {}
+
+    @staticmethod
+    def additional_evaluator_kwargs(data: DataBase, scenario_params: ScenarioBaseParams) -> Dict[str, Any]:
+        """Additional parameter required to initialize the Evaluator."""
+        return {}
+
 
 def import_scenario(module_name: str) -> Type["ScenarioBase"]:
     """
@@ -789,7 +835,7 @@ def import_scenario(module_name: str) -> Type["ScenarioBase"]:
             raise ModuleNotFoundError(
                 f"No module named '{module_path_or_name}'. Please specify the full module to "
                 f"import or a relative path of the working directory. "
-                f"E.g.: tfaip.scenario.tutorial.full"
+                f"E.g.: examples.tutorial.full"
             ) from e
 
     if ":" in module_name:

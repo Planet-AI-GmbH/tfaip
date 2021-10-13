@@ -42,15 +42,16 @@ def main():
     )
     parser.add_argument("--dry_run", action="store_true")
     parser.add_argument("--python", default=sys.executable)
+    parser.add_argument("--update", action="store_true", default=False)
 
     args = parser.parse_args()
+    if not args.update:
+        if not args.no_use_tsp and not args.gpus and not args.cpus:
+            raise ValueError("No devices (gpu or cpu) found. Disable task spooler (--use_no_tsp) or use --gpus --cpus")
+        if args.gpus and args.cpus:
+            raise ValueError("Do not mix gpu and cpu calls.")
 
-    if not args.no_use_tsp and not args.gpus and not args.cpus:
-        raise ValueError("No devices (gpu or cpu) found. Disable task spooler (--use_no_tsp) or use --gpus --cpus")
-    if args.gpus and args.cpus:
-        raise ValueError("Do not mix gpu and cpu calls.")
-
-    exp = XLSXExperimenter(args.xlsx, args.gpus, args.cpus, args.dry_run, args.python, not args.no_use_tsp)
+    exp = XLSXExperimenter(args.xlsx, args.gpus, args.cpus, args.dry_run, args.python, not args.no_use_tsp, args.update)
     exp.run()
 
 

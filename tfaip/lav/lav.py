@@ -22,18 +22,20 @@ from abc import ABC
 from queue import Queue
 from threading import Thread
 from packaging.version import Version
-from typing import TYPE_CHECKING, Type, Dict, List, Callable, Optional, Iterable
+from typing import TYPE_CHECKING, Type, Dict, List, Callable, Optional, Iterable, Any
 
 import tensorflow
 import tensorflow.keras as keras
 from tensorflow.python.keras.callbacks import Callback, ProgbarLogger
 from tensorflow.python.keras.engine import data_adapter
-from tfaip import LAVParams, DataGeneratorParams
+from tfaip import LAVParams, DataGeneratorParams, ScenarioBaseParams
 from tfaip import Sample
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.evaluator.evaluator import EvaluatorBase
 from tfaip.lav.callbacks.lav_callback import LAVCallback
+from tfaip.lav.callbacks.print_callback import PrintCallback
 from tfaip.model.graphbase import create_lav_graph
+from tfaip.scenario.scenariobase import ScenarioBase
 from tfaip.trainer.callbacks.benchmark_callback import BenchmarkCallback, BenchmarkResults
 from tfaip.trainer.callbacks.extract_logs import ExtractLogsCallback
 from tfaip.util.file.oshelper import ChDir
@@ -111,7 +113,7 @@ class EvaluationCallback(Callback):
     evaluating the result and writing it to the logs
     """
 
-    def __init__(self, evaluator: EvaluatorBase, runnable_data_pipeline, callbacks: List[LAVCallback]):
+    def __init__(self, evaluator: EvaluatorBase, data_pipeline, callbacks: List[LAVCallback]):
         super().__init__()
         self._supports_tf_logs = True
         self.evaluator = evaluator
@@ -125,10 +127,11 @@ class EvaluationCallback(Callback):
                         break
                     yield sample
 
-            for sample in runnable_data_pipeline.process_output(read_fn()):
-                evaluator.update_state(sample)
-                for cb in callbacks:
-                    cb.on_sample_end(sample)
+            with data_pipeline.process_output(read_fn()) as samples:
+                for sample in samples:
+                    evaluator.update_state(sample)
+                    for cb in callbacks:
+                        cb.on_sample_end(sample)
 
         self.post_proc_runner = Thread(target=post_proc_worker, daemon=True)
         self.post_proc_runner.start()
@@ -169,15 +172,14 @@ class LAV(ABC):
     def __init__(
         self,
         params: LAVParams,
-        data_fn: Callable[[], "DataBase"],
-        model_fn: Callable[[], "ModelBase"],
-        evaluator_fn: Callable[[], EvaluatorBase],
+        scenario_params: ScenarioBaseParams,
+        **kwargs,
     ):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         assert params.model_path
+        self._scenario_cls = scenario_params.cls()
+        self._scenario_params = scenario_params
         self._params = params
-        self._data_fn = data_fn
-        self._model_fn = model_fn
-        self._evaluator_fn = evaluator_fn
         self.device_config = DeviceConfig(self._params.device)
         self._data: Optional["DataBase"] = None
         self._model: Optional["ModelBase"] = None
@@ -215,12 +217,30 @@ class LAV(ABC):
         if run_eagerly:
             instantiate_graph = True
         callbacks = callbacks or []
+
+        if self._params.print_samples:
+            callbacks.append(PrintCallback())
+
         callbacks += self._custom_callbacks()
         with ChDir(os.path.join(self._params.model_path)):
             # resources are located in parent dir
-            self._data = self._data_fn()
-        evaluator: EvaluatorBase = self._evaluator_fn()
-        self._model = model = self._model_fn()
+            self._data = self._scenario_cls.data_cls()(
+                self._scenario_params.data,
+                **self._scenario_cls.static_data_kwargs(self._scenario_params),
+            )
+        evaluator: EvaluatorBase = self._scenario_cls.create_evaluator(
+            self._scenario_params.evaluator,
+            **self._scenario_cls.additional_evaluator_kwargs(self._data, self._scenario_params),
+        )
+
+        root_graph = self._scenario_cls.model_cls().root_graph_cls()(
+            self._scenario_params.model,
+            setup_graph=False,
+            **self._scenario_cls.additional_root_graph_kwargs(self._data, self._scenario_params),
+        )
+        self._model = model = root_graph.create_model(
+            **self._scenario_cls.additional_model_kwargs(self._data, self._scenario_params)
+        )
 
         if run_eagerly:
             logger.warning(
@@ -278,37 +298,37 @@ class LAV(ABC):
         for params in generator_params:
             val_data = self._data.create_pipeline(self._params.pipeline, params)
             with evaluator:
-                with val_data as rd:
-                    for cb in callbacks:
-                        cb.setup(params, self, self._data, model)
-                        cb.on_lav_start()
+                dataset = val_data.input_dataset()
+                for cb in callbacks:
+                    cb.setup(params, self, self._data, model)
+                    cb.on_lav_start()
 
-                    extract_logs_callback = ExtractLogsCallback(test_prefix="")
-                    benchmark_callback = BenchmarkCallback(extract_logs_callback)
-                    eval_callbacks = [
-                        EvaluationCallback(evaluator, rd, callbacks),
-                        extract_logs_callback,
-                        benchmark_callback,
-                    ]
-                    if not self._params.silent:
-                        eval_callbacks.append(ProgbarLogger(count_mode="steps"))
+                extract_logs_callback = ExtractLogsCallback(test_prefix="")
+                benchmark_callback = BenchmarkCallback(extract_logs_callback)
+                eval_callbacks = [
+                    EvaluationCallback(evaluator, val_data, callbacks),
+                    extract_logs_callback,
+                    benchmark_callback,
+                ]
+                if not self._params.silent:
+                    eval_callbacks.append(ProgbarLogger(count_mode="steps"))
 
-                    r = lav_model.evaluate(
-                        rd.input_dataset().map(regroup),
-                        callbacks=InplaceCallbackList(eval_callbacks, model=lav_model),
-                        return_dict=True,
-                        verbose=0 if self._params.silent else 1,
-                    )
-                    self.benchmark_results = benchmark_callback.last_test_results
-                    if return_tensorboard_outputs:
-                        r.update(extract_logs_callback.extracted_logs)
+                r = lav_model.evaluate(
+                    dataset.map(regroup),
+                    callbacks=InplaceCallbackList(eval_callbacks, model=lav_model),
+                    return_dict=True,
+                    verbose=0 if self._params.silent else 1,
+                )
+                self.benchmark_results = benchmark_callback.last_test_results
+                if return_tensorboard_outputs:
+                    r.update(extract_logs_callback.extracted_logs)
 
-                    for cb in callbacks:
-                        cb.on_lav_end(r)
+                for cb in callbacks:
+                    cb.on_lav_end(r)
 
-                    if not self._params.silent:
-                        logger.info("LAV results: \n" + "\n    ".join([f"{k} = {v}" for k, v in r.items()]))
-                    yield r
+                if not self._params.silent:
+                    logger.info("LAV results: \n" + "\n    ".join([f"{k} = {v}" for k, v in r.items()]))
+                yield r
 
     def _custom_callbacks(self) -> List[LAVCallback]:
         """Additional custom callbacks

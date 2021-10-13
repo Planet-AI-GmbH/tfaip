@@ -147,14 +147,14 @@ def run_pad_test(test, n_numbers=1000):
     def to_tuple(s):
         return s.inputs, s.targets, s.meta
 
-    with data.create_pipeline(
+    pipeline = data.create_pipeline(
         DataPipelineParams(mode=PipelineMode.TRAINING), BatchedPadDataGeneratorParams(numbers_to_generate=numbers)
-    ) as pipeline:
-        # Test generate input samples
-        batched_samples = pipeline.generate_input_samples(auto_repeat=False)
-
-        # Test dataset
-        batched_samples_with_ds = list(pipeline.input_dataset(auto_repeat=False).as_numpy_iterator())
+    )
+    # Test generate input samples, and dataset
+    with pipeline.generate_input_samples(auto_repeat=False) as batched_samples, pipeline.generate_input_batches(
+        auto_repeat=False
+    ) as batched_samples_with_ds:
+        batched_samples_with_ds = list(batched_samples_with_ds)
         for (i1, t1, m1), (i2, t2, m2) in zip(map(to_tuple, batched_samples), batched_samples_with_ds):
             np.testing.assert_array_equal(i1["n"], i2["n"])
             np.testing.assert_array_equal(t1["n"], t2["n"])
@@ -182,16 +182,19 @@ def run_test(test, parallel, n_numbers=100):
         )
     )
     data = data_params.create()
-    with data.create_pipeline(
+    pipeline = data.create_pipeline(
         DataPipelineParams(mode=PipelineMode.TRAINING), BatchedDataGeneratorParams(numbers_to_generate=numbers)
-    ) as pipeline:
+    )
+
+    with pipeline.generate_input_samples(auto_repeat=False) as batched_samples:
         # Test generate input samples
-        batched_samples = list(pipeline.generate_input_samples(auto_repeat=False))
+        batched_samples = list(batched_samples)
+
         out = [list(np.squeeze(x.inputs["n"], axis=-1)) for x in batched_samples]
         test.assertListEqual(target_numbers, out)
 
+    with pipeline.generate_input_batches(auto_repeat=False) as batched_samples_ds:
         # Test dataset
-        batched_samples_ds = list(pipeline.input_dataset(auto_repeat=False).as_numpy_iterator())
         out = [list(np.squeeze(i["n"], axis=-1)) for i, t, m in batched_samples_ds]
         test.assertListEqual(target_numbers, out)
 

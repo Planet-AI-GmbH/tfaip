@@ -36,7 +36,7 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
     """
     Purpose: Transformation of a pure-python pipeline into the tf.data.Dataset world
 
-    Usage: Used in the RunningDataPipeline to instantiate tf.data.Dataset
+    Usage: Used in the DataPipeline to instantiate tf.data.Dataset
 
     Customization: Customize this class (in DataPipeline) if you want to apply tf.data.Dataset.map calls to transform
                    the data before batching/prefetching/...
@@ -59,14 +59,14 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
 
     def input_layer_specs(self):
         # Override this, when the generator yields other shapes/types than the final data pipeline (input to the model)
-        return self.data_pipeline.data.input_layer_specs()
+        return self.data_pipeline.data.dataset_input_layer_specs()
 
     def target_layer_specs(self):
         # Override this, when the generator yields other shapes/types than the final data pipeline (input to the model)
-        return self.data_pipeline.data.target_layer_specs()
+        return self.data_pipeline.data.dataset_target_layer_specs()
 
     def meta_layer_specs(self):
-        return self.data_pipeline.data.meta_layer_specs()
+        return self.data_pipeline.data.dataset_meta_layer_specs()
 
     def create(self, generator_fn: Callable[[], Iterable[Sample]], yields_batches=False) -> "tf.data.Dataset":
         """
@@ -80,6 +80,8 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
         """
         # Local input so that not imported in spawned processes
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
+
+        data = self.data_pipeline.data
 
         def wrap(sample):
             if isinstance(sample, Sample):
@@ -98,10 +100,13 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
 
         if self.mode == PipelineMode.PREDICTION:
             output_signature = (self.input_layer_specs(), self.meta_layer_specs())
+            net_input_signature = (data.input_layer_specs(), data.meta_layer_specs())
         elif self.mode == PipelineMode.TARGETS:
             output_signature = (self.target_layer_specs(), self.meta_layer_specs())
+            net_input_signature = (data.target_layer_specs(), data.meta_layer_specs())
         else:
             output_signature = (self.input_layer_specs(), self.target_layer_specs(), self.meta_layer_specs())
+            net_input_signature = (data.input_layer_specs(), data.target_layer_specs(), data.meta_layer_specs())
 
         if yields_batches:
             output_signature = tf.nest.map_structure(
@@ -121,4 +126,5 @@ class TFDatasetGenerator(Generic[TDataPipeline]):
         )
         dataset = dataset.map(unflatten)
         dataset = self._transform(dataset)
+        tf.nest.assert_same_structure(dataset.element_spec, net_input_signature)
         return dataset

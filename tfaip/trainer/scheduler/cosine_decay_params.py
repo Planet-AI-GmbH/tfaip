@@ -20,12 +20,12 @@ from dataclasses import dataclass, field
 
 from paiargparse import pai_dataclass, pai_meta
 
-from tfaip.trainer.scheduler.learningrate_params import LearningRateParams
+from tfaip.trainer.scheduler import ExponentialDecayParams
 
 
 @pai_dataclass(alt="CosineDecay")
 @dataclass
-class CosineDecayParams(LearningRateParams):
+class CosineDecayParams(ExponentialDecayParams):
     """Definition of a cosine decay"""
 
     @staticmethod
@@ -34,18 +34,19 @@ class CosineDecayParams(LearningRateParams):
 
         return CosineDecaySchedule
 
-    learning_circle: int = field(
-        default=3, metadata=pai_meta(help="(type dependent) The number of epochs with a flat constant learning rate")
+    alpha: float = field(
+        default=0.1,
+        metadata=pai_meta(
+            help="(type dependent) The lr is reduced to this fraction throughout the cosine phase (compared to the beginning of the phase, NOT compared to the initial learning rate)"
+        ),
     )
-    lr_decay_rate: float = field(default=0.99, metadata=pai_meta(help="(type dependent) The exponential decay factor"))
-    decay_fraction: float = field(default=0.1, metadata=pai_meta(help="(type dependent) Alpha value of cosine decay"))
     final_epochs: int = field(
         default=50,
         metadata=pai_meta(help="(type dependent) Number of final epochs with a steep decline in the learning rate"),
     )
 
 
-@pai_dataclass(alt="WarmupConstantDecay")
+@pai_dataclass(alt="WarmupCosineDecay")
 @dataclass
 class WarmupCosineDecayParams(CosineDecayParams):
     """Cosine decay with warmup"""

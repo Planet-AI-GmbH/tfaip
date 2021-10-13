@@ -18,7 +18,7 @@
 """Definition of the various Optimizers and their OptimizerParams"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Tuple, Any, Dict, Type, TYPE_CHECKING, Optional
+from typing import Tuple, Any, Dict, Type, TYPE_CHECKING, Optional, List
 
 from paiargparse import pai_dataclass, pai_meta
 
@@ -186,5 +186,31 @@ class AdaBeliefOptimizer(OptimizerParams):
             "total_steps": self.total_steps,
             "warmup_proportion": self.warmup_proportion,
             "min_lr": self.min_lr,
+            **self._clip_grad_args(),
+        }
+
+
+@pai_dataclass(alt="LAMB")
+@dataclass
+class LAMBOptimizer(OptimizerParams):
+    """The LAMBOptimizer"""
+
+    beta_1: float = 0.9
+    beta_2: float = 0.999
+    epsilon: float = 1e-6
+    weight_decay: float = 0.0
+    exclude_from_weight_decay: Optional[List[str]] = None
+    exclude_from_layer_adaptation: Optional[List[str]] = None
+
+    def create(self):
+        from tensorflow_addons.optimizers import LAMB  # pylint: disable = import-outside-toplevel
+
+        return LAMB, {
+            "beta_1": self.beta_1,
+            "beta_2": self.beta_2,
+            "epsilon": self.epsilon,
+            "weight_decay_rate": self.weight_decay,
+            "exclude_from_weight_decay": self.exclude_from_weight_decay,
+            "exclude_from_layer_adaptation": self.exclude_from_layer_adaptation,
             **self._clip_grad_args(),
         }

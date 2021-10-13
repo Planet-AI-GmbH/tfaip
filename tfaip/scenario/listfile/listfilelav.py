@@ -25,6 +25,11 @@ from tfaip.lav.lav import LAV
 
 
 class ListFileLAVCallback(LAVCallback):
+    """Custom LAVCallback used in LAV Scenarios.
+
+    On the end of LAV, this will dump all metrics in the model_path (if `store_results`==True).
+    """
+
     def on_lav_end(self, result):
         ...
 
@@ -48,5 +53,7 @@ class ListFileLAVCallback(LAVCallback):
 
 
 class ListFileLAV(LAV):
+    """Custom LAV to add additional callbacks."""
+
     def _custom_callbacks(self) -> List[LAVCallback]:
         return [ListFileLAVCallback()]

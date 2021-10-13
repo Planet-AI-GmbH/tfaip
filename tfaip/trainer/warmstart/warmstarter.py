@@ -19,12 +19,13 @@
 import logging
 import os
 import re
-from typing import List, Optional, NoReturn
+from typing import List, Optional, NoReturn, TypeVar, Generic
 
 import numpy as np
 import tensorflow as tf
 
 from tfaip import WarmStartParams
+from tfaip.util.typing import AnyNumpy
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +42,25 @@ def longest_common_startstr(strs: List[str]) -> str:
     return longest_common
 
 
-class WarmStarter:
+TWSP = TypeVar("TWSP", bound=WarmStartParams)
+
+
+class WarmStarter(Generic[TWSP]):
     """The WarmStarter handles the loading of a pretrained model an applies the weights to the current one.
 
     See WarmStartParams for configuration. Both SavedModels and Checkpoints are supported.
     """
 
-    def __init__(self, params: WarmStartParams):
+    def __init__(self, params: TWSP, **kwargs):
+        assert len(kwargs) == 0, f"Not all kwargs processed by subclasses: {kwargs}"
         self._params = params
 
         if (params.exclude or params.include) and params.allow_partial:
             raise ValueError("Allow partial is only allowed if neither exclude not include is specified")
+
+    @property
+    def params(self) -> TWSP:
+        return self._params
 
     def _trim(self, names: List[str]) -> List[str]:
         if self._params.trim_graph_name:
@@ -214,7 +223,11 @@ class WarmStarter:
             trainable_name = target_var_name_to_trainable_name.get(name, None)  # None == not existing
             if trainable_name in names_to_load:
                 warm_weights_names.append(name)
-                new_weights.append(all_loaded_weights[trainable_name_to_loaded_var_name[trainable_name]])
+                new_weights.append(
+                    self._transform_weight(
+                        all_loaded_weights[trainable_name_to_loaded_var_name[trainable_name]], trainable_name, name
+                    )
+                )
             else:
                 if name in all_trainable_target_weights:
                     cold_weights_names.append(name)
@@ -244,3 +257,6 @@ class WarmStarter:
             new_weights: New weights of the model
         """
         target_model.set_weights(new_weights)
+
+    def _transform_weight(self, weight: AnyNumpy, trainable_name: str, name: str) -> AnyNumpy:
+        return weight

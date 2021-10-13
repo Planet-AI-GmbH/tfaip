@@ -17,12 +17,12 @@
 # ==============================================================================
 """Imports of all Schedules and definition of the DEFAULT_SCHEDULES"""
 from tfaip.trainer.scheduler.constant_params import Constant
+from tfaip.trainer.scheduler.exponential_decay_params import ExponentialDecayParams
 from tfaip.trainer.scheduler.cosine_decay_params import (
     WarmupCosineDecayParams,
     WarmupConstantCosineDecayParams,
     CosineDecayParams,
 )
-from tfaip.trainer.scheduler.exponential_decay_params import ExponentialDecayParams
 from tfaip.trainer.scheduler.learningrate_params import LearningRateParams
 
 DEFAULT_SCHEDULES = [

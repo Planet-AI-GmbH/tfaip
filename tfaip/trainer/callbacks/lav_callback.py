@@ -85,8 +85,6 @@ class LAVCallback(Callback):
             logs_str = f"LAV l{i} Metrics (dt={(time.time() - start) / 60:.2f}min) - {logs_str}"
             logger.info(logs_str)
             for k, v in r.items():
-                if "multi_metric" in k:
-                    continue
                 if self.extract_logs_cb.tensorboard_data_handler.is_tensorboard_only(k, v):
                     self.extract_logs_cb.extracted_logs[f"lav_l{i}_{k}"] = v
                 else:

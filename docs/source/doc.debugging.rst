@@ -20,9 +20,8 @@ Do the following:
 * Set up a data-:ref:`test<doc.installation:tests>` for your scenario and :ref:`Data<doc.data:data>` class
 * Disable all multiprocessing (setting ``run_parallel=False`` in the ``pre_proc`` and ``post_proc`` parameters of the ``DataParams``).
 * Create a ``DataPipeline``.
-* Enter the ``DataPipeline`` to obtain a ``RunningDataPipeline``
-* Call ``generate_input_samples`` which will return a Generator of samples which are the un-batched input of the ``tf.data.Dataset``.
-* Optionally call ``input_dataset().as_numpy_iterator()`` to access the outputs of the ``tf.data.Dataset``. Note that this makes debugging of the pipeline impossible this ``tf.data.Dataset`` is accessed.
+* Call ``with pipeline.generate_input_samples() as samples:`` which will return a Generator of samples which are the (un-batched) input of the ``tf.data.Dataset``.
+* Optionally call ``with pipeline.generate_input_batches() as batches`` to access the outputs of the ``tf.data.Dataset.as_numpy_iterator()``. Note that this makes debugging of the pipeline impossible this ``tf.data.Dataset`` is accessed.
   Use this only if you want to verify the batched and padded outputs of the dataset not to debug the data-pipeline itself.
 
 Here is an example for the Tutorial:
@@ -33,13 +32,14 @@ Here is an example for the Tutorial:
         def test_data_loading(self):
             trainer_params = TutorialScenario.default_trainer_params()
             data = TutorialData(trainer_params.scenario.data)
-            with trainer_params.gen.train_data(data) as rd:
-                for sample in rd.generate_input_samples(auto_repeat=False):
+            with trainer_params.gen.train_data(data).generate_input_samples(auto_repeat) as samples:
+                for sample in samples:
                     print(sample)  # un-batched, but can be debugged
 
-                # or
-                for sample in rd.input_dataset(auto_repeat=False).as_numpy_iterator():
-                    print(sample)  # batched and prepared (inputs, targets) tuple, that can not be debugged. Use prints.
+            # or
+            with trainer_params.gen.train_data(data).generate_input_batches(auto_repeat) as batches:
+                for batch in batches:
+                    print(batch)  # batched and prepared (inputs, targets) tuple, that can not be debugged. Use prints.
 
 Note that ``generate_input_samples()`` will run infinitely for the ``train_data`` which is why ``auto_repeat=False`` is set to only generate an epoch of data.
 

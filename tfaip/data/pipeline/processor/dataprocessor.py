@@ -67,11 +67,7 @@ class DataProcessorParamsMeta(ABCMeta):
 def is_valid_sample(sample: Sample, mode: PipelineMode) -> bool:
     if sample is None:
         return False
-    if sample.inputs is None and mode in INPUT_PROCESSOR:
-        return False
-    if sample.targets is None and mode in TARGETS_PROCESSOR:
-        return False
-    return True
+    return sample.is_valid(mode)
 
 
 @pai_dataclass

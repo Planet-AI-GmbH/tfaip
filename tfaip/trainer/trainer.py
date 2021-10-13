@@ -24,9 +24,12 @@ from datetime import datetime
 from typing import Type, Tuple, Union, TypeVar, Generic, Optional, Dict
 
 import tensorflow as tf
+from packaging import version
 from tensorflow.python.keras.backend import get_graph
-from tfaip import TrainerParams
+from typeguard import typechecked
+
 from tfaip import EXPORT_TENSORFLOW_1
+from tfaip import TrainerParams
 from tfaip.data.data import DataBase
 from tfaip.device.device_config import DeviceConfig, distribute_strategy
 from tfaip.scenario.scenariobase import ScenarioBase
@@ -38,7 +41,6 @@ from tfaip.trainer.callbacks.lav_callback import LAVCallback
 from tfaip.trainer.callbacks.logger_callback import LoggerCallback
 from tfaip.trainer.callbacks.progbar import TFAIPProgbarLogger
 from tfaip.trainer.callbacks.tensor_board_callback import TensorBoardCallback
-from tfaip.trainer.callbacks.tensorflow_fix import TensorflowFix
 from tfaip.trainer.callbacks.train_params_logger import TrainerCheckpointsCallback
 from tfaip.trainer.optimizer.gradient_accumulation_optimizer import create_gradient_accumulation_optimizer
 from tfaip.trainer.optimizer.weights_moving_average import WeightsMovingAverage
@@ -48,8 +50,6 @@ from tfaip.trainer.warmstart.warmstarter import WarmStarter
 from tfaip.util.generic_meta import CollectGenericTypes
 from tfaip.util.random import set_global_random_seed
 from tfaip.util.typing import AnyNumpy
-from typeguard import typechecked
-from packaging import version
 
 if version.parse(tf.__version__) == version.parse("2.6.0"):
     # TODO(all): this is a workaround to fix writing of binary metrics
@@ -196,8 +196,10 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         optimizer = self._create_optimizer()
 
         # create pipelines (so that they can be accessed in scenario by mode)
-        self._data.get_or_create_pipeline(self.params.gen.setup.train, self.params.gen.train_gen())
-        self._data.get_or_create_pipeline(self.params.gen.setup.val, self.params.gen.val_gen())
+        self.params.gen.train_data(self._data)
+        self.params.gen.val_data(self._data)
+        if self.params.preload_data:
+            self._data.preload(progress_bar=True)
 
         self._scenario.setup_training(
             optimizer,
@@ -271,7 +273,6 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         extract_logs_cb = ExtractLogsCallback()
         callbacks.append(extract_logs_cb)
         callbacks.append(TFAIPProgbarLogger(delta_time=self._params.progbar_delta_time, count_mode="steps"))
-        callbacks.append(TensorflowFix())
         callbacks.append(BenchmarkCallback(extract_logs_cb))
         # split storing of parameters and weights
         # first store the actual checkpoint (non EMA weights)
@@ -303,7 +304,9 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
                     steps_per_epoch=self._steps_per_epoch,
                     extracted_logs_cb=extract_logs_cb,
                     reset=self._params.current_epoch == 0,
-                    profile="10,20" if self._params.profile else 0,
+                    profile=f"{self._params.profile_steps[0]},{self._params.profile_steps[1]}"
+                    if self._params.profile
+                    else 0,
                 )
             )
 
@@ -414,8 +417,8 @@ class Trainer(Generic[TTrainerParams], ABC, metaclass=CollectGenericTypes):
         # create the gradient accumulation optimizer (will not wrap, if train_accum_steps <= 1)
         return create_gradient_accumulation_optimizer(self._params.train_accum_steps, *optimizer_class())
 
-    def create_warmstarter(self) -> WarmStarter:
-        return WarmStarter(self.params.warmstart)
+    def create_warmstarter(self, **kwargs) -> WarmStarter:
+        return self.params.warmstart.create(**kwargs)
 
     def export_trainable_pb(self):
         """Save the current graph (tf1 style) in a pb

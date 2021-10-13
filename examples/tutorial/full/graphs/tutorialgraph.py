@@ -34,7 +34,7 @@ class TutorialGraph(GraphBase, ABC):
         # Optionally add a training attribute to check if the graph is in training or validation mode
         # To design a different behaviour of the prediction graph, check if GT is available in the inputs
         # call function that is shared by all other graphs
-        rescaled_img = K.expand_dims(K.cast(inputs["img"], dtype="float32") / 255, -1)
+        rescaled_img = K.expand_dims(inputs["img"], -1)
         backbone_out = self.backend(rescaled_img)  # call the actual graph (MLP or CNN)
         logits = self.logits(backbone_out["out"])
         pred = K.softmax(logits, axis=-1)

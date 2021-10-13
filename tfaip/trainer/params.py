@@ -18,7 +18,7 @@
 """Definition of the TrainerParams and the TrainerPipelineParamsBase"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Union, TypeVar, Generic, Iterable, TYPE_CHECKING
+from typing import Optional, Union, TypeVar, Generic, Iterable, TYPE_CHECKING, List
 
 from paiargparse import pai_meta, pai_dataclass
 
@@ -269,6 +269,12 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
             "reboot system"
         ),
     )
+    profile_steps: List[int] = field(
+        default_factory=lambda: [10, 20],
+        metadata=pai_meta(
+            help="Set step range for profiling in the first epoch. Start with 1 not 0. e.g --trainer.profile_steps 1 50"
+        ),
+    )
     device: DeviceConfigParams = field(
         default_factory=DeviceConfigParams,
         metadata=pai_meta(mode="flat", help="Parameters to setup the devices such as GPUs and multi GPU training."),
@@ -306,6 +312,17 @@ class TrainerParams(Generic[TScenarioParams, TTrainerPipelineParams], ABC, metac
     gen: TTrainerPipelineParams = field(
         default_factory=TrainerPipelineParams,
         metadata=pai_meta(help="Parameters that setup the data generators (i.e. the input data)."),
+    )
+    preload_data: bool = field(
+        default=False,
+        metadata=pai_meta(
+            help="Instead of loading data on the fly, preload all data in the RAM. "
+            "This is faster, but can only be performed if the RAM is large enough. "
+            "Note: the DataGenerator must not yield infinite samples!"
+        ),
+    )
+    preload_data_progress_bar: bool = field(
+        default=True, metadata=pai_meta(help="Show a progress bar when preloading the data (see `preload_data`)")
     )
 
     # Additional params

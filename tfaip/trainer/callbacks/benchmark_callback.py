@@ -51,7 +51,7 @@ class BenchmarkResults:
         table.add_row(["Per Second", 1 / self.total_time, self.batches_per_second, self.samples_per_second])
         if print_fn is None:
             return table
-        print_fn(table)
+        print_fn(str(table))
 
     def finish_epoch(self, duration, samples=None):
         self.total_time = duration
