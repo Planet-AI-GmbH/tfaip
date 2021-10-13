@@ -1,0 +1,289 @@
+INFO     2021-09-22 08:53:31,623             tfaip.util.logging: Logging to 'test/scripts/experimenter_test_files/1/train.log'
+INFO     2021-09-22 08:53:31,627            tfaip.scripts.train: trainer_params={
+  "epochs": 2,
+  "current_epoch": 0,
+  "samples_per_epoch": 20,
+  "scale_epoch_size": 1,
+  "train_accum_steps": 1,
+  "progress_bar_mode": 1,
+  "progbar_delta_time": 5,
+  "tf_cpp_min_log_level": 2,
+  "force_eager": false,
+  "skip_model_load_test": false,
+  "export_training_graph_path": null,
+  "val_every_n": 1,
+  "lav_every_n": 0,
+  "lav_silent": true,
+  "lav_min_epoch": 0,
+  "output_dir": "test/scripts/experimenter_test_files/1",
+  "write_checkpoints": true,
+  "export_best": null,
+  "export_final": true,
+  "no_train_scope": null,
+  "ema_decay": 0.0,
+  "random_seed": null,
+  "profile": false,
+  "device": {
+    "gpus": null,
+    "gpu_auto_tune": false,
+    "gpu_memory": null,
+    "soft_device_placement": true,
+    "dist_strategy": "default",
+    "__cls__": "tfaip.device.device_config:DeviceConfigParams"
+  },
+  "optimizer": {
+    "clip_norm": null,
+    "clip_value": null,
+    "global_clip_norm": null,
+    "beta_1": 0.9,
+    "beta_2": 0.999,
+    "epsilon": 1e-07,
+    "weight_decay": 0.0,
+    "__cls__": "tfaip.trainer.optimizer.optimizers:AdamOptimizer"
+  },
+  "learning_rate": {
+    "lr": 0.01,
+    "step_function": true,
+    "offset_epochs": 0,
+    "steps_per_epoch": -1,
+    "epochs": -1,
+    "learning_circle": 3,
+    "lr_decay_rate": 0.99,
+    "decay_min_fraction": 0.0,
+    "__cls__": "tfaip.trainer.scheduler.exponential_decay_params:ExponentialDecayParams"
+  },
+  "scenario": {
+    "debug_graph_n_examples": 1,
+    "print_eval_limit": 10,
+    "tensorboard_logger_history_size": 5,
+    "export_serve": true,
+    "model": {
+      "n_classes": 10,
+      "graph": {
+        "nodes": [
+          128
+        ],
+        "activation": "relu",
+        "__cls__": "examples.tutorial.full.graphs.mlp:MLPGraphParams"
+      },
+      "__cls__": "examples.tutorial.full.model:TutorialModelParams"
+    },
+    "data": {
+      "pre_proc": {
+        "run_parallel": false,
+        "num_threads": -1,
+        "max_tasks_per_process": 250,
+        "processors": [
+          {
+            "modes": [
+              "prediction",
+              "evaluation",
+              "targets",
+              "training"
+            ],
+            "center": true,
+            "__cls__": "examples.tutorial.full.data.processors.normalize:NormalizeProcessorParams"
+          }
+        ],
+        "__cls__": "tfaip.data.pipeline.processor.params:SequentialProcessorPipelineParams"
+      },
+      "post_proc": {
+        "run_parallel": true,
+        "num_threads": -1,
+        "max_tasks_per_process": 250,
+        "processors": [],
+        "__cls__": "tfaip.data.pipeline.processor.params:SequentialProcessorPipelineParams"
+      },
+      "resource_base_path": "changed/tf2_aip",
+      "__cls__": "examples.tutorial.full.data.data:TutorialDataParams"
+    },
+    "evaluator": {
+      "__cls__": "tfaip.evaluator.params:EvaluatorParams"
+    },
+    "export_net_config": true,
+    "net_config_filename": "net_config.json",
+    "default_serve_dir": "serve",
+    "additional_serve_dir": "additional",
+    "trainer_params_filename": "trainer_params.json",
+    "scenario_params_filename": "scenario_params.json",
+    "scenario_base_path": "changed/tf2_aip/examples/tutorial/full/scenario.py",
+    "scenario_id": "examples.tutorial.full.scenario:TutorialScenario",
+    "id": null,
+    "tfaip_commit_hash": "71597fa57e04dda158452f8469ff1dbbfc2b4835",
+    "tfaip_version": "1.2.5",
+    "__cls__": "examples.tutorial.full.scenario:TutorialScenarioParams"
+  },
+  "warmstart": {
+    "model": null,
+    "allow_partial": false,
+    "trim_graph_name": true,
+    "rename": [],
+    "add_suffix": "",
+    "rename_targets": [],
+    "exclude": null,
+    "include": null,
+    "auto_remove_numbers_for": [
+      "lstm_cell"
+    ],
+    "__cls__": "tfaip.trainer.warmstart.warmstart_params:WarmStartParams"
+  },
+  "early_stopping": {
+    "best_model_output_dir": null,
+    "best_model_name": "best",
+    "frequency": 1,
+    "n_to_go": -1,
+    "lower_threshold": -1e+100,
+    "upper_threshold": 1e+100,
+    "mode": null,
+    "current": null,
+    "monitor": null,
+    "n": 1,
+    "__cls__": "tfaip.trainer.callbacks.earlystopping.params:EarlyStoppingParams"
+  },
+  "gen": {
+    "setup": {
+      "train": {
+        "batch_size": 16,
+        "limit": -1,
+        "prefetch": 32,
+        "num_processes": 4,
+        "batch_drop_remainder": false,
+        "shuffle_buffer_size": -1,
+        "mode": "training",
+        "bucket_boundaries": [],
+        "bucket_batch_sizes": null,
+        "use_shared_memory": false,
+        "__cls__": "tfaip.data.databaseparams:DataPipelineParams"
+      },
+      "val": {
+        "batch_size": 16,
+        "limit": -1,
+        "prefetch": 32,
+        "num_processes": 4,
+        "batch_drop_remainder": false,
+        "shuffle_buffer_size": -1,
+        "mode": "evaluation",
+        "bucket_boundaries": [],
+        "bucket_batch_sizes": null,
+        "use_shared_memory": false,
+        "__cls__": "tfaip.data.databaseparams:DataPipelineParams"
+      },
+      "__cls__": "tfaip.trainer.params:TrainerPipelines"
+    },
+    "train_val": {
+      "dataset": "mnist",
+      "force_train": false,
+      "shuffle": null,
+      "__cls__": "examples.tutorial.full.data.training_data_generation:TutorialDataGeneratorParams"
+    },
+    "__cls__": "examples.tutorial.full.data.training_data_generation:TutorialTrainerGeneratorParams"
+  },
+  "saved_checkpoint_sub_dir": "",
+  "checkpoint_sub_dir": "",
+  "checkpoint_save_freq": "epoch",
+  "__cls__": "tfaip.scenario.scenariobase:LocalTrainerParams"
+}
+INFO     2021-09-22 08:53:31,628     tfaip.device.device_config: Setting up device config DeviceConfigParams(gpus=None, gpu_auto_tune=False, gpu_memory=None, soft_device_placement=True, dist_strategy=<DistributionStrategy.DEFAULT: 'default'>)
+INFO     2021-09-22 08:53:32,091          tfaip.trainer.trainer: Set steps per epoch to 1
+INFO     2021-09-22 08:53:32,133    tfaip.scenario.scenariobase: Building training keras model
+INFO     2021-09-22 08:53:32,137    tfaip.scenario.scenariobase: Attempting to set no train scope
+INFO     2021-09-22 08:53:32,137    tfaip.scenario.scenariobase: Compiling training model including optimization
+INFO     2021-09-22 08:53:32,141    tfaip.scenario.scenariobase: Interference on the input shapes to build the graph.
+INFO     2021-09-22 08:53:34,235    tfaip.scenario.scenariobase: Building prediction/export keras model (for export and decoding)
+INFO     2021-09-22 08:53:34,261    tfaip.scenario.scenariobase: Compiling prediction model graph
+INFO     2021-09-22 08:53:34,265    tfaip.scenario.scenariobase: Models successfully constructed
+INFO     2021-09-22 08:53:34,265    tfaip.scenario.scenariobase: Checking if model can be saved
+WARNING  2021-09-22 08:53:34,608                           absl: Found untraced functions such as tutorial_graph_layer_call_fn, tutorial_graph_layer_call_and_return_conditional_losses, MLP_layer_call_fn, MLP_layer_call_and_return_conditional_losses, classify_layer_call_fn while saving (showing 5 of 25). These functions will not be directly callable after loading.
+INFO     2021-09-22 08:53:34,690                     tensorflow: Assets written to: /tmp/tmpgeun0ul1/assets
+INFO     2021-09-22 08:53:34,703    tfaip.scenario.scenariobase: Prediction model successfully saved. Attempting to load it
+WARNING  2021-09-22 08:53:34,835                     tensorflow: No training configuration found in save file, so the model was *not* compiled. Compile it manually.
+INFO     2021-09-22 08:53:34,837    tfaip.scenario.scenariobase: Model can be successfully loaded
+INFO     2021-09-22 08:53:34,837 tfaip.trainer.callbacks.earlys: Automatically selecting 'val_acc' instead of 'acc' for monitoring.
+INFO     2021-09-22 08:53:34,838 tfaip.trainer.callbacks.earlys: Early stopping deactivated.
+INFO     2021-09-22 08:53:34,838 tfaip.trainer.callbacks.tensor: Removing old event files from "test/scripts/experimenter_test_files/1"
+INFO     2021-09-22 08:53:34,838          tfaip.trainer.trainer: Starting training in epoch 0. 2 remaining.
+INFO     2021-09-22 08:53:34,838    tfaip.scenario.scenariobase: ______________________________________________________________________________________________________________________________________________________
+INFO     2021-09-22 08:53:34,838    tfaip.scenario.scenariobase: Param # (output shape)                                                     Layer (type)                                                               
+INFO     2021-09-22 08:53:34,838    tfaip.scenario.scenariobase: ======================================================================================================================================================
+INFO     2021-09-22 08:53:34,839    tfaip.scenario.scenariobase: ├─ 101770 [trainable]                                                      ├─ root (RootGraph)                                                        
+INFO     2021-09-22 08:53:34,839    tfaip.scenario.scenariobase: │  └─ 101770 [trainable]                                                   │  └─ tutorial_graph (TutorialGraph)                                       
+INFO     2021-09-22 08:53:34,839    tfaip.scenario.scenariobase: │     ├─ 100480 [trainable]                                                │     ├─ MLP (MLPLayers)                                                   
+INFO     2021-09-22 08:53:34,839    tfaip.scenario.scenariobase: │     │  └─ 100480 [trainable]                                             │     │  └─ dense (Dense)                                                  
+INFO     2021-09-22 08:53:34,839    tfaip.scenario.scenariobase: │     │     ├─ 100352 [trainable] (784, 128)                               │     │     ├─ kernel:0                                                    
+INFO     2021-09-22 08:53:34,840    tfaip.scenario.scenariobase: │     │     └─ 128 [trainable] (128,)                                      │     │     └─ bias:0                                                      
+INFO     2021-09-22 08:53:34,840    tfaip.scenario.scenariobase: │     └─ 1290 [trainable]                                                  │     └─ classify (Dense)                                                  
+INFO     2021-09-22 08:53:34,840    tfaip.scenario.scenariobase: │        ├─ 1280 [trainable] (128, 10)                                     │        ├─ kernel:0                                                       
+INFO     2021-09-22 08:53:34,840    tfaip.scenario.scenariobase: │        └─ 10 [trainable] (10,)                                           │        └─ bias:0                                                         
+INFO     2021-09-22 08:53:34,840    tfaip.scenario.scenariobase: └─ 1 [not trainable]                                                       └─ print_evaluate_layer (PrintEvaluateLayer)                               
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase:    └─ 1 [not trainable] ()                                                    └─ print_limit:0                                                        
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase: ======================================================================================================================================================
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase: Total params: 101,771
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase: Trainable params: 101,770
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase: Non-trainable params: 1
+INFO     2021-09-22 08:53:34,841    tfaip.scenario.scenariobase: ______________________________________________________________________________________________________________________________________________________
+INFO     2021-09-22 08:53:35,941 tfaip.trainer.callbacks.logger: Start of epoch    1
+INFO     2021-09-22 08:53:36,966 tfaip.model.print_evaluate_lay: Printing evaluation results of 10 instances
+INFO     2021-09-22 08:53:36,967 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[7] (p = 1.0)
+INFO     2021-09-22 08:53:36,968 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[2] (p = 1.0)
+INFO     2021-09-22 08:53:36,969 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[1] (p = 1.0)
+INFO     2021-09-22 08:53:36,970 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[0] (p = 1.0)
+INFO     2021-09-22 08:53:36,970 tfaip.model.print_evaluate_lay: PRED/GT: 4==[4] (p = 1.0)
+INFO     2021-09-22 08:53:36,971 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[1] (p = 1.0)
+INFO     2021-09-22 08:53:36,972 tfaip.model.print_evaluate_lay: PRED/GT: 4==[4] (p = 1.0)
+INFO     2021-09-22 08:53:36,973 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[9] (p = 1.0)
+INFO     2021-09-22 08:53:36,974 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[5] (p = 1.0)
+INFO     2021-09-22 08:53:36,974 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[9] (p = 1.0)
+INFO     2021-09-22 08:53:41,815 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+---------------------+--------------------+-----------------------+---------------------+----------------------+-----------------------+
+|    Benchmark    |     Train Total     |    Train Batch     |      Train Sample     |      Test Total     |      Test Batch      |      Test Sample      |
++-----------------+---------------------+--------------------+-----------------------+---------------------+----------------------+-----------------------+
+|    AVG Count    |          1          |         1          |         10000         |          1          |          1           |         10000         |
+|   AVG Time Per  |  5.922596454620361  | 0.5149679183959961 | 5.149679183959961e-05 |  5.922603607177734  |  0.5149679183959961  | 5.149679183959961e-05 |
+|  AVG Per Second | 0.16884486519757322 | 1.9418685403058986 |   19418.685403058986  |  0.1688446612885046 |  1.9418685403058986  |   19418.685403058986  |
+|    Last Count   |          1          |         1          |         10000         |          1          |         625          |         10000         |
+|  Last Time Per  |  5.872778415679932  | 0.5149679183959961 | 5.149679183959961e-05 |  5.331913948059082  | 0.008369649887084961 | 0.0005231031179428101 |
+| Last Per Second |  0.1702771549033871 | 1.9418685403058986 |   19418.685403058986  | 0.18754991354727676 |  119.47931078253106  |   1911.668972520497   |
++-----------------+---------------------+--------------------+-----------------------+---------------------+----------------------+-----------------------+
+INFO     2021-09-22 08:53:41,822 tfaip.trainer.callbacks.earlys: Better value of val_acc found. Old = None, Best = 0.0982000008225441
+WARNING  2021-09-22 08:53:42,147                           absl: Found untraced functions such as tutorial_graph_layer_call_fn, tutorial_graph_layer_call_and_return_conditional_losses, MLP_layer_call_fn, MLP_layer_call_and_return_conditional_losses, classify_layer_call_fn while saving (showing 5 of 25). These functions will not be directly callable after loading.
+INFO     2021-09-22 08:53:42,221                     tensorflow: Assets written to: test/scripts/experimenter_test_files/1/best/serve/assets
+INFO     2021-09-22 08:53:42,256 tfaip.trainer.callbacks.logger: Results of epoch    1 acc: 0.2500 - custom_acc: 0.2500 - internal_acc: 0.0000 - keras_loss: 2.5655 - loss: 2.5655 - loss/mean_epoch: 2.5655 - raw_acc: 0.2500 - raw_loss: 2.5655 - val_acc: 0.0982 - val_custom_acc: 0.0982 - val_internal_acc: 0.0000 - val_keras_loss: 23.4480 - val_loss: 23.4480 - val_loss/mean_epoch: 23.4480 - val_raw_acc: 0.0982 - val_raw_loss: 23.4480
+INFO     2021-09-22 08:53:42,258 tfaip.trainer.callbacks.logger: Start of epoch    2
+INFO     2021-09-22 08:53:42,345 tfaip.model.print_evaluate_lay: Printing evaluation results of 10 instances
+INFO     2021-09-22 08:53:42,346 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[7] (p = 0.9621146321296692)
+INFO     2021-09-22 08:53:42,347 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[2] (p = 0.8232637643814087)
+INFO     2021-09-22 08:53:42,348 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[1] (p = 0.9596889019012451)
+INFO     2021-09-22 08:53:42,349 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[0] (p = 0.9375242590904236)
+INFO     2021-09-22 08:53:42,350 tfaip.model.print_evaluate_lay: PRED/GT: 4==[4] (p = 0.9919392466545105)
+INFO     2021-09-22 08:53:42,351 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[1] (p = 0.9349765777587891)
+INFO     2021-09-22 08:53:42,351 tfaip.model.print_evaluate_lay: PRED/GT: 4==[4] (p = 0.9863651990890503)
+INFO     2021-09-22 08:53:42,353 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[9] (p = 0.9767382740974426)
+INFO     2021-09-22 08:53:42,354 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[5] (p = 0.9753098487854004)
+INFO     2021-09-22 08:53:42,355 tfaip.model.print_evaluate_lay: PRED/GT: 4!=[9] (p = 0.9829497337341309)
+INFO     2021-09-22 08:53:47,463 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+|    Benchmark    |     Train Total     |      Train Batch      |      Train Sample      |      Test Total     |      Test Batch      |      Test Sample       |
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+|    AVG Count    |          1          |           2           |         20000          |          1          |          2           |         20000          |
+|   AVG Time Per  |  11.56968069076538  |  0.25946009159088135  | 2.5946009159088136e-05 |  11.569692373275757 | 0.25946009159088135  | 2.5946009159088136e-05 |
+|  AVG Per Second | 0.08643280888453335 |   3.854157276629685   |   38541.57276629686    | 0.08643272160890371 |  3.854157276629685   |   38541.57276629686    |
+|    Last Count   |          1          |           1           |         10000          |          1          |         625          |         10000          |
+|  Last Time Per  |  5.2030346393585205 | 0.0039522647857666016 | 3.9522647857666014e-07 |  5.1608052253723145 | 0.008130658340454101 | 0.0005081661462783813  |
+| Last Per Second | 0.19219552997696157 |   253.01948482837668  |   2530194.848283767    | 0.19376821180610576 |  122.99127058684765  |   1967.8603293895624   |
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+INFO     2021-09-22 08:53:47,472 tfaip.trainer.callbacks.earlys: No better value of val_acc = 0.0982000008225441 found. Keeping best = 0.0982000008225441
+INFO     2021-09-22 08:53:47,476 tfaip.trainer.callbacks.logger: Results of epoch    2 acc: 0.1875 - custom_acc: 0.1875 - internal_acc: 0.0000 - keras_loss: 23.5864 - loss: 23.5864 - loss/mean_epoch: 23.5864 - raw_acc: 0.1875 - raw_loss: 23.5864 - val_acc: 0.0982 - val_custom_acc: 0.0982 - val_internal_acc: 0.0000 - val_keras_loss: 7.3559 - val_loss: 7.3559 - val_loss/mean_epoch: 7.3559 - val_raw_acc: 0.0982 - val_raw_loss: 7.3559
+INFO     2021-09-22 08:53:47,477 tfaip.trainer.callbacks.benchm: Benchmark results:
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+|    Benchmark    |     Train Total     |      Train Batch      |      Train Sample      |      Test Total     |      Test Batch      |      Test Sample       |
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+|    AVG Count    |          1          |           2           |         20000          |          1          |          2           |         20000          |
+|   AVG Time Per  |  11.585206031799316 |  0.12973004579544067  | 1.2973004579544068e-09 |  11.585206031799316 | 0.12973004579544067  | 1.2973004579544068e-09 |
+|  AVG Per Second | 0.08631698022937002 |    7.70831455325937   |    770831455.325937    | 0.08631698022937002 |   7.70831455325937   |    770831455.325937    |
+|    Last Count   |          1          |           1           |         10000          |          1          |         625          |         10000          |
+|  Last Time Per  |  5.2030346393585205 | 0.0039522647857666016 | 3.9522647857666014e-07 |  5.1608052253723145 | 0.008130658340454101 | 0.0005081661462783813  |
+| Last Per Second | 0.19219552997696157 |   253.01948482837668  |   2530194.848283767    | 0.19376821180610576 |  122.99127058684765  |   1967.8603293895624   |
++-----------------+---------------------+-----------------------+------------------------+---------------------+----------------------+------------------------+
+INFO     2021-09-22 08:53:47,755          tfaip.trainer.trainer: Final export of the model.
+WARNING  2021-09-22 08:53:48,007                           absl: Found untraced functions such as tutorial_graph_layer_call_fn, tutorial_graph_layer_call_and_return_conditional_losses, MLP_layer_call_fn, MLP_layer_call_and_return_conditional_losses, classify_layer_call_fn while saving (showing 5 of 25). These functions will not be directly callable after loading.
+INFO     2021-09-22 08:53:48,090                     tensorflow: Assets written to: test/scripts/experimenter_test_files/1/export/serve/assets
