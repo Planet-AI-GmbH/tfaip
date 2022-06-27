@@ -99,7 +99,7 @@ class DeviceConfig:
             ) from e
 
         try:
-        tf.config.experimental.set_visible_devices(physical_gpu_devices, "GPU")
+            tf.config.experimental.set_visible_devices(physical_gpu_devices, "GPU")
         except RuntimeError:
             logging.warn("Couldn't set visible devices! Are they already initialized?")
         for physical_gpu_device in physical_gpu_devices:
